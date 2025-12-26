@@ -114,7 +114,7 @@ export default function Auth() {
         return;
       }
 
-      navigate("/admin", { replace: true });
+      navigate("/admindashboard", { replace: true });
 
     } catch (error: any) {
       toast({
