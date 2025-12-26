@@ -1,0 +1,400 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+    font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --green-custom: #0f9d58;
+  --green-custom-hover: #0b7a43;
+  /* Admin palette defaults (light) */
+  --admin-primary: #013e7e;
+  --admin-primaryHover: #0a4f99;
+  --admin-primarySoft: #e3ecf8;
+  --admin-accent: #0a4f99;
+  --admin-accentHover: #1166c1;
+  --admin-accentSoft: #deebff;
+  --admin-surface: #f2f6fb;
+  --admin-surfaceMuted: #e7edf6;
+  --admin-surfaceAlt: #ffffff;
+  --admin-border: #d6e6ff;
+  --admin-text: #071731;
+  --admin-mutedText: #55637b;
+  --admin-cardShadow: 0 15px 40px rgba(1, 62, 126, 0.18);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+  --green-custom: #22c55e;
+  --green-custom-hover: #16a34a;
+  /* Admin palette overrides (dark) */
+  --admin-primary: #2f63a8;
+  --admin-primaryHover: #3e7ac7;
+  --admin-primarySoft: rgba(1, 62, 126, 0.25);
+  --admin-accent: #3e7ac7;
+  --admin-accentHover: #5291e6;
+  --admin-accentSoft: rgba(1, 62, 126, 0.35);
+  --admin-surface: #050b15;
+  --admin-surfaceMuted: #0d1624;
+  --admin-surfaceAlt: #0f1c31;
+  --admin-border: #1f3554;
+  --admin-text: #f3f8ff;
+  --admin-mutedText: #97b3d6;
+  --admin-cardShadow: 0 25px 45px rgba(2, 8, 20, 0.85);
+}
+
+
+/* Google Material Symbols baseline */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined", sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 1.25rem; /* default size, override per component if needed */
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(150%);
+  }
+}
+
+.card-shimmer {
+  animation: shimmer-slide 6s ease-in-out infinite;
+}
+
+@keyframes rainbow-border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.rainbow-border {
+  position: relative;
+  z-index: 0;
+  border-color: transparent !important;
+  isolation: isolate;
+}
+
+.rainbow-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    90deg,
+    #ff4b4b,
+    #ff9f1c,
+    #fff35a,
+    #4cd964,
+    #38d9ff,
+    #4c6ef5,
+    #b36bff,
+    #ff4b4b
+  );
+  background-size: 300% 300%;
+  animation: rainbow-border-flow 14s linear infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-green-custom {
+    background-color: var(--green-custom);
+  }
+
+  .bg-green-custom:hover {
+    background-color: var(--green-custom-hover);
+  }
+
+  .border-green-custom {
+    border-color: var(--green-custom);
+  }
+
+  .focus\:border-green-custom:focus {
+    border-color: var(--green-custom);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--green-custom) 60%, transparent);
+  }
+}
+
+/* ============================================================
+   GLOBAL THEME BRIDGE (forms, lists, tables across the app)
+   Only active when `.dark` is applied to the root element
+   ============================================================ */
+
+.dark body,
+.dark .app-shell,
+.dark .admin-shell {
+  background: var(--admin-surface) !important;
+  color: var(--admin-text) !important;
+}
+
+.dark .themed-card,
+.dark .bg-white,
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-indigo-50,
+.dark .bg-white\/90,
+.dark .bg-white\/80,
+.dark .bg-white\/70,
+.dark .p-component,
+.dark .p-card,
+.dark .p-dialog,
+.dark .p-sidebar,
+.dark .p-panel,
+.dark .p-toast {
+  background: var(--admin-surfaceAlt) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+  box-shadow: var(--admin-cardShadow) !important;
+}
+
+.dark .text-gray-700,
+.dark .text-gray-800,
+.dark .text-black,
+.dark .text-slate-700,
+.dark .text-slate-800,
+.dark .text-slate-900,
+.dark .text-slate-950,
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark label,
+.dark .p-component label {
+  color: var(--admin-text) !important;
+}
+
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-slate-500,
+.dark .text-slate-600,
+.dark .p-muted,
+.dark .text-muted-foreground,
+.dark .p-text-secondary,
+.dark .p-subheader {
+  color: var(--admin-mutedText) !important;
+}
+
+.dark .border,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .p-inputtext,
+.dark .p-dropdown,
+.dark .p-multiselect,
+.dark .p-inputnumber,
+.dark .p-fieldset,
+.dark .p-panel,
+.dark .p-datatable,
+.dark .p-table,
+.dark .p-dialog,
+.dark .p-sidebar {
+  border-color: var(--admin-border) !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select,
+.dark .p-inputtext,
+.dark .p-dropdown,
+.dark .p-multiselect,
+.dark .p-inputnumber,
+.dark .p-autocomplete-input,
+.dark .p-calendar input {
+  background: var(--admin-surfaceMuted) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.dark .p-datatable,
+.dark .p-datatable-header,
+.dark .p-datatable-wrapper,
+.dark .p-datatable .p-datatable-thead > tr > th,
+.dark .p-datatable .p-datatable-tbody > tr,
+.dark .p-datatable .p-datatable-tfoot > tr,
+.dark .p-datatable .p-paginator,
+.dark .p-table,
+.dark .p-gridtable {
+  background: var(--admin-surfaceAlt) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.dark .p-datatable .p-datatable-tbody > tr:nth-child(even) {
+  background: var(--admin-surfaceMuted) !important;
+}
+
+.dark .p-button,
+.dark .bg-green-custom,
+.dark .btn-primary,
+.dark .p-chip {
+  background-image: linear-gradient(135deg, var(--admin-primary), var(--admin-accent));
+  border: none;
+  color: #fff !important;
+}
+
+.dark .p-button.p-button-text,
+.dark .p-button.p-button-outlined,
+.dark .btn-outline,
+.dark .fuel-outline-btn,
+.dark .text-blue-600,
+.dark .text-red-600,
+.dark .bg-red-400,
+.dark .bg-red-500 {
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+  background: transparent !important;
+}
+
+.dark .shadow,
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  box-shadow: var(--admin-cardShadow) !important;
+}
+
+.dark .swal2-popup,
+.dark .p-dialog,
+.dark .p-confirm-dialog,
+.dark .p-sidebar {
+  background: var(--admin-surfaceAlt) !important;
+  color: var(--admin-text) !important;
+}

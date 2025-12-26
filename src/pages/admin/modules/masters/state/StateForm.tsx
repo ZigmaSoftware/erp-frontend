@@ -1,0 +1,409 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Swal from "sweetalert2";
+import ComponentCard from "@/components/common/ComponentCard";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { encryptSegment } from "@/utils/routeCrypto";
+
+import { continentApi, countryApi, stateApi } from "@/helpers/admin";
+
+
+const encMasters = encryptSegment("masters");
+const encStates = encryptSegment("states");
+const ENC_LIST_PATH = `/${encMasters}/${encStates}`;
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
+type CountryMeta = {
+  id: string;
+  name: string;
+  continentId: string | null;
+  isActive: boolean;
+};
+
+type StateRecord = {
+  name: string;
+  label: string;
+  is_active: boolean;
+  country_id: string | number;
+  continent_id: string | number;
+};
+
+
+type ErrorWithResponse = {
+  response?: {
+    data?: unknown;
+  };
+};
+
+
+const normalizeNullableId = (
+  value: string | number | null | undefined
+): string | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return String(value);
+};
+
+const extractErrorMessage = (error: unknown) => {
+  if (!error) {
+    return "Something went wrong while processing the request.";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  const withResponse = error as ErrorWithResponse;
+  const data = withResponse.response?.data;
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.join(", ");
+  }
+
+  if (data && typeof data === "object") {
+    return Object.entries(data as Record<string, unknown>)
+      .map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return `${key}: ${value.join(", ")}`;
+        }
+        return `${key}: ${String(value)}`;
+      })
+      .join("\n");
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Something went wrong while processing the request.";
+};
+
+function StateForm() {
+  const [name, setName] = useState("");
+  const [label, setLabel] = useState("");
+  const [isActive, setIsActive] = useState(true);
+
+  const [continentId, setContinentId] = useState<string>("");
+  const [countryId, setCountryId] = useState<string>("");
+  const [continents, setContinents] = useState<SelectOption[]>([]);
+
+  
+  const [pendingCountryId, setPendingCountryId] = useState<string>("");
+  const [allCountries, setAllCountries] = useState<CountryMeta[]>([]);
+  const [filteredCountries, setFilteredCountries] = useState<SelectOption[]>([]);
+
+  const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEdit = Boolean(id);
+
+  useEffect(() => {
+    const fetchContinents = async () => {
+      try {
+        const res = (await continentApi.list()) as {
+          unique_id: string | number;
+          name: string;
+          is_active: boolean;
+        }[];
+
+        const activeContinents = res
+          .filter((continent) => continent.is_active)
+          .map((continent) => ({
+            value: String(continent.unique_id),
+            label: continent.name,
+          }));
+
+
+        setContinents(activeContinents);
+      } catch (error) {
+        console.error("Error fetching continents:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Failed to fetch continents",
+          text: extractErrorMessage(error),
+        });
+      }
+    };
+
+    void fetchContinents();
+  }, []);
+
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const data = (await countryApi.list()) as {
+          unique_id: string | number;
+          name: string;
+          continent_id?: string | number | null;
+          continent?: string | number | null;
+          is_active: boolean;
+        }[];
+
+        const normalized: CountryMeta[] = data.map((country) => ({
+          id: String(country.unique_id),
+          name: country.name,
+          continentId: normalizeNullableId(
+            country.continent_id ?? country.continent
+          ),
+          isActive: Boolean(country.is_active),
+        }));
+
+        setAllCountries(normalized);
+      } catch (error) {
+        console.error("Error fetching countries:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Failed to fetch countries",
+          text: extractErrorMessage(error),
+        });
+      }
+    };
+
+    void fetchCountries();
+  }, []);
+
+  useEffect(() => {
+    if (!continentId) {
+      setFilteredCountries([]);
+      if (!pendingCountryId) {
+        setCountryId("");
+      }
+      return;
+    }
+
+    const filtered = allCountries
+      .filter(
+        (country) => country.isActive && country.continentId === continentId
+      )
+      .map<SelectOption>((country) => ({
+        value: country.id,
+        label: country.name,
+      }));
+
+    setFilteredCountries(filtered);
+    setCountryId((prev) =>
+      filtered.some((option) => option.value === prev) ? prev : ""
+    );
+  }, [continentId, allCountries, pendingCountryId]);
+
+  // EDIT MODE → FETCH DATA
+  useEffect(() => {
+    if (!isEdit || !id) return;
+    if (allCountries.length === 0) return;
+
+    const fetchState = async () => {
+      try {
+        const data = (await stateApi.get(id)) as StateRecord;
+
+        setName(data.name ?? "");
+        setLabel(data.label ?? "");
+        setIsActive(Boolean(data.is_active));
+
+        const cId = String(data.country_id);
+        const contId = String(data.continent_id);
+
+        // Set first
+        setContinentId(contId);
+        setPendingCountryId(cId);
+
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Failed to load state",
+          text: extractErrorMessage(error),
+        });
+      }
+    };
+
+    fetchState();
+  }, [isEdit, id, allCountries]);
+
+
+  // NEW IMPORTANT EFFECT → Set country AFTER filtering
+  useEffect(() => {
+    if (!pendingCountryId) return;
+    if (filteredCountries.length === 0) return;
+
+    const exists = filteredCountries.some(
+      (c) => c.value === pendingCountryId
+    );
+
+    if (exists) setCountryId(pendingCountryId);
+  }, [filteredCountries, pendingCountryId]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!continentId || !countryId || !name.trim() || !label.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Missing fields",
+        text: "Please fill all required fields.",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    const payload = {
+      name: name.trim(),
+      label: label.trim(),
+      country_id: countryId,
+      continent_id: continentId,
+      is_active: isActive,
+    };
+    console.log(payload)
+
+    try {
+      if (isEdit && id) {
+        await stateApi.update(id, payload);
+        Swal.fire({ icon: "success", title: "State updated successfully!" });
+      } else {
+        await stateApi.create(payload);
+        Swal.fire({ icon: "success", title: "State created successfully!" });
+      }
+
+      navigate(ENC_LIST_PATH);
+    } catch (error) {
+      console.error("Failed to save state:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Failed to save",
+        text: extractErrorMessage(error),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <ComponentCard title={isEdit ? "Edit State" : "Add State"}>
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <div>
+            <Label htmlFor="continent">
+              Continent <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={continentId}
+              onValueChange={(value) => setContinentId(value)}
+            >
+              <SelectTrigger className="input-validate w-full" id="continent">
+                <SelectValue placeholder="Select Continent" />
+              </SelectTrigger>
+
+              <SelectContent>
+                {continents.map((ct) => (
+                  <SelectItem key={ct.value} value={ct.value}>
+                    {ct.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="country">
+              Country <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={countryId}
+              disabled={!continentId || filteredCountries.length === 0}
+              onValueChange={(value) => setCountryId(value)}
+            >
+              <SelectTrigger className="input-validate w-full" id="country">
+                <SelectValue placeholder="Select Country" />
+              </SelectTrigger>
+
+              <SelectContent>
+                {filteredCountries.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="stateName">
+              State Name <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="stateName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter state"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="stateLabel">
+              Label <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="stateLabel"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Enter label"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="stateStatus">
+              Status <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={isActive ? "true" : "false"}
+              onValueChange={(v) => setIsActive(v === "true")}
+            >
+              <SelectTrigger className="input-validate w-full" id="stateStatus">
+                <SelectValue placeholder="Select Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <Button type="submit" disabled={loading}>
+            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => navigate(ENC_LIST_PATH)}
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </ComponentCard>
+  );
+}
+
+export default StateForm;
