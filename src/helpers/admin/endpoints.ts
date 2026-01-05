@@ -13,6 +13,8 @@ export const adminEndpoints = {
   cities: "masters/cities",
   zones: "masters/zones",
   wards: "masters/wards",
+  sites: "masters/sites",
+  plants: "masters/plants",
 
   /* =========================
      ASSETS

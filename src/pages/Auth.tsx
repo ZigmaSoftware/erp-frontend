@@ -78,9 +78,11 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      const loginBaseUrl = import.meta.env.VITE_API_LOGIN;
       const res = await desktopApi.post<LoginResponse>(
-        "/login/login-user/",
-        { username, password }
+        "login-user/",
+        { username, password },
+        { baseURL: loginBaseUrl }
       );
 
       const {

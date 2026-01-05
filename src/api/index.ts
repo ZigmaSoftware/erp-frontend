@@ -27,8 +27,7 @@ const createApi = (type: "desktop" | "mobile"): AxiosInstance => {
   api.interceptors.request.use((config) => {
     const token = localStorage.getItem("access_token");
 
-    const isLogin =
-      config.url?.includes("/login/login-user");
+    const isLogin = config.url?.includes("login-user");
 
     if (token && !isLogin) {
       config.headers = config.headers ?? {};
