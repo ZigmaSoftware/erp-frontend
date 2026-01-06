@@ -15,7 +15,7 @@ import DistrictForm from "@/pages/admin/modules/masters/district/DistrictForm";
 import CityList from "@/pages/admin/modules/masters/city/CityListPage";
 import CityForm from "@/pages/admin/modules/masters/city/CityForm";
 
-import StaffCreationList from "@/pages/admin/modules/masters/staffCreation/staffcreationlist";
+import StaffCreationList from "@/pages/admin/modules/masters/staffCreation/staffcreationList";
 import StaffCreationForm from "@/pages/admin/modules/masters/staffCreation/staffcreationForm";
 // Admin
 import UserTypeList from "@/pages/admin/modules/admin/userType/user-typeList";
@@ -34,6 +34,8 @@ import UserScreenList from "@/pages/admin/modules/admin/userScreen/userScreenLis
 import UserScreenForm from "@/pages/admin/modules/admin/userScreen/userScreenForm";
 import UserScreenPermissionForm from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionForm";
 import UserScreenPermissionList from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionList";
+import PlantList from "@/pages/admin/modules/masters/plantCreation/plancreationList";
+import PlantForm from "@/pages/admin/modules/masters/plantCreation/plantcreationForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -64,6 +66,7 @@ const ROUTES: RouteMap = {
     districts: { list: DistrictList, form: DistrictForm },
     cities: { list: CityList, form: CityForm },
     "staff-creation": { list: StaffCreationList, form: StaffCreationForm },
+    "plant-creation": {list: PlantList, form: PlantForm}
   },
 };
 
