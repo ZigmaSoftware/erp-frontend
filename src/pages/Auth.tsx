@@ -21,11 +21,18 @@ import BgImg from "../images/bgSignin.png";
 
 type LoginResponse = {
   access_token: string;
-  role: string;
-  unique_id: string;
+  refresh_token?: string;
+  expires_in?: number;
+  role?: string;
+  unique_id?: string;
   name?: string;
   username?: string;
   email?: string;
+  user?: {
+    id?: number | string;
+    username?: string;
+    groups?: string[];
+  };
 };
 
 const DUMMY_ACCESS_TOKEN =
@@ -50,7 +57,7 @@ const RND_PROFILES: Record<
 export default function Auth() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // ✅ added
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -78,32 +85,50 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const loginBaseUrl = import.meta.env.VITE_API_LOGIN;
-      const res = await desktopApi.post<LoginResponse>(
-        "login-user/",
-        { username, password },
-        { baseURL: loginBaseUrl }
-      );
+      const loginUrl = import.meta.env.VITE_API_LOGIN;
+      const res = await desktopApi.post<LoginResponse>(loginUrl, {
+        username,
+        password,
+      });
 
       const {
         access_token,
+        refresh_token,
         role,
         unique_id,
         name,
         username: apiUsername,
         email,
+        user,
       } = res.data;
 
-      const normalizedRole = normalizeRole(role) ?? ADMIN_ROLE;
+      const groups = Array.isArray(user?.groups) ? user?.groups : [];
+      const roleFromGroups = groups
+        .map((group) => normalizeRole(group))
+        .find((group): group is UserRole => Boolean(group));
+      const normalizedRole = normalizeRole(role) ?? roleFromGroups ?? ADMIN_ROLE;
+      const resolvedUniqueId =
+        unique_id ?? (user?.id != null ? String(user.id) : "");
+      const resolvedUsername =
+        user?.username ?? apiUsername ?? username;
 
       localStorage.setItem("access_token", access_token);
-      localStorage.setItem(USER_ROLE_STORAGE_KEY, ADMIN_ROLE);
-      localStorage.setItem("unique_id", unique_id);
+      if (refresh_token) {
+        localStorage.setItem("refresh_token", refresh_token);
+      } else {
+        localStorage.removeItem("refresh_token");
+      }
+      localStorage.setItem(USER_ROLE_STORAGE_KEY, normalizedRole);
+      if (resolvedUniqueId) {
+        localStorage.setItem("unique_id", resolvedUniqueId);
+      } else {
+        localStorage.removeItem("unique_id");
+      }
 
       await Promise.resolve();
 
       setUser({
-        name: name ?? apiUsername ?? username,
+        name: name ?? resolvedUsername,
         email: email ?? "",
       });
 

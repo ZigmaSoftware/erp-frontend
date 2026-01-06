@@ -32,6 +32,7 @@ export default function UserDropdown() {
   function handleSignOut() {
     closeDropdown();
     localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_role");
     localStorage.removeItem("unique_id");
     localStorage.removeItem("user_name");

@@ -7,6 +7,7 @@ const IS_PROD = import.meta.env.VITE_PROD === "true";
 const API_ROOT = IS_PROD
   ? import.meta.env.VITE_API_PROD
   : import.meta.env.VITE_API_LOCAL;
+const LOGIN_ENDPOINT = import.meta.env.VITE_API_LOGIN;
 
 /* --------------------------------------------------------
    CREATE INSTANCE
@@ -27,7 +28,10 @@ const createApi = (type: "desktop" | "mobile"): AxiosInstance => {
   api.interceptors.request.use((config) => {
     const token = localStorage.getItem("access_token");
 
-    const isLogin = config.url?.includes("login-user");
+    const isLogin =
+      (LOGIN_ENDPOINT && config.url?.startsWith(LOGIN_ENDPOINT)) ||
+      config.url?.includes("/auth/login") ||
+      config.url?.includes("login-user");
 
     if (token && !isLogin) {
       config.headers = config.headers ?? {};
