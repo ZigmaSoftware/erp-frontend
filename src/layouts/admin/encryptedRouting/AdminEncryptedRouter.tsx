@@ -14,6 +14,8 @@ import DistrictList from "@/pages/admin/modules/masters/district/DistrictListPag
 import DistrictForm from "@/pages/admin/modules/masters/district/DistrictForm";
 import CityList from "@/pages/admin/modules/masters/city/CityListPage";
 import CityForm from "@/pages/admin/modules/masters/city/CityForm";
+import SiteCreationList from "@/pages/admin/modules/masters/siteCreation/siteCreationList";
+import SiteCreationForm from "@/pages/admin/modules/masters/siteCreation/siteCreationForm";
 
 import StaffCreationList from "@/pages/admin/modules/masters/staffCreation/staffcreationlist";
 import StaffCreationForm from "@/pages/admin/modules/masters/staffCreation/staffcreationForm";
@@ -63,6 +65,7 @@ const ROUTES: RouteMap = {
     states: { list: StateList, form: StateForm },
     districts: { list: DistrictList, form: DistrictForm },
     cities: { list: CityList, form: CityForm },
+    "site-creation": { list: SiteCreationList, form: SiteCreationForm },
     "staff-creation": { list: StaffCreationList, form: StaffCreationForm },
   },
 };
