@@ -48,6 +48,7 @@ export type EncryptedRoutes = {
   encUserScreenAction: string;
   encMainScreen: string;
   encUserScreen: string;
+  encPlantCreation: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -77,6 +78,7 @@ const plainRoutes: EncryptedRoutes = {
   encSubProperties: "sub-properties",
   encTripSummary: "trip-summary",
   encUserCreation: "user-creation",
+  encPlantCreation: "plant-creation",
 
   encUserType: "user-type",
   encVehicleCreation: "vehicle-creation",

@@ -39,6 +39,7 @@ export function getAdminNavigation(): AdminNavConfig {
     encMainScreen,
     encUserScreen,
     encUserScreenPermission,
+    encPlantCreation
   } = getEncryptedRoute();
 
   const home: NavItem[] = [
@@ -74,6 +75,7 @@ export function getAdminNavigation(): AdminNavConfig {
         { name: "City", path: `/${encMasters}/${encCities}` },
         { name: "Site Creation", path: `/${encMasters}/${encSiteCreation}` },
         { name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` },
+        { name: "Plant Creation", path: `/${encMasters}/${encPlantCreation}`}
       ],
     },
   ];
