@@ -1,76 +1,65 @@
 /* --------------------------------------------------------
-   Admin endpoint registry (Grouped)
+   Base prefixes
+-------------------------------------------------------- */
+const MASTER_BASE = "masters";
+const ASSET_BASE = "assets";
+const SCREEN_BASE = "screen-management";
+const ROLE_BASE = "role-assign";
+const USER_BASE = "user-creation";
+const CUSTOMER_BASE = "customers";
+const VEHICLE_BASE = "vehicles";
+
+/* --------------------------------------------------------
+   Admin endpoint registry
 -------------------------------------------------------- */
 export const adminEndpoints = {
-  /* =========================
-     MASTERS
-  ========================= */
-  continents: "masters/continents",
-  countries: "masters/countries",
-  bins: "masters/bins",
-  states: "masters/states",
-  districts: "masters/districts",
-  cities: "masters/cities",
-  zones: "masters/zones",
-  wards: "masters/wards",
-  sites: "masters/sites",
-  plants: "masters/plants",
+  /* MASTERS */
+  continents: `${MASTER_BASE}/continents/`,
+  countries: `${MASTER_BASE}/countries/`,
+  bins: `${MASTER_BASE}/bins/`,
+  states: `${MASTER_BASE}/states/`,
+  districts: `${MASTER_BASE}/districts/`,
+  cities: `${MASTER_BASE}/cities/`,
+  zones: `${MASTER_BASE}/zones/`,
+  wards: `${MASTER_BASE}/wards/`,
+  sites: `${MASTER_BASE}/sites/`,
+  plants: `${MASTER_BASE}/plants/`,
 
-  /* =========================
-     ASSETS
-  ========================= */
-  fuels: "assets/fuels",
-  properties: "assets/properties",
-  subProperties: "assets/subproperties",
+  /* ASSETS */
+  fuels: `${ASSET_BASE}/fuels/`,
+  properties: `${ASSET_BASE}/properties/`,
+  subProperties: `${ASSET_BASE}/subproperties/`,
 
-  /* =========================
-     SCREEN MANAGEMENT
-  ========================= */
-  mainscreentype: "screen-management/mainscreentype",
-  mainscreens: "screen-management/mainscreens",
-  userscreens: "screen-management/userscreens",
-  userscreenaction: "screen-management/userscreen-action",
-  userscreenpermissions: "screen-management/userscreenpermissions",
+  /* SCREEN MANAGEMENT */
+  mainscreentype: `${SCREEN_BASE}/mainscreentype/`,
+  mainscreens: `${SCREEN_BASE}/mainscreens/`,
+  userscreens: `${SCREEN_BASE}/userscreens/`,
+  userscreenaction: `${SCREEN_BASE}/userscreen-action/`,
+  userscreenpermissions: `${SCREEN_BASE}/userscreenpermissions/`,
 
-  /* =========================
-     ROLE ASSIGNMENT
-  ========================= */
-  userTypes: "role-assign/user-type",
-  staffUserTypes: "role-assign/staffusertypes",
+  /* ROLE ASSIGNMENT */
+  userTypes: `${ROLE_BASE}/user-type/`,
+  staffUserTypes: `${ROLE_BASE}/staffusertypes/`,
 
-  /* =========================
-     USER CREATION
-  ========================= */
-  usercreations: "user-creation/users-creation",
-  staffCreation: "user-creation/staffcreation",
+  /* USER CREATION */
+  usercreations: `${USER_BASE}/users-creation/`,
+  staffCreation: `${USER_BASE}/staffcreation/`,
 
-  /* =========================
-     Login
-  ========================= */
-  
-  loginUser: "login/login-user",
+  /* CUSTOMERS */
+  customerCreations: `${CUSTOMER_BASE}/customercreations/`,
+  wasteCollections: `${CUSTOMER_BASE}/wastecollections/`,
+  feedbacks: `${CUSTOMER_BASE}/feedbacks/`,
+  complaints: `${CUSTOMER_BASE}/complaints/`,
+  mainCategory: `${CUSTOMER_BASE}/main-category/`,
+  subCategory: `${CUSTOMER_BASE}/sub-category/`,
 
-  /* =========================
-     CUSTOMERS
-  ========================= */
-  customerCreations: "customers/customercreations",
-  wasteCollections: "customers/wastecollections",
-  feedbacks: "customers/feedbacks",
-  complaints: "customers/complaints",
-   mainCategory: "customers/main-category",
-   SubCategory: "customers/sub-category",
-  
-
-  /* =========================
-     VEHICLES
-  ========================= */
-  vehicleTypes: "vehicles/vehicle-type",
-  vehicleCreation: "vehicles/vehicle-creation",
+  /* VEHICLES */
+  vehicleTypes: `${VEHICLE_BASE}/vehicle-type/`,
+  vehicleCreation: `${VEHICLE_BASE}/vehicle-creation/`,
 } as const;
 
 export type AdminEntity = keyof typeof adminEndpoints;
 
 export const getAdminEndpointPath = (entity: AdminEntity): string => {
-  const path = adminEndpoints[entity];
-  return path.startsWith("/") ? path : `/${path}`;
+  return `/${adminEndpoints[entity]}`;
 };

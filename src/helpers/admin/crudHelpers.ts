@@ -1,12 +1,12 @@
 import type { AxiosRequestConfig } from "axios";
-import { desktopApi } from "@/api";
+import api from "@/api";
 
 /* -----------------------------------------
-   Normalize API path
+   Normalize API path (idempotent)
 ----------------------------------------- */
 const normalizePath = (path: string): string => {
-  const trimmed = path.replace(/^\/+/, "").replace(/\/+$/, "");
-  return `/${trimmed}/`;
+  const cleaned = path.replace(/^\/+/, "").replace(/\/+$/, "");
+  return `/${cleaned}/`;
 };
 
 /* -----------------------------------------
@@ -32,69 +32,60 @@ export type CrudHelpers<T = any> = {
 /* -----------------------------------------
    Factory
 ----------------------------------------- */
-export const createCrudHelpers = <T = any>(basePath: string): CrudHelpers<T> => {
+export const createCrudHelpers = <T = any>(
+  basePath: string
+): CrudHelpers<T> => {
   const resource = normalizePath(basePath);
 
   return {
-    /* ---------------------------
-       LIST
-    ---------------------------- */
     list: async (config) => {
-      const { data } = await desktopApi.get<T[]>(resource, config);
+      const { data } = await api.get<T[]>(resource, config);
       return data;
     },
 
-    /* ---------------------------
-       GET (Supports PATH PARAMS)
-       Examples:
-       get(5) → /resource/5/
-       get("abc") → /resource/abc/
-       get("by-staff-format/?...") → /resource/by-staff-format/?...
-    ---------------------------- */
     get: async (path, config) => {
-      let url: string;
+      const isRaw =
+        typeof path === "string" &&
+        (path.includes("/") || path.includes("?"));
 
-      // If "path" contains "/" or "?", treat as RAW PATH
-      if (typeof path === "string" && (path.includes("/") || path.includes("?"))) {
-        url = `${resource}${path}`;
-      } else {
-        url = `${resource}${path}/`;
-      }
+      const url = isRaw
+        ? `${resource}${path}`
+        : `${resource}${path}/`;
 
-      const { data } = await desktopApi.get<T>(url, config);
+      const { data } = await api.get<T>(url, config);
       return data;
     },
 
     create: async (payload, config) => {
-      const { data } = await desktopApi.post<T>(resource, payload, config);
+      const { data } = await api.post<T>(resource, payload, config);
       return data;
     },
 
     update: async (id, payload, config) => {
-      // Use PATCH so partial payloads (e.g., status toggles) work with ModelViewSet
-      const { data } = await desktopApi.patch<T>(`${resource}${id}/`, payload, config);
+      const { data } = await api.patch<T>(
+        `${resource}${id}/`,
+        payload,
+        config
+      );
       return data;
     },
 
     remove: async (id, config) => {
-      await desktopApi.delete(`${resource}${id}/`, config);
+      await api.delete(`${resource}${id}/`, config);
     },
 
-    /* ---------------------------
-       CUSTOM ACTION
-       action("bulk-sync-multi/123", payload)
-       → POST /resource/bulk-sync-multi/123/
-    ---------------------------- */
     action: async (action, payload, config) => {
-      const endsWithSlash = action.endsWith("/");
-      const url = `${resource}${action}${endsWithSlash ? "" : "/"}`;
+      const cleanAction = action.replace(/^\/+/, "");
+      const url = `${resource}${cleanAction}${
+        cleanAction.endsWith("/") ? "" : "/"
+      }`;
 
       if (payload) {
-        const { data } = await desktopApi.post(url, payload, config);
+        const { data } = await api.post(url, payload, config);
         return data;
       }
 
-      const { data } = await desktopApi.get(url, config);
+      const { data } = await api.get(url, config);
       return data;
     },
   };
