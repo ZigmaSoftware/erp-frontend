@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { desktopApi } from "@/api";
+import api from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,7 +86,7 @@ export default function Auth() {
 
     try {
       const loginUrl = import.meta.env.VITE_API_LOGIN;
-      const res = await desktopApi.post<LoginResponse>(loginUrl, {
+      const res = await api.post<LoginResponse>(loginUrl, {
         username,
         password,
       });

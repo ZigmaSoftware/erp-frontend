@@ -15,11 +15,7 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
-import {
-  getPlantById,
-  updatePlant,
-  addPlant,
-} from "@/utils/plantsStorage";
+import { plantApi } from "@/helpers/admin";
 
 const encMasters = encryptSegment("masters");
 const encPlantCreation = encryptSegment("plant-creation");
@@ -27,7 +23,7 @@ const ENC_LIST_PATH = `/${encMasters}/${encPlantCreation}`;
 
 function PlantForm() {
   const [plantName, setPlantName] = useState("");
-  const [siteName, setSiteName] = useState("");
+  const [site, setSite] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -35,69 +31,76 @@ function PlantForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
 
-  /** Load plant for edit */
+  // ---------------------------
+  // Load plant (EDIT)
+  // ---------------------------
   useEffect(() => {
-    if (isEdit && id) {
-      const plant = getPlantById(id);
+    if (!isEdit || !id) return;
 
-      if (!plant) {
+    const fetchPlant = async () => {
+      try {
+        setLoading(true);
+
+        const res = await plantApi.get(id);
+        const plant = res?.data ?? res;
+
+        setPlantName(plant.plant_name);
+        setSite(plant.site);
+        setIsActive(plant.is_active);
+      } catch (err) {
         Swal.fire("Error", "Plant not found", "error");
         navigate(ENC_LIST_PATH);
-        return;
+      } finally {
+        setLoading(false);
       }
+    };
 
-      setPlantName(plant.plantName);
-      setSiteName(plant.siteName);
-      setIsActive(plant.is_active);
-    }
+    fetchPlant();
   }, [id, isEdit, navigate]);
 
-  /** Save / Update */
-  const handleSubmit = (e: React.FormEvent) => {
+  // ---------------------------
+  // Submit (CREATE / UPDATE)
+  // ---------------------------
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!plantName || !siteName) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "Please fill all required fields.",
-      });
+    if (!plantName || !site) {
+      Swal.fire("Warning", "All fields are required", "warning");
       return;
     }
 
-    setLoading(true);
+    const payload = {
+      plant_name: plantName,
+      site,
+      is_active: isActive,
+    };
 
     try {
+      setLoading(true);
+
       if (isEdit && id) {
-        updatePlant(id, {
-          plantName,
-          siteName,
-          is_active: isActive,
-        });
+        await plantApi.update(id, payload);
 
         Swal.fire({
           icon: "success",
-          title: "Updated successfully!",
+          title: "Updated successfully",
           timer: 1500,
           showConfirmButton: false,
         });
       } else {
-        addPlant({
-          unique_id: Date.now().toString(),
-          plantName,
-          siteName,
-          is_active: isActive,
-        });
+        await plantApi.create(payload);
 
         Swal.fire({
           icon: "success",
-          title: "Added successfully!",
+          title: "Added successfully",
           timer: 1500,
           showConfirmButton: false,
         });
       }
 
       navigate(ENC_LIST_PATH);
+    } catch (err) {
+      Swal.fire("Error", "Save failed", "error");
     } finally {
       setLoading(false);
     }
@@ -121,31 +124,31 @@ function PlantForm() {
             />
           </div>
 
-          {/* Site Name */}
+          {/* Site */}
           <div>
-            <Label htmlFor="siteName">
-              Site Name <span className="text-red-500">*</span>
+            <Label htmlFor="site">
+              Site <span className="text-red-500">*</span>
             </Label>
             <Input
-              id="siteName"
-              value={siteName}
-              onChange={(e) => setSiteName(e.target.value)}
-              placeholder="Enter site name"
+              id="site"
+              value={site}
+              onChange={(e) => setSite(e.target.value)}
+              placeholder="Enter site id"
               required
             />
           </div>
 
-          {/* Active Status */}
+          {/* Status */}
           <div>
-            <Label htmlFor="isActive">
+            <Label>
               Active Status <span className="text-red-500">*</span>
             </Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(val) => setIsActive(val === "true")}
             >
-              <SelectTrigger id="isActive">
-                <SelectValue placeholder="Select status" />
+              <SelectTrigger>
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="true">Active</SelectItem>
