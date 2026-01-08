@@ -4,48 +4,41 @@ import axios, { type AxiosInstance } from "axios";
    ENV
 -------------------------------------------------------- */
 const IS_PROD = import.meta.env.VITE_PROD === "true";
+
 const API_ROOT = IS_PROD
   ? import.meta.env.VITE_API_PROD
-  : import.meta.env.VITE_API_LOCAL;
+  : import.meta.env.VITE_API_MASTERSERVICE;
+
 const LOGIN_ENDPOINT = import.meta.env.VITE_API_LOGIN;
 
 /* --------------------------------------------------------
-   CREATE INSTANCE
+   CREATE AXIOS INSTANCE
 -------------------------------------------------------- */
-const createApi = (type: "desktop" | "mobile"): AxiosInstance => {
-  const api = axios.create({
-    baseURL: `${API_ROOT}/${type}`,
-    withCredentials: type === "mobile",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-  });
-
-  /* ----------------------------------------------------
-      AUTH INTERCEPTOR (ATTACHED IMMEDIATELY)
-  ---------------------------------------------------- */
-  api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("access_token");
-
-    const isLogin =
-      (LOGIN_ENDPOINT && config.url?.startsWith(LOGIN_ENDPOINT)) ||
-      config.url?.includes("/auth/login") ||
-      config.url?.includes("login-user");
-
-    if (token && !isLogin) {
-      config.headers = config.headers ?? {};
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  });
-
-  return api;
-};
+const api: AxiosInstance = axios.create({
+  baseURL: API_ROOT,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
 
 /* --------------------------------------------------------
-   EXPORT SINGLETONS
+   AUTH INTERCEPTOR (SINGLE, CLEAN)
 -------------------------------------------------------- */
-export const desktopApi = createApi("desktop");
-export const mobileApi = createApi("mobile");
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("access_token");
+
+  const isLoginRequest =
+    config.url &&
+    LOGIN_ENDPOINT &&
+    config.url.startsWith(LOGIN_ENDPOINT);
+
+  if (token && !isLoginRequest) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+export default api;
