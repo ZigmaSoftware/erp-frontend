@@ -232,7 +232,7 @@ export default function StateList() {
           <Column
             field="label"
             header="Label"
-            body={(r) => r.label.toUpperCase()}
+            body={(r) => r.label}
             sortable
           />
           <Column header="Status" body={statusTemplate} />
