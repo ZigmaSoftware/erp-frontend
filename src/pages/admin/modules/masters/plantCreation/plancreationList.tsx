@@ -63,6 +63,7 @@ useEffect(() => {
       setLoading(true);
 
       const rawData = await plantApi.list(); //
+      console.log(rawData);
 
       const mappedPlants: Plant[] = rawData.map((item: any) => ({
         unique_id: item.unique_id,
@@ -208,7 +209,7 @@ useEffect(() => {
 
         <Column
           field="siteName"
-          header="Site Name"
+          header="Site ID"
           sortable
           style={{ minWidth: "200px" }}
         />
