@@ -1,5 +1,6 @@
-import type { FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import Swal from "sweetalert2";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { siteApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 type FieldConfig = {
@@ -29,6 +31,12 @@ type SectionConfig = {
   description?: string;
   fields: FieldConfig[];
 };
+
+type FormValues = Record<string, string>;
+
+type FileValues = Record<string, File | null>;
+
+const fileFieldNames = new Set(["verification_document", "document_view"]);
 
 const sections: SectionConfig[] = [
   {
@@ -259,20 +267,54 @@ const sections: SectionConfig[] = [
   },
 ];
 
-const renderField = (field: FieldConfig) => {
+const buildInitialFormData = () =>
+  sections.reduce<FormValues>((acc, section) => {
+    section.fields.forEach((field) => {
+      if (fileFieldNames.has(field.name)) {
+        acc[field.name] = "";
+        return;
+      }
+
+      if (field.as === "select") {
+        acc[field.name] = "";
+        return;
+      }
+
+      acc[field.name] = "";
+    });
+    return acc;
+  }, {});
+
+const buildInitialFileValues = () =>
+  Array.from(fileFieldNames).reduce<FileValues>((acc, key) => {
+    acc[key] = null;
+    return acc;
+  }, {});
+
+const renderField = (
+  field: FieldConfig,
+  value: string,
+  onChange: (name: string, value: string) => void,
+  onFileChange: (name: string, file: File | null) => void
+) => {
   if (field.as === "textarea") {
     return (
       <Textarea
         id={field.name}
         name={field.name}
         placeholder={field.placeholder}
+        value={value}
+        onChange={(event) => onChange(field.name, event.target.value)}
       />
     );
   }
 
   if (field.as === "select") {
     return (
-      <Select>
+      <Select
+        value={value === "" ? undefined : value}
+        onValueChange={(nextValue) => onChange(field.name, nextValue)}
+      >
         <SelectTrigger id={field.name}>
           <SelectValue placeholder="Select" />
         </SelectTrigger>
@@ -287,6 +329,19 @@ const renderField = (field: FieldConfig) => {
     );
   }
 
+  if (field.type === "file") {
+    return (
+      <Input
+        id={field.name}
+        name={field.name}
+        type="file"
+        onChange={(event) =>
+          onFileChange(field.name, event.target.files?.[0] ?? null)
+        }
+      />
+    );
+  }
+
   return (
     <Input
       id={field.name}
@@ -294,19 +349,181 @@ const renderField = (field: FieldConfig) => {
       type={field.type ?? "text"}
       placeholder={field.placeholder}
       step={field.step}
+      value={value}
+      onChange={(event) => onChange(field.name, event.target.value)}
     />
   );
 };
 
 export default function SiteCreationForm() {
+  const [formData, setFormData] = useState<FormValues>(() =>
+    buildInitialFormData()
+  );
+  const [fileInputs, setFileInputs] = useState<FileValues>(() =>
+    buildInitialFileValues()
+  );
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+
+  const numericFields = useMemo(() => {
+    const names = new Set<string>();
+    sections.forEach((section) => {
+      section.fields.forEach((field) => {
+        if (field.type === "number") {
+          names.add(field.name);
+        }
+      });
+    });
+    return names;
+  }, []);
+
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const { encMasters, encSiteCreation } = getEncryptedRoute();
   const ENC_LIST_PATH = `/${encMasters}/${encSiteCreation}`;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!isEdit || !id) return;
+
+    const fetchSite = async () => {
+      try {
+        setFetching(true);
+        const site = await siteApi.get(id);
+
+        setFormData((prev) => {
+          const next = { ...prev };
+          Object.keys(prev).forEach((key) => {
+            if (fileFieldNames.has(key)) return;
+
+            if (key === "status") {
+              if (typeof site?.status === "string") {
+                next.status = site.status;
+                return;
+              }
+
+              if (typeof site?.is_active === "boolean") {
+                next.status = site.is_active ? "Active" : "Inactive";
+                return;
+              }
+            }
+
+            const value = site?.[key];
+            next[key] = value === null || value === undefined ? "" : String(value);
+          });
+
+          return next;
+        });
+      } catch (error) {
+        console.error("Failed to load site", error);
+        Swal.fire("Error", "Site not found", "error");
+        navigate(ENC_LIST_PATH);
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    fetchSite();
+  }, [ENC_LIST_PATH, id, isEdit, navigate]);
+
+  const handleChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (name: string, file: File | null) => {
+    setFileInputs((prev) => ({ ...prev, [name]: file }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const payload = Object.entries(formData).reduce<Record<string, unknown>>(
+      (acc, [key, value]) => {
+        if (fileFieldNames.has(key)) {
+          return acc;
+        }
+
+        if (numericFields.has(key)) {
+          if (value === "") {
+            acc[key] = "";
+            return acc;
+          }
+
+          const parsed = Number(value);
+          acc[key] = Number.isNaN(parsed) ? value : parsed;
+          return acc;
+        }
+
+        acc[key] = value;
+        return acc;
+      },
+      {}
+    );
+
+    const hasFiles = Object.values(fileInputs).some((file) => file);
+
+    try {
+      setLoading(true);
+
+      if (hasFiles) {
+        const formBody = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value === undefined || value === null || value === "") return;
+          formBody.append(key, String(value));
+        });
+
+        Object.entries(fileInputs).forEach(([key, file]) => {
+          if (file) {
+            formBody.append(key, file);
+          }
+        });
+
+        const multipartConfig = {
+          headers: { "Content-Type": "multipart/form-data" },
+        };
+
+        if (isEdit && id) {
+          await siteApi.update(id, formBody, multipartConfig);
+          Swal.fire({
+            icon: "success",
+            title: "Updated successfully",
+            timer: 1500,
+            showConfirmButton: false,
+          });
+        } else {
+          await siteApi.create(formBody, multipartConfig);
+          Swal.fire({
+            icon: "success",
+            title: "Added successfully",
+            timer: 1500,
+            showConfirmButton: false,
+          });
+        }
+      } else if (isEdit && id) {
+        await siteApi.update(id, payload);
+        Swal.fire({
+          icon: "success",
+          title: "Updated successfully",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } else {
+        await siteApi.create(payload);
+        Swal.fire({
+          icon: "success",
+          title: "Added successfully",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      }
+
+      navigate(ENC_LIST_PATH);
+    } catch (error) {
+      console.error("Save failed", error);
+      Swal.fire("Error", "Save failed", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -346,10 +563,18 @@ export default function SiteCreationForm() {
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {section.fields.map((field) => (
                 <div key={field.name} className="flex flex-col gap-2">
-                  <Label htmlFor={field.name} className="text-xs font-semibold text-gray-700">
+                  <Label
+                    htmlFor={field.name}
+                    className="text-xs font-semibold text-gray-700"
+                  >
                     {field.label}
                   </Label>
-                  {renderField(field)}
+                  {renderField(
+                    field,
+                    formData[field.name] ?? "",
+                    handleChange,
+                    handleFileChange
+                  )}
                 </div>
               ))}
             </div>
@@ -357,11 +582,14 @@ export default function SiteCreationForm() {
         ))}
 
         <div className="flex flex-wrap gap-3">
-          <Button type="submit">{isEdit ? "Update" : "Save"}</Button>
+          <Button type="submit" disabled={loading || fetching}>
+            {loading ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update" : "Save"}
+          </Button>
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate(ENC_LIST_PATH)}
+            disabled={loading}
           >
             Cancel
           </Button>
