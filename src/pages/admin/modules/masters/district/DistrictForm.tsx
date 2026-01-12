@@ -13,12 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
-
+import type { SelectOption } from "@/types/forms";
 
 import { continentApi, countryApi, stateApi, districtApi } from "@/helpers/admin";
 
-
-type SelectOption = { value: string; label: string };
 
 type CountryMeta = {
   id: string;

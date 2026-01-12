@@ -23,7 +23,7 @@ const ENC_LIST_PATH = `/${encMasters}/${encPlantCreation}`;
 
 function PlantForm() {
   const [plantName, setPlantName] = useState("");
-  const [site, setSite] = useState("");
+  const [siteId, setSiteId] = useState("");
   const [siteOptions, setSiteOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
@@ -44,9 +44,10 @@ function PlantForm() {
         const options = (res as any[])
           .filter((item) => item?.site_name)
           .map((item) => ({
-            value: String(item.unique_id ?? item.id ?? item.site_name),
+            value: String(item.unique_id),
             label: item.site_name,
           }));
+
         setSiteOptions(options);
       } catch (err) {
         console.error("Failed to load sites", err);
@@ -56,18 +57,8 @@ function PlantForm() {
     fetchSites();
   }, []);
 
-  useEffect(() => {
-    if (!site || siteOptions.length === 0) return;
-    const directMatch = siteOptions.some((opt) => opt.value === site);
-    if (directMatch) return;
-    const labelMatch = siteOptions.find((opt) => opt.label === site);
-    if (labelMatch) {
-      setSite(labelMatch.value);
-    }
-  }, [site, siteOptions]);
-
   // ---------------------------
-  // Load plant (EDIT)
+  // Load plant (EDIT MODE)
   // ---------------------------
   useEffect(() => {
     if (!isEdit || !id) return;
@@ -80,7 +71,7 @@ function PlantForm() {
         const plant = res?.data ?? res;
 
         setPlantName(plant.plant_name);
-        setSite(String(plant.site ?? ""));
+        setSiteId(String(plant.site_id));
         setIsActive(plant.is_active);
       } catch (err) {
         Swal.fire("Error", "Plant not found", "error");
@@ -99,14 +90,14 @@ function PlantForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!plantName || !site) {
+    if (!plantName || !siteId) {
       Swal.fire("Warning", "All fields are required", "warning");
       return;
     }
 
     const payload = {
       plant_name: plantName,
-      site,
+      site_id: siteId,
       is_active: isActive,
     };
 
@@ -115,7 +106,6 @@ function PlantForm() {
 
       if (isEdit && id) {
         await plantApi.update(id, payload);
-
         Swal.fire({
           icon: "success",
           title: "Updated successfully",
@@ -124,7 +114,6 @@ function PlantForm() {
         });
       } else {
         await plantApi.create(payload);
-
         Swal.fire({
           icon: "success",
           title: "Added successfully",
@@ -164,7 +153,7 @@ function PlantForm() {
             <Label htmlFor="site">
               Site <span className="text-red-500">*</span>
             </Label>
-            <Select value={site} onValueChange={setSite}>
+            <Select value={siteId} onValueChange={setSiteId}>
               <SelectTrigger id="site">
                 <SelectValue placeholder="Select site" />
               </SelectTrigger>
