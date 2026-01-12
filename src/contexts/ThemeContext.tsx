@@ -28,39 +28,52 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/* --------------------------------------------------------
+   🌿 PASTEL GREEN THEME
+-------------------------------------------------------- */
 const THEME_PALETTES: Record<Theme, ThemePalette> = {
   light: {
-    primary: "#013E7E",
-    primaryHover: "#0a4f99",
-    primarySoft: "#e3ecf8",
-    primaryGradient: "#013E7E",
-    accent: "#0a4f99",
-    accentHover: "#1166c1",
-    accentSoft: "#deebff",
-    surface: "#f2f6fb",
-    surfaceMuted: "#e7edf6",
+    primary: "#4CAF93",          // soft green
+    primaryHover: "#3f9e84",
+    primarySoft: "#e7f6f1",
+    primaryGradient: "#6bc4a8",
+    accent: "#6bc4a8",
+    accentHover: "#58b39a",
+    accentSoft: "#e3f5ef",
+    surface: "#f3fbf8",
+    surfaceMuted: "#eaf6f1",
     surfaceAlt: "#ffffff",
-    border: "#d6e6ff",
-    text: "#071731",
-    mutedText: "#55637b",
-    cardShadow: "0 15px 40px rgba(1, 62, 126, 0.18)",
+    border: "#cfe9df",
+    text: "#0f2f26",
+    mutedText: "#5f7f75",
+    cardShadow: "0 14px 35px rgba(76, 175, 147, 0.18)",
   },
-  dark: {
-    primary: "#2f63a8",
-    primaryHover: "#3e7ac7",
-    primarySoft: "rgba(1, 62, 126, 0.25)",
-    primaryGradient: "#013E7E",
-    accent: "#3e7ac7",
-    accentHover: "#5291e6",
-    accentSoft: "rgba(1, 62, 126, 0.35)",
-    surface: "#050b15",
-    surfaceMuted: "#0d1624",
-    surfaceAlt: "#0f1c31",
-    border: "#1f3554",
-    text: "#f3f8ff",
-    mutedText: "#97b3d6",
-    cardShadow: "0 25px 45px rgba(2, 8, 20, 0.85)",
-  },
+
+dark: {
+  primary: "#6fdcc0",           // mint accent (used sparingly)
+  primaryHover: "#8be6cd",
+  primarySoft: "rgba(111, 220, 192, 0.16)",
+  primaryGradient: "#54cfae",
+
+  accent: "#8be6cd",
+  accentHover: "#a6f0da",
+  accentSoft: "rgba(111, 220, 192, 0.22)",
+
+  // SURFACES — neutral, not green
+  surface: "#0f172a",           // deep slate (main bg)
+  surfaceMuted: "#162036",      // cards / header
+  surfaceAlt: "#1e293b",        // elevated panels
+
+  border: "#24324d",            // subtle cool border
+
+  // TEXT
+  text: "#e5f9f2",              // soft white
+  mutedText: "#9fcfc2",
+
+  // SHADOW
+  cardShadow: "0 18px 40px rgba(0, 0, 0, 0.55)",
+},
+
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

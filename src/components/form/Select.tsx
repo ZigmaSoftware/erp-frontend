@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import {
   Select as ShadSelect,
   SelectContent,
@@ -8,10 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type SelectOption = {
-  value: string | number;
-  label: ReactNode;
-};
+import type { SelectOption } from "@/types/forms";
 
 interface SelectProps {
   id?: string;

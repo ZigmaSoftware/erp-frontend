@@ -30,15 +30,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-
-/* =======================
-   TYPES
-   ======================= */
-type SelectOption = {
-  value: string;
-  label: string;
-};
-
+import type { SelectOption } from "@/types/forms";
 /* =======================
    ROUTES
    ======================= */

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
@@ -11,6 +11,8 @@ import { plantApi } from "@/helpers/admin";
 import { Switch } from "@/components/ui/switch";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { PencilIcon } from "@/icons";
+import { extractErrorMessage } from "@/utils/errorUtils";
+
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -19,7 +21,7 @@ import "primeicons/primeicons.css";
 /* --------------------------------------------------------
    TYPES
 -------------------------------------------------------- */
-type Plant = {
+type PlantRecord = {
   unique_id: string;
   plantName: string;
   siteName: string;
@@ -29,6 +31,7 @@ type Plant = {
 type TableFilters = {
   global: { value: string | null; matchMode: FilterMatchMode };
 };
+
 
 /* --------------------------------------------------------
    ROUTES
@@ -44,7 +47,7 @@ const ENC_EDIT_PATH = (id: string) =>
    COMPONENT
 -------------------------------------------------------- */
 export default function PlantList() {
-  const [plants, setPlants] = useState<Plant[]>([]);
+  const [plants, setPlants] = useState<PlantRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
 
@@ -55,34 +58,37 @@ export default function PlantList() {
   const navigate = useNavigate();
 
   /* --------------------------------------------------------
-     FETCH PLANTS
+     FETCH PLANTS (TEMPLATE APPLIED)
   -------------------------------------------------------- */
-useEffect(() => {
-  const fetchPlants = async () => {
+  const fetchPlants = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      const res = await plantApi.list();
+      const data = res as any[];
 
-      const rawData = await plantApi.list(); //
-      console.log(rawData);
-
-      const mappedPlants: Plant[] = rawData.map((item: any) => ({
+      const mapped: PlantRecord[] = data.map((item) => ({
         unique_id: item.unique_id,
         plantName: item.plant_name,
-        siteName: item.site,
+        siteName: item.site_name,
         is_active: item.is_active,
       }));
 
-      setPlants(mappedPlants);
+      mapped.sort((a, b) => a.plantName.localeCompare(b.plantName));
+      setPlants(mapped);
     } catch (error) {
-      console.error("Failed to load plants", error);
-      Swal.fire("Error", "Failed to load plants", "error");
+      Swal.fire({
+        icon: "error",
+        title: "Unable to load plants",
+        text: extractErrorMessage(error),
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  fetchPlants();
-}, []);
+  useEffect(() => {
+    fetchPlants();
+  }, [fetchPlants]);
 
   /* --------------------------------------------------------
      GLOBAL SEARCH
@@ -100,37 +106,24 @@ useEffect(() => {
   /* --------------------------------------------------------
      STATUS TOGGLE
   -------------------------------------------------------- */
-  const statusBodyTemplate = (row: Plant) => {
-    const updateStatus = async (checked: boolean) => {
-      try {
-        setPlants((prev) =>
-          prev.map((p) =>
-            p.unique_id === row.unique_id
-              ? { ...p, is_active: checked }
-              : p
-          )
-        );
-
-        // OPTIONAL API CALL
-        // await plantApi.update(row.unique_id, { is_active: checked });
-
-      } catch (error) {
-        Swal.fire("Error", "Failed to update status", "error");
-      }
-    };
-
-    return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
-    );
-  };
+  const statusBodyTemplate = (row: PlantRecord) => (
+    <Switch
+      checked={row.is_active}
+      onCheckedChange={async (value) => {
+        try {
+          await plantApi.update(row.unique_id, { is_active: value });
+          fetchPlants(); //  re-fetch (template style)
+        } catch (error) {
+          Swal.fire("Error", "Status update failed", "error");
+        }
+      }}
+    />
+  );
 
   /* --------------------------------------------------------
      ACTIONS
   -------------------------------------------------------- */
-  const actionBodyTemplate = (row: Plant) => (
+  const actionBodyTemplate = (row: PlantRecord) => (
     <div className="flex justify-center">
       <button
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
@@ -194,37 +187,11 @@ useEffect(() => {
         showGridlines
         className="p-datatable-sm"
       >
-        <Column
-          header="S.No"
-          body={indexTemplate}
-          style={{ width: "80px" }}
-        />
-
-        <Column
-          field="plantName"
-          header="Plant Name"
-          sortable
-          style={{ minWidth: "200px" }}
-        />
-
-        <Column
-          field="siteName"
-          header="Site ID"
-          sortable
-          style={{ minWidth: "200px" }}
-        />
-
-        <Column
-          header="Status"
-          body={statusBodyTemplate}
-          style={{ width: "150px", textAlign: "center" }}
-        />
-
-        <Column
-          header="Actions"
-          body={actionBodyTemplate}
-          style={{ width: "150px", textAlign: "center" }}
-        />
+        <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+        <Column field="plantName" header="Plant Name" sortable />
+        <Column field="siteName" header="Site Name" sortable />
+        <Column header="Status" body={statusBodyTemplate} style={{ textAlign: "center" }} />
+        <Column header="Actions" body={actionBodyTemplate} style={{ textAlign: "center" }} />
       </DataTable>
     </div>
   );
