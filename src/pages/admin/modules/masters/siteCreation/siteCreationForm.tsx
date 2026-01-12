@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -13,8 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { siteApi } from "@/helpers/admin";
+import { districtApi, siteApi, stateApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+
+/* ---------------- TYPES ---------------- */
 
 type FieldConfig = {
   label: string;
@@ -22,35 +24,67 @@ type FieldConfig = {
   type?: string;
   placeholder?: string;
   as?: "textarea" | "select";
-  options?: string[];
+  options?: Array<{ value: string; label: string }>;
   step?: string;
 };
 
 type SectionConfig = {
   title: string;
-  description?: string;
   fields: FieldConfig[];
 };
 
 type FormValues = Record<string, string>;
-
 type FileValues = Record<string, File | null>;
 
+/* ---------------- CONFIG ---------------- */
+
 const fileFieldNames = new Set(["verification_document", "document_view"]);
+
+const mapLocationOptions = (items: any[]) =>
+  (items ?? [])
+    .filter((item) => item?.name && item.is_active !== false)
+    .map((item) => ({
+      value: String(item.unique_id ?? item.id ?? item.name),
+      label: item.name,
+    }));
+
+const normalizeStatusLabel = (value: string) =>
+  value?.toLowerCase() === "active" ? "Active" : "Inactive";
+
+const resolveOptionValue = (
+  value: string,
+  options: Array<{ value: string; label: string }>
+) => {
+  if (!value) return "";
+  const direct = options.find((opt) => opt.value === value);
+  if (direct) return direct.value;
+  const byLabel = options.find((opt) => opt.label === value);
+  return byLabel ? byLabel.value : value;
+};
+
+const coerceString = (value: unknown) =>
+  value === null || value === undefined ? "" : String(value);
+
+const toNumberValue = (value: string) => (value === "" ? "" : Number(value));
+
+/* ---------------- SECTIONS ---------------- */
 
 const sections: SectionConfig[] = [
   {
     title: "Core Site & Location",
     fields: [
       { label: "Site Name", name: "site_name", placeholder: "Enter site name" },
-      { label: "State", name: "state", placeholder: "Enter state" },
-      { label: "District", name: "district", placeholder: "Enter district" },
+      { label: "State", name: "state_id", as: "select" },
+      { label: "District", name: "district_id", as: "select" },
       { label: "ULB", name: "ulb", placeholder: "Enter ULB" },
       {
         label: "Status",
         name: "status",
         as: "select",
-        options: ["Active", "Inactive"],
+        options: [
+          { value: "Active", label: "Active" },
+          { value: "Inactive", label: "Inactive" },
+        ],
       },
       {
         label: "Site Address",
@@ -267,19 +301,11 @@ const sections: SectionConfig[] = [
   },
 ];
 
+/* ---------------- HELPERS ---------------- */
+
 const buildInitialFormData = () =>
   sections.reduce<FormValues>((acc, section) => {
     section.fields.forEach((field) => {
-      if (fileFieldNames.has(field.name)) {
-        acc[field.name] = "";
-        return;
-      }
-
-      if (field.as === "select") {
-        acc[field.name] = "";
-        return;
-      }
-
       acc[field.name] = "";
     });
     return acc;
@@ -291,20 +317,24 @@ const buildInitialFileValues = () =>
     return acc;
   }, {});
 
+/* ---------------- FIELD RENDER ---------------- */
+
 const renderField = (
   field: FieldConfig,
   value: string,
   onChange: (name: string, value: string) => void,
-  onFileChange: (name: string, file: File | null) => void
+  onFileChange: (name: string, file: File | null) => void,
+  options?: Array<{ value: string; label: string }>
 ) => {
+  const safeValue = value ?? "";
+
   if (field.as === "textarea") {
     return (
       <Textarea
         id={field.name}
-        name={field.name}
+        value={safeValue}
         placeholder={field.placeholder}
-        value={value}
-        onChange={(event) => onChange(field.name, event.target.value)}
+        onChange={(e) => onChange(field.name, e.target.value)}
       />
     );
   }
@@ -312,16 +342,16 @@ const renderField = (
   if (field.as === "select") {
     return (
       <Select
-        value={value === "" ? undefined : value}
-        onValueChange={(nextValue) => onChange(field.name, nextValue)}
+        value={safeValue}
+        onValueChange={(v) => onChange(field.name, v)}
       >
         <SelectTrigger id={field.name}>
           <SelectValue placeholder="Select" />
         </SelectTrigger>
         <SelectContent>
-          {field.options?.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
+          {(options || field.options || []).map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
             </SelectItem>
           ))}
         </SelectContent>
@@ -333,10 +363,9 @@ const renderField = (
     return (
       <Input
         id={field.name}
-        name={field.name}
         type="file"
-        onChange={(event) =>
-          onFileChange(field.name, event.target.files?.[0] ?? null)
+        onChange={(e) =>
+          onFileChange(field.name, e.target.files?.[0] || null)
         }
       />
     );
@@ -345,122 +374,182 @@ const renderField = (
   return (
     <Input
       id={field.name}
-      name={field.name}
-      type={field.type ?? "text"}
+      type={field.type || "text"}
+      value={safeValue}
       placeholder={field.placeholder}
       step={field.step}
-      value={value}
-      onChange={(event) => onChange(field.name, event.target.value)}
+      onChange={(e) => onChange(field.name, e.target.value)}
     />
   );
 };
 
-export default function SiteCreationForm() {
-  const [formData, setFormData] = useState<FormValues>(() =>
-    buildInitialFormData()
-  );
-  const [fileInputs, setFileInputs] = useState<FileValues>(() =>
-    buildInitialFileValues()
-  );
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
+/* ---------------- COMPONENT ---------------- */
 
-  const numericFields = useMemo(() => {
-    const names = new Set<string>();
-    sections.forEach((section) => {
-      section.fields.forEach((field) => {
-        if (field.type === "number") {
-          names.add(field.name);
-        }
-      });
-    });
-    return names;
-  }, []);
+export default function SiteCreationForm() {
+  const [formData, setFormData] = useState<FormValues>(buildInitialFormData);
+  const [fileInputs, setFileInputs] = useState<FileValues>(buildInitialFileValues);
+  const [loading, setLoading] = useState(false);
+
+  const [stateOptions, setStateOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [districtOptions, setDistrictOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
 
   const navigate = useNavigate();
-  const { id } = useParams<{ id?: string }>();
+  const { id } = useParams();
   const isEdit = Boolean(id);
+
   const { encMasters, encSiteCreation } = getEncryptedRoute();
-  const ENC_LIST_PATH = `/${encMasters}/${encSiteCreation}`;
+  const LIST_PATH = `/${encMasters}/${encSiteCreation}`;
+
+  /* -------- DROPDOWNS -------- */
 
   useEffect(() => {
-    if (!isEdit || !id) return;
+    (async () => {
+      const states = await stateApi.list();
+      const districts = await districtApi.list();
+      setStateOptions(mapLocationOptions(states));
+      setDistrictOptions(mapLocationOptions(districts));
+    })();
+  }, []);
 
-    const fetchSite = async () => {
-      try {
-        setFetching(true);
-        const site = await siteApi.get(id);
-
-        setFormData((prev) => {
-          const next = { ...prev };
-          Object.keys(prev).forEach((key) => {
-            if (fileFieldNames.has(key)) return;
-
-            if (key === "status") {
-              if (typeof site?.status === "string") {
-                next.status = site.status;
-                return;
-              }
-
-              if (typeof site?.is_active === "boolean") {
-                next.status = site.is_active ? "Active" : "Inactive";
-                return;
-              }
-            }
-
-            const value = site?.[key];
-            next[key] = value === null || value === undefined ? "" : String(value);
-          });
-
-          return next;
-        });
-      } catch (error) {
-        console.error("Failed to load site", error);
-        Swal.fire("Error", "Site not found", "error");
-        navigate(ENC_LIST_PATH);
-      } finally {
-        setFetching(false);
+  useEffect(() => {
+    setFormData((prev) => {
+      const next = { ...prev };
+      if (stateOptions.length) {
+        const resolved = resolveOptionValue(prev.state_id, stateOptions);
+        if (resolved !== prev.state_id) next.state_id = resolved;
       }
+      if (districtOptions.length) {
+        const resolved = resolveOptionValue(prev.district_id, districtOptions);
+        if (resolved !== prev.district_id) next.district_id = resolved;
+      }
+      return next;
+    });
+  }, [stateOptions, districtOptions]);
+
+  /* -------- EDIT MODE -------- */
+
+  useEffect(() => {
+    if (!isEdit) return;
+
+    (async () => {
+      const site = await siteApi.get(id!);
+
+      setFormData({
+        site_name: coerceString(site.site_name),
+        state_id: resolveOptionValue(coerceString(site.state_id), stateOptions),
+        district_id: resolveOptionValue(
+          coerceString(site.district_id),
+          districtOptions
+        ),
+        ulb: coerceString(site.ulb),
+        site_address: coerceString(site.site_address),
+        status: site.status
+          ? normalizeStatusLabel(coerceString(site.status))
+          : site.is_active !== undefined
+          ? site.is_active
+            ? "Active"
+            : "Inactive"
+          : "",
+        latitude: coerceString(site.latitude),
+        longitude: coerceString(site.longitude),
+        project_value: coerceString(site.project_value),
+        project_type_details: coerceString(site.project_type_details),
+        basic_payment_per_m3: coerceString(site.basic_payment_per_m3),
+        dc_invoice_no: coerceString(site.dc_invoice_no),
+        min_max_type: coerceString(site.min_max_type),
+        screen_name: coerceString(site.screen_name),
+        weighbridge_count: coerceString(site.weighbridge_count),
+        eb_rate: coerceString(site.eb_rate),
+        unit_per_cost: coerceString(site.unit_per_cost),
+        kwh: coerceString(site.kwh),
+        demand_cost: coerceString(site.demand_cost),
+        eb_start_date: coerceString(site.eb_start_date),
+        eb_end_date: coerceString(site.eb_end_date),
+        no_of_zones: coerceString(site.no_of_zones),
+        no_of_phases: coerceString(site.no_of_phases),
+        density_volume: coerceString(site.density_volume),
+        extended_quantity: coerceString(site.extended_quantity),
+        service_charge: coerceString(site.service_charge),
+        transportation_cost: coerceString(site.transportation_cost),
+        gst: coerceString(site.gst),
+        bank_name: coerceString(site.bank_name),
+        account_number: coerceString(site.account_number),
+        ifsc_code: coerceString(site.ifsc_code),
+        bank_address: coerceString(site.bank_address),
+        erection_start_date: coerceString(site.erection_start_date),
+        commissioning_start_date: coerceString(site.commissioning_start_date),
+        project_completion_date: coerceString(site.project_completion_date),
+        weighment_folder_name: coerceString(site.weighment_folder_name),
+        verification_document: "",
+        document_view: "",
+        petty_cash: coerceString(site.petty_cash),
+        proposed_change: coerceString(site.proposed_change),
+        remarks: coerceString(site.remarks),
+      });
+    })();
+  }, [id, isEdit, stateOptions, districtOptions]);
+
+  /* -------- HANDLERS -------- */
+
+  const handleChange = (name: string, value: string) =>
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+  const handleFileChange = (name: string, file: File | null) =>
+    setFileInputs((prev) => ({ ...prev, [name]: file }));
+
+  /* -------- SUBMIT -------- */
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    const payload = {
+      site_name: formData.site_name,
+      state_id: formData.state_id,
+      district_id: formData.district_id,
+      ulb: formData.ulb,
+      site_address: formData.site_address,
+      status: formData.status,
+      is_active: formData.status ? formData.status === "Active" : undefined,
+      latitude: toNumberValue(formData.latitude),
+      longitude: toNumberValue(formData.longitude),
+      project_value: toNumberValue(formData.project_value),
+      project_type_details: formData.project_type_details,
+      basic_payment_per_m3: toNumberValue(formData.basic_payment_per_m3),
+      dc_invoice_no: formData.dc_invoice_no,
+      min_max_type: formData.min_max_type,
+      screen_name: formData.screen_name,
+      weighbridge_count: toNumberValue(formData.weighbridge_count),
+      eb_rate: toNumberValue(formData.eb_rate),
+      unit_per_cost: toNumberValue(formData.unit_per_cost),
+      kwh: toNumberValue(formData.kwh),
+      demand_cost: toNumberValue(formData.demand_cost),
+      eb_start_date: formData.eb_start_date,
+      eb_end_date: formData.eb_end_date,
+      no_of_zones: toNumberValue(formData.no_of_zones),
+      no_of_phases: toNumberValue(formData.no_of_phases),
+      density_volume: toNumberValue(formData.density_volume),
+      extended_quantity: toNumberValue(formData.extended_quantity),
+      service_charge: toNumberValue(formData.service_charge),
+      transportation_cost: toNumberValue(formData.transportation_cost),
+      gst: formData.gst,
+      bank_name: formData.bank_name,
+      account_number: formData.account_number,
+      ifsc_code: formData.ifsc_code,
+      bank_address: formData.bank_address,
+      erection_start_date: formData.erection_start_date,
+      commissioning_start_date: formData.commissioning_start_date,
+      project_completion_date: formData.project_completion_date,
+      weighment_folder_name: formData.weighment_folder_name,
+      petty_cash: toNumberValue(formData.petty_cash),
+      proposed_change: formData.proposed_change,
+      remarks: formData.remarks,
     };
 
-    fetchSite();
-  }, [ENC_LIST_PATH, id, isEdit, navigate]);
-
-  const handleChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (name: string, file: File | null) => {
-    setFileInputs((prev) => ({ ...prev, [name]: file }));
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const payload = Object.entries(formData).reduce<Record<string, unknown>>(
-      (acc, [key, value]) => {
-        if (fileFieldNames.has(key)) {
-          return acc;
-        }
-
-        if (numericFields.has(key)) {
-          if (value === "") {
-            acc[key] = "";
-            return acc;
-          }
-
-          const parsed = Number(value);
-          acc[key] = Number.isNaN(parsed) ? value : parsed;
-          return acc;
-        }
-
-        acc[key] = value;
-        return acc;
-      },
-      {}
-    );
-
-    const hasFiles = Object.values(fileInputs).some((file) => file);
+    const hasFiles = Object.values(fileInputs).some(Boolean);
 
     try {
       setLoading(true);
@@ -468,112 +557,63 @@ export default function SiteCreationForm() {
       if (hasFiles) {
         const formBody = new FormData();
         Object.entries(payload).forEach(([key, value]) => {
-          if (value === undefined || value === null || value === "") return;
+          if (value === undefined || value === null) return;
           formBody.append(key, String(value));
         });
-
         Object.entries(fileInputs).forEach(([key, file]) => {
-          if (file) {
-            formBody.append(key, file);
-          }
+          if (file) formBody.append(key, file);
         });
 
-        const multipartConfig = {
-          headers: { "Content-Type": "multipart/form-data" },
-        };
-
-        if (isEdit && id) {
-          await siteApi.update(id, formBody, multipartConfig);
-          Swal.fire({
-            icon: "success",
-            title: "Updated successfully",
-            timer: 1500,
-            showConfirmButton: false,
-          });
+        if (isEdit) {
+          await siteApi.update(id!, formBody);
         } else {
-          await siteApi.create(formBody, multipartConfig);
-          Swal.fire({
-            icon: "success",
-            title: "Added successfully",
-            timer: 1500,
-            showConfirmButton: false,
-          });
+          await siteApi.create(formBody);
         }
-      } else if (isEdit && id) {
-        await siteApi.update(id, payload);
-        Swal.fire({
-          icon: "success",
-          title: "Updated successfully",
-          timer: 1500,
-          showConfirmButton: false,
-        });
+      } else if (isEdit) {
+        await siteApi.update(id!, payload);
       } else {
         await siteApi.create(payload);
-        Swal.fire({
-          icon: "success",
-          title: "Added successfully",
-          timer: 1500,
-          showConfirmButton: false,
-        });
       }
 
-      navigate(ENC_LIST_PATH);
-    } catch (error) {
-      console.error("Save failed", error);
-      Swal.fire("Error", "Save failed", "error");
+      Swal.fire("Success", "Saved successfully", "success");
+      navigate(LIST_PATH);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.detail ||
+        error?.response?.data ||
+        "Save failed";
+      Swal.fire("Error", String(message), "error");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="p-4">
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* <h1 className="text-2xl font-semibold text-gray-800">
-            Master / Site Creation
-          </h1> */}
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-            {/* {isEdit ? "Edit Mode" : "Add Mode"} */}
-            {isEdit ? "Edit Site" : "Add Site"}
-          </span>
-        </div>
-        {/* <p className="text-sm text-gray-500">
-          {isEdit
-            ? "Update site, commercial, and operational details."
-            : "Fill in site, commercial, and operational details."}
-        </p> */}
-      </div>
+  /* -------- UI -------- */
 
+  return (
+    <div className="p-6">
       <form onSubmit={handleSubmit} className="space-y-6">
         {sections.map((section) => (
           <section
             key={section.title}
-            className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+            className="rounded-xl border p-5 bg-white shadow"
           >
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">
-                {section.title}
-              </h2>
-              {section.description ? (
-                <p className="text-sm text-gray-500">{section.description}</p>
-              ) : null}
-            </div>
+            <h2 className="font-semibold mb-4">{section.title}</h2>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {section.fields.map((field) => (
-                <div key={field.name} className="flex flex-col gap-2">
-                  <Label
-                    htmlFor={field.name}
-                    className="text-xs font-semibold text-gray-700"
-                  >
-                    {field.label}
-                  </Label>
+                <div key={field.name} className="space-y-1">
+                  <Label htmlFor={field.name}>{field.label}</Label>
                   {renderField(
                     field,
-                    formData[field.name] ?? "",
+                    formData[field.name],
                     handleChange,
-                    handleFileChange
+                    handleFileChange,
+                    field.name === "state_id"
+                      ? stateOptions
+                      : field.name === "district_id"
+                      ? districtOptions
+                      : undefined
                   )}
                 </div>
               ))}
@@ -581,15 +621,14 @@ export default function SiteCreationForm() {
           </section>
         ))}
 
-        <div className="flex flex-wrap gap-3">
-          <Button type="submit" disabled={loading || fetching}>
-            {loading ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update" : "Save"}
+        <div className="flex gap-3">
+          <Button type="submit" disabled={loading}>
+            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
           </Button>
           <Button
-            type="button"
             variant="outline"
-            onClick={() => navigate(ENC_LIST_PATH)}
-            disabled={loading}
+            type="button"
+            onClick={() => navigate(LIST_PATH)}
           >
             Cancel
           </Button>

@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 
-import { siteApi } from "@/helpers/admin";
+import { districtApi, siteApi, stateApi } from "@/helpers/admin";
 import { Switch } from "@/components/ui/switch";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { PencilIcon } from "@/icons";
@@ -15,8 +15,13 @@ type SiteRecord = {
   site_name?: string;
   state?: string;
   district?: string;
+  state_id?: string;
+  district_id?: string;
+  state_name?: string;
+  district_name?: string;
   ulb?: string;
   status?: string;
+  is_active?: boolean;
   project_value?: number | string;
   project_type_details?: string;
   weighbridge_count?: number | string;
@@ -37,8 +42,61 @@ export default function SiteCreationList() {
     const fetchSites = async () => {
       try {
         setLoading(true);
-        const data = await siteApi.list();
-        setSites(data as SiteRecord[]);
+        const [siteData, states, districts] = await Promise.all([
+          siteApi.list(),
+          stateApi.list(),
+          districtApi.list(),
+        ]);
+
+        const stateMap = new Map<string, string>();
+        (states as any[]).forEach((state) => {
+          const key = String(state.unique_id ?? state.id ?? state.name ?? "");
+          if (!key) return;
+          stateMap.set(key, state.name ?? key);
+          if (state.name) {
+            stateMap.set(String(state.name), state.name);
+          }
+        });
+
+        const districtMap = new Map<string, string>();
+        (districts as any[]).forEach((district) => {
+          const key = String(
+            district.unique_id ?? district.id ?? district.name ?? ""
+          );
+          if (!key) return;
+          districtMap.set(key, district.name ?? key);
+          if (district.name) {
+            districtMap.set(String(district.name), district.name);
+          }
+        });
+
+        const mapped = (siteData as SiteRecord[]).map((site) => {
+          const stateKey =
+            site.state_id ?? site.state_name ?? site.state ?? "";
+          const districtKey =
+            site.district_id ?? site.district_name ?? site.district ?? "";
+
+          return {
+            ...site,
+            state:
+              site.state_name ??
+              (stateKey ? stateMap.get(String(stateKey)) : undefined) ??
+              site.state,
+            district:
+              site.district_name ??
+              (districtKey ? districtMap.get(String(districtKey)) : undefined) ??
+              site.district,
+            status:
+              site.status ??
+              (site.is_active !== undefined
+                ? site.is_active
+                  ? "Active"
+                  : "Inactive"
+                : undefined),
+          };
+        });
+
+        setSites(mapped);
       } catch (error) {
         console.error("Failed to load sites", error);
         Swal.fire("Error", "Failed to load sites", "error");
