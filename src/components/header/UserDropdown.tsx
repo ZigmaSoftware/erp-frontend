@@ -47,14 +47,14 @@ export default function UserDropdown() {
         onClick={toggleDropdown}
         className="flex h-12 w-48 items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-surfaceAlt)]/95 px-2.5 py-1 text-left text-[var(--admin-text)] shadow-[0_18px_40px_rgba(1,62,126,0.12)] transition hover:border-[var(--admin-primarySoft)] hover:bg-[var(--admin-primarySoft)]/70"
       >
-        <span className="mr-3 grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-[#0f5bd8] to-[#013E7E] text-sm font-semibold uppercase tracking-wide text-white">
+        <span className="mr-3 grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-[#9cece0] to-[#013E7E] text-sm font-semibold uppercase tracking-wide text-white">
           {initials}
         </span>
         <span className="flex flex-1 flex-col overflow-hidden">
           <span className="truncate text-sm font-semibold leading-tight">{displayName}</span>
-          <span className="truncate text-[11px] uppercase tracking-[0.3em] text-[var(--admin-mutedText)]">
+          {/* <span className="truncate text-[11px] uppercase tracking-[0.3em] text-[var(--admin-mutedText)]">
             {displayEmail}
-          </span>
+          </span> */}
         </span>
         <svg
           className={`h-5 w-5 text-[var(--admin-mutedText)] transition-transform duration-200 ${

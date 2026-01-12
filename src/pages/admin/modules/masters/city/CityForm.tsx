@@ -15,14 +15,14 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
+import { extractErrorMessage } from "@/utils/errorUtils";
+import type { SelectOption } from "@/types/forms";
 
 import { continentApi, countryApi, stateApi, districtApi, cityApi } from "@/helpers/admin";
 
 /* ------------------------------
     TYPES
 ------------------------------ */
-type SelectOption = { value: string; label: string };
-
 type CountryMeta = {
   id: string;
   name: string;
@@ -67,12 +67,6 @@ type CityRecord = {
 const normalizeNullable = (v: any): string | null => {
   if (v === undefined || v === null) return null;
   return String(v);
-};
-
-const extractError = (error: any): string => {
-  if (error?.response?.data) return String(error.response.data);
-  if (error?.message) return error.message;
-  return "Unexpected error!";
 };
 
 /* ------------------------------
@@ -133,7 +127,7 @@ export default function CityForm() {
             }))
         );
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire("Error", extractErrorMessage(err), "error");
       }
     })();
   }, []);
@@ -150,7 +144,7 @@ export default function CityForm() {
         }));
         setAllCountries(mapped);
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire("Error", extractErrorMessage(err), "error");
       }
     })();
   }, []);
@@ -167,7 +161,7 @@ export default function CityForm() {
         }));
         setAllStates(mapped);
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire("Error", extractErrorMessage(err), "error");
       }
     })();
   }, []);
@@ -184,7 +178,7 @@ export default function CityForm() {
         }));
         setAllDistricts(mapped);
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire("Error", extractErrorMessage(err), "error");
       }
     })();
   }, []);
@@ -365,7 +359,7 @@ export default function CityForm() {
         setPendingStateId(ste ?? "");
         setPendingDistrictId(dis ?? "");
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire("Error", extractErrorMessage(err), "error");
       }
     })();
   }, [id, isEdit]);
@@ -403,7 +397,7 @@ export default function CityForm() {
 
       navigate(ENC_LIST_PATH);
     } catch (err) {
-      Swal.fire("Save failed", extractError(err), "error");
+      Swal.fire("Save failed", extractErrorMessage(err), "error");
     } finally {
       setLoading(false);
     }

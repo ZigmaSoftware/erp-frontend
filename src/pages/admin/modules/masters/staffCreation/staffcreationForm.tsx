@@ -9,6 +9,7 @@ import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { staffCreationApi } from "@/helpers/admin";
+import { extractErrorMessage } from "@/utils/errorUtils";
 import {
     countryApi,
     stateApi,
@@ -71,34 +72,6 @@ const mapLocationOptions = (items: any[]) =>
   (items ?? [])
     .filter((item) => item?.name && item.is_active !== false)
     .map((item) => ({ value: item.name, label: item.name }));
-
-type ErrorWithResponse = {
-  response?: {
-    data?: unknown;
-  };
-};
-
-const formatErrorMessage = (error: unknown) => {
-  if (!error) return "Please review the highlighted fields.";
-  if (typeof error === "string") return error;
-
-  const data = (error as ErrorWithResponse)?.response?.data;
-  if (typeof data === "string") return data;
-  if (Array.isArray(data)) return data.join(", ");
-
-  const payload =
-    data && typeof data === "object" && "errors" in data ? (data as any).errors : data;
-
-  if (payload && typeof payload === "object") {
-    return Object.entries(payload as Record<string, unknown>)
-      .map(([key, value]) =>
-        Array.isArray(value) ? `${key}: ${value.join(", ")}` : `${key}: ${String(value)}`
-      )
-      .join("\n");
-  }
-
-  return "Please review the highlighted fields.";
-};
 
 const initialFormData = {
   employee_name: "",
@@ -444,7 +417,7 @@ console.log("Fetched staff data:", staff);
       Swal.fire({
         icon: "error",
         title: "Save failed",
-        text: formatErrorMessage(error),
+        text: extractErrorMessage(error),
       });
     } finally {
       setSubmitting(false);
