@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
-import { plantApi } from "@/helpers/admin";
+import { plantApi, siteApi } from "@/helpers/admin";
 
 const encMasters = encryptSegment("masters");
 const encPlantCreation = encryptSegment("plant-creation");
@@ -24,12 +24,47 @@ const ENC_LIST_PATH = `/${encMasters}/${encPlantCreation}`;
 function PlantForm() {
   const [plantName, setPlantName] = useState("");
   const [site, setSite] = useState("");
+  const [siteOptions, setSiteOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
+
+  // ---------------------------
+  // Load sites
+  // ---------------------------
+  useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        const res = await siteApi.list();
+        const options = (res as any[])
+          .filter((item) => item?.site_name)
+          .map((item) => ({
+            value: String(item.unique_id ?? item.id ?? item.site_name),
+            label: item.site_name,
+          }));
+        setSiteOptions(options);
+      } catch (err) {
+        console.error("Failed to load sites", err);
+      }
+    };
+
+    fetchSites();
+  }, []);
+
+  useEffect(() => {
+    if (!site || siteOptions.length === 0) return;
+    const directMatch = siteOptions.some((opt) => opt.value === site);
+    if (directMatch) return;
+    const labelMatch = siteOptions.find((opt) => opt.label === site);
+    if (labelMatch) {
+      setSite(labelMatch.value);
+    }
+  }, [site, siteOptions]);
 
   // ---------------------------
   // Load plant (EDIT)
@@ -45,7 +80,7 @@ function PlantForm() {
         const plant = res?.data ?? res;
 
         setPlantName(plant.plant_name);
-        setSite(plant.site);
+        setSite(String(plant.site ?? ""));
         setIsActive(plant.is_active);
       } catch (err) {
         Swal.fire("Error", "Plant not found", "error");
@@ -129,13 +164,18 @@ function PlantForm() {
             <Label htmlFor="site">
               Site <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="site"
-              value={site}
-              onChange={(e) => setSite(e.target.value)}
-              placeholder="Enter site id"
-              required
-            />
+            <Select value={site} onValueChange={setSite}>
+              <SelectTrigger id="site">
+                <SelectValue placeholder="Select site" />
+              </SelectTrigger>
+              <SelectContent>
+                {siteOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Status */}

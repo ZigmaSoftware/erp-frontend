@@ -28,6 +28,7 @@ export function getAdminNavigation(): AdminNavConfig {
     encStates,
     encDistricts,
     encCities,
+    encSiteCreation,
     encStaffCreation,
     encAdmins,
     encUserType,
@@ -72,6 +73,7 @@ export function getAdminNavigation(): AdminNavConfig {
         { name: "State", path: `/${encMasters}/${encStates}` },
         { name: "District", path: `/${encMasters}/${encDistricts}` },
         { name: "City", path: `/${encMasters}/${encCities}` },
+        { name: "Site Creation", path: `/${encMasters}/${encSiteCreation}` },
         { name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` },
         { name: "Plant Creation", path: `/${encMasters}/${encPlantCreation}`}
       ],
