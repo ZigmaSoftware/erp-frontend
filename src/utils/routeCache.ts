@@ -19,6 +19,7 @@ export type EncryptedRoutes = {
   encMonthlyDistance: string;
   encProperties: string;
   encReport: string;
+  encSiteCreation: string;
   encStaffCreation: string;
   encStaffUserType: string;
   encStates: string;
@@ -69,6 +70,7 @@ const plainRoutes: EncryptedRoutes = {
   encMonthlyDistance: "monthly-distance",
   encProperties: "properties",
   encReport: "reports",
+  encSiteCreation: "site-creation",
   encStaffCreation: "staff-creation",
   encStaffUserType: "staff-user-type",
   encStates: "states",
