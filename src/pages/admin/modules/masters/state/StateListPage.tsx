@@ -16,6 +16,7 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";
 import { stateApi } from "@/helpers/admin";
+import { extractErrorMessage } from "@/utils/errorUtils";
 
 type StateRecord = {
   unique_id: string;
@@ -25,33 +26,6 @@ type StateRecord = {
   is_active: boolean;
 };
 
-type ErrorWithResponse = {
-  response?: {
-    data?: unknown;
-  };
-};
-
-const extractErrorMessage = (error: unknown) => {
-  if (!error) return "Something went wrong while processing the request.";
-  if (typeof error === "string") return error;
-
-  const data = (error as ErrorWithResponse)?.response?.data;
-
-  if (typeof data === "string") return data;
-  if (Array.isArray(data)) return data.join(", ");
-
-  if (data && typeof data === "object") {
-    return Object.entries(data as Record<string, unknown>)
-      .map(([k, v]) =>
-        Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
-      )
-      .join("\n");
-  }
-
-  if (error instanceof Error && error.message) return error.message;
-
-  return "Something went wrong while processing the request.";
-};
 
 export default function StateList() {
   const [states, setStates] = useState<StateRecord[]>([]);

@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
+import { extractErrorMessage } from "@/utils/errorUtils";
+import type { SelectOption } from "@/types/forms";
 
 import { continentApi, countryApi } from "@/helpers/admin";
 
@@ -37,17 +39,6 @@ type CountryRecord = {
   is_active: boolean;
 };
 
-type SelectOption = {
-  value: string;
-  label: string;
-};
-
-type ErrorWithResponse = {
-  response?: {
-    data?: unknown;
-  };
-};
-
 const normalizeNullableId = (
   value: string | number | null | undefined
 ): string | null => {
@@ -55,39 +46,6 @@ const normalizeNullableId = (
     return null;
   }
   return String(value);
-};
-
-const extractErrorMessage = (error: unknown) => {
-  if (!error) return "Something went wrong while processing the request.";
-  if (typeof error === "string") return error;
-
-  const withResponse = error as ErrorWithResponse;
-  const data = withResponse.response?.data;
-
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.join(", ");
-  }
-
-  if (data && typeof data === "object") {
-    return Object.entries(data as Record<string, unknown>)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: ${value.join(", ")}`;
-        }
-        return `${key}: ${String(value)}`;
-      })
-      .join("\n");
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return "Something went wrong while processing the request.";
 };
 
 function CountryForm() {
