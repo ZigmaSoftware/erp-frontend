@@ -85,7 +85,7 @@ const AppSidebar: React.FC = () => {
   }, [currentDecodedPath.master, location.pathname, setActiveItem]);
 
   /* ----------------------------------------
-     Section renderer (NO navigation on header)
+     Sections
   ---------------------------------------- */
   const sections = useMemo(
     () => [
@@ -96,18 +96,16 @@ const AppSidebar: React.FC = () => {
   );
 
   /* ----------------------------------------
-     Layout
+     Layout (NO SHADOW)
   ---------------------------------------- */
   return (
     <aside
-      className={`fixed top-0 left-0 z-50 h-screen border-r border-[var(--admin-border)]/80 bg-[var(--admin-surfaceAlt)]/95 text-[var(--admin-text)] transition-all duration-300 ease-out backdrop-blur-2xl ${
-        showFullSidebar ? "w-[300px]" : "w-[140px]"
-      } ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
-      style={{
-        boxShadow: showFullSidebar
-          ? "var(--admin-cardShadow)"
-          : "0 10px 35px rgba(1,62,126,0.18)",
-      }}
+      className={`fixed top-0 left-0 z-50 h-screen border-r border-[var(--admin-border)]/80
+        bg-[var(--admin-surfaceAlt)]/95 text-[var(--admin-text)]
+        backdrop-blur-2xl transition-all duration-300 ease-out
+        ${showFullSidebar ? "w-[300px]" : "w-[140px]"}
+        ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
+        lg:translate-x-0`}
     >
       <div className="flex h-full flex-col px-4 pb-6 pt-6">
         <div className="mt-[70px] flex-1 overflow-y-auto pr-2 no-scrollbar">
@@ -120,10 +118,11 @@ const AppSidebar: React.FC = () => {
                 );
 
               return (
-                <div key={section.key} className="space-y-2">
-                  <p className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--admin-mutedText)]">
+                <div key={section.key}>
+                  {/* <p className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--admin-mutedText)]">
                     {section.label}
-                  </p>
+                  </p> */}
+
                   <button
                     type="button"
                     onClick={() => {
@@ -136,17 +135,22 @@ const AppSidebar: React.FC = () => {
                     }}
                     className={`${menuButtonBase} ${
                       isSectionActive
-                        ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
-                        : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
+                        ? "bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)]"
+                        : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
                     }`}
                   >
                     <span
-                      className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}
+                      className={`menu-item-icon-size ${
+                        !showFullSidebar ? "mx-auto" : ""
+                      }`}
                     >
                       {section.items[0]?.icon}
                     </span>
+
                     {showFullSidebar && (
-                      <span className="text-sm font-semibold">{section.label}</span>
+                      <span className="text-sm font-semibold">
+                        {section.label}
+                      </span>
                     )}
                   </button>
                 </div>
