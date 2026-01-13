@@ -109,7 +109,7 @@ const AppSidebar: React.FC = () => {
     >
       <div className="flex h-full flex-col px-4 pb-6 pt-6">
         <div className="mt-[70px] flex-1 overflow-y-auto pr-2 no-scrollbar">
-          <nav className="flex flex-col gap-6">
+          <nav className="flex flex-col gap-2">
             {sections.map((section) => {
               const isSectionActive =
                 activeItem === section.key ||
