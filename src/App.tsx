@@ -21,7 +21,7 @@ export default function App() {
       <Route path="/auth" element={<Auth />} />
       <Route path="/" element={<Navigate to="/admindashboard" replace />} />
       <Route path="/admindashboard" element={withAdmin(<AdminHome />)} />
-      <Route path="/admindashboard/admin" element={withAdmin(<AdminHome />)} />
+      <Route path="/admindashboard/admins" element={withAdmin(<AdminHome />)} />
       <Route path="/admindashboard/masters" element={withAdmin(<AdminHome />)} />
 
       <Route path="/:encMaster/:encModule" element={withAdmin(<AdminEncryptedRouter />)} />
