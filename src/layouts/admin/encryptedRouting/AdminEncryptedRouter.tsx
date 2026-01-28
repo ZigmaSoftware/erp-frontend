@@ -38,6 +38,8 @@ import UserScreenPermissionForm from "@/pages/admin/modules/admin/userScreenPerm
 import UserScreenPermissionList from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionList";
 import PlantList from "@/pages/admin/modules/masters/plantCreation/plancreationList";
 import PlantForm from "@/pages/admin/modules/masters/plantCreation/plantcreationForm";
+import EquipmentTypesList from "@/pages/admin/modules/emMasters/equipmentTypes/equipmentTypesList";
+import EquipmentTypesForm from "@/pages/admin/modules/emMasters/equipmentTypes/equipmentTypesForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -70,6 +72,9 @@ const ROUTES: RouteMap = {
     "site-creation": { list: SiteCreationList, form: SiteCreationForm },
     "staff-creation": { list: StaffCreationList, form: StaffCreationForm },
     "plant-creation": {list: PlantList, form: PlantForm}
+  },
+  "em-masters": {
+    "equipment-types": { list: EquipmentTypesList, form: EquipmentTypesForm },
   },
 };
 

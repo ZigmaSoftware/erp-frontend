@@ -8,11 +8,21 @@ const ROLE_BASE = "role-assign";
 const USER_BASE = "user-creation";
 const CUSTOMER_BASE = "customers";
 const VEHICLE_BASE = "vehicles";
+const EM_MASTER_BASE = "em-masters";
+
+/* --------------------------------------------------------
+   EM Masters
+-------------------------------------------------------- */
+export const emMastersEndpoints = {
+  equipmentTypes: `${EM_MASTER_BASE}/equipment-types/`,
+} as const;
+
+export type EmMasterEntity = keyof typeof emMastersEndpoints;
 
 /* --------------------------------------------------------
    Admin endpoint registry
 -------------------------------------------------------- */
-export const adminEndpoints = {
+export const adminMasterEndpoints = {
   /* MASTERS */
   continents: `${MASTER_BASE}/continents/`,
   countries: `${MASTER_BASE}/countries/`,
@@ -31,18 +41,18 @@ export const adminEndpoints = {
   subProperties: `${ASSET_BASE}/subproperties/`,
 
   /* SCREEN MANAGEMENT */
-  mainscreentype: `${SCREEN_BASE}/mainscreentype/`,
-  mainscreens: `${SCREEN_BASE}/mainscreens/`,
-  userscreens: `${SCREEN_BASE}/userscreens/`,
-  userscreenaction: `${SCREEN_BASE}/userscreen-action/`,
-  userscreenpermissions: `${SCREEN_BASE}/userscreenpermissions/`,
+  mainScreenType: `${SCREEN_BASE}/mainscreentype/`,
+  mainScreens: `${SCREEN_BASE}/mainscreens/`,
+  userScreens: `${SCREEN_BASE}/userscreens/`,
+  userScreenAction: `${SCREEN_BASE}/userscreen-action/`,
+  userScreenPermissions: `${SCREEN_BASE}/userscreenpermissions/`,
 
   /* ROLE ASSIGNMENT */
   userTypes: `${ROLE_BASE}/user-type/`,
   staffUserTypes: `${ROLE_BASE}/staffusertypes/`,
 
   /* USER CREATION */
-  usercreations: `${USER_BASE}/users-creation/`,
+  userCreations: `${USER_BASE}/users-creation/`,
   staffCreation: `${USER_BASE}/staffcreation/`,
 
   /* CUSTOMERS */
@@ -58,8 +68,13 @@ export const adminEndpoints = {
   vehicleCreation: `${VEHICLE_BASE}/vehicle-creation/`,
 } as const;
 
-export type AdminEntity = keyof typeof adminEndpoints;
+export type AdminEntity = keyof typeof adminMasterEndpoints;
 
-export const getAdminEndpointPath = (entity: AdminEntity): string => {
-  return `/${adminEndpoints[entity]}`;
-};
+/* --------------------------------------------------------
+   Helpers
+-------------------------------------------------------- */
+export const getAdminEndpointPath = (entity: AdminEntity): string =>
+  `/${adminMasterEndpoints[entity]}`;
+
+export const getEmMasterEndpointPath = (entity: EmMasterEntity): string =>
+  `/${emMastersEndpoints[entity]}`;

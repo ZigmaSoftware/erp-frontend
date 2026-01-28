@@ -268,7 +268,7 @@ export default function Auth() {
                 : t("login.sign_in")}
             </Button>
 
-            <div className="pt-6 border-t border-dashed border-gray-200">
+            {/* <div className="pt-6 border-t border-dashed border-gray-200">
               <p className="text-xs uppercase tracking-[0.2em] text-gray-400 text-center">
                 {t("login.rnd_shortcuts_label")}
               </p>
@@ -290,7 +290,7 @@ export default function Auth() {
                   {t("login.rnd_admin")}
                 </Button>
               </div>
-            </div>
+            </div> */}
           </form>
         </div>
       </div>

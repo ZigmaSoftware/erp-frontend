@@ -1,38 +1,53 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import UserDropdown from "@/components/header/UserDropdown";
-import { useTheme } from "@/contexts/ThemeContext";
 import { useSidebar } from "@/contexts/SideBarContext";
 import { cn } from "@/lib/utils";
-import { decryptSegment } from "@/utils/routeCrypto";
 import { getAdminNavigation } from "../navigation";
 import ZigmaLogo from "@/images/logo.png";
 
 const AppHeader: React.FC = () => {
-  const [openMenu, setOpenMenu] = useState<"masters" | "admin" | null>(null);
+  const [openMenu, setOpenMenu] = useState<"masters" | "admins" | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
-  const {
-    isMobileOpen,
-    toggleSidebar,
-    toggleMobileSidebar,
-    activeItem,
-    setActiveItem,
-  } = useSidebar();
+  const { isMobileOpen, toggleSidebar, toggleMobileSidebar, activeItem, setActiveItem } =
+    useSidebar();
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const location = useLocation();
   const navigate = useNavigate();
 
   const { admin, masters } = useMemo(getAdminNavigation, []);
+  const findPrimaryPath = useCallback(
+    (items: { path?: string; subItems?: { path: string }[] }[]) => {
+      for (const item of items) {
+        if (item.path) return item.path;
+        if (item.subItems?.length) return item.subItems[0].path;
+      }
+      return "/admin";
+    },
+    []
+  );
+
+  const withAdminPrefix = useCallback((path: string) => {
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+    return normalized.startsWith("/admin")
+      ? normalized
+      : `/admin${normalized}`;
+  }, []);
+
+  const adminDashboardPath = useMemo(
+    () => withAdminPrefix(findPrimaryPath(admin)),
+    [admin, findPrimaryPath, withAdminPrefix]
+  );
+  const mastersDashboardPath = useMemo(
+    () => withAdminPrefix(findPrimaryPath(masters)),
+    [findPrimaryPath, masters, withAdminPrefix]
+  );
   const adminItems = admin[0]?.subItems || [];
   const masterItems = masters[0]?.subItems || [];
-
-  const adminDashboardPath = "/admindashboard/admin";
-  const mastersDashboardPath = "/admindashboard/masters";
 
   /* ---------------- effects ---------------- */
 
@@ -60,11 +75,11 @@ const AppHeader: React.FC = () => {
     else toggleMobileSidebar();
   };
 
-  const toggleMenu = (menu: "masters" | "admin") => {
+  const toggleMenu = (menu: "masters" | "admins") => {
     setActiveItem(menu);
     setOpenMenu((prev) => (prev === menu ? null : menu));
 
-    if (menu === "admin") navigate(adminDashboardPath);
+    if (menu === "admins") navigate(adminDashboardPath);
     if (menu === "masters") navigate(mastersDashboardPath);
   };
 
@@ -72,7 +87,7 @@ const AppHeader: React.FC = () => {
 
   const renderNavMenu = (
     label: string,
-    menuKey: "masters" | "admin",
+    menuKey: "masters" | "admins",
     items: { name: string; path: string }[]
   ) => {
     if (activeItem !== menuKey) return null;
@@ -125,7 +140,7 @@ const AppHeader: React.FC = () => {
                 {items.map((item) => (
                   <li key={item.name}>
                     <Link
-                      to={item.path}
+                      to={withAdminPrefix(item.path)}
                       onClick={() => setOpenMenu(null)}
                       className="block rounded-xl px-4 py-2.5 text-sm font-medium transition hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
                     >
@@ -174,7 +189,7 @@ const AppHeader: React.FC = () => {
             </Link>
 
             <div className="hidden lg:flex gap-3">
-              {renderNavMenu("Admin", "admin", adminItems)}
+              {renderNavMenu("Admin", "admins", adminItems)}
               {renderNavMenu("Masters", "masters", masterItems)}
             </div>
           </div>
