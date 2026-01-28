@@ -49,6 +49,8 @@ export type EncryptedRoutes = {
   encMainScreen: string;
   encUserScreen: string;
   encPlantCreation: string;
+  encEmMasters: string;
+  encEquipmentType: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -100,6 +102,8 @@ const plainRoutes: EncryptedRoutes = {
   encMainScreen: "mainscreens",
   encUserScreen: "userscreens",
   encUserScreenPermission: "userscreenpermissions",
+  encEmMasters: "em-masters",
+  encEquipmentType: "equipment-types"
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {

@@ -22,9 +22,24 @@ export type CrudHelpers<T = any> = {
     config?: AxiosRequestConfig
   ) => Promise<T>;
   remove: (id: string | number, config?: AxiosRequestConfig) => Promise<void>;
+
+  /** Generic POST/GET action */
   action: <R = any, P = any>(
     action: string,
     payload?: P,
+    config?: AxiosRequestConfig
+  ) => Promise<R>;
+
+  /** 🔥 Multipart upload support */
+  upload: <R = any>(
+    payload: FormData,
+    config?: AxiosRequestConfig
+  ) => Promise<R>;
+
+  /** 🔥 Multipart update */
+  uploadUpdate: <R = any>(
+    id: string | number,
+    payload: FormData,
     config?: AxiosRequestConfig
   ) => Promise<R>;
 };
@@ -86,6 +101,34 @@ export const createCrudHelpers = <T = any>(
       }
 
       const { data } = await api.get(url, config);
+      return data;
+    },
+
+    /* ---------- FILE UPLOADS ---------- */
+
+    upload: async (payload, config) => {
+      const { data } = await api.post(resource, payload, {
+        ...config,
+        headers: {
+          "Content-Type": "multipart/form-data",
+          ...config?.headers,
+        },
+      });
+      return data;
+    },
+
+    uploadUpdate: async (id, payload, config) => {
+      const { data } = await api.patch(
+        `${resource}${id}/`,
+        payload,
+        {
+          ...config,
+          headers: {
+            "Content-Type": "multipart/form-data",
+            ...config?.headers,
+          },
+        }
+      );
       return data;
     },
   };
