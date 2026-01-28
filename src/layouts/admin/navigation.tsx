@@ -18,6 +18,7 @@ export type AdminNavConfig = {
   home: NavItem[];
   admin: NavItem[];
   masters: NavItem[];
+  emMasters: NavItem[];
 };
 
 export function getAdminNavigation(): AdminNavConfig {
@@ -39,11 +40,13 @@ export function getAdminNavigation(): AdminNavConfig {
     encMainScreen,
     encUserScreen,
     encUserScreenPermission,
-    encPlantCreation
+    encPlantCreation,
+    encEmMasters,
+    encEquipmentType
   } = getEncryptedRoute();
 
   const home: NavItem[] = [
-    { name: "Admin Home", icon: <LayoutGrid size={18} />, path: "/admin" },
+    { name: "Admin Home", icon: <LayoutGrid size={18} />, path: "/admins" },
   ];
 
   const admin: NavItem[] = [
@@ -80,5 +83,15 @@ export function getAdminNavigation(): AdminNavConfig {
     },
   ];
 
-  return { home, admin, masters };
+    const emMasters: NavItem[] = [
+    {
+      name: "EM Masters",
+      icon: <Layers3 size={18} />,
+      subItems: [
+        { name: "Equipment Type Masters", path: `/${encEmMasters}/${encEquipmentType}` }
+      ],
+    },
+  ];
+
+  return { home, admin, masters, emMasters };
 }

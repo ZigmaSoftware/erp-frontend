@@ -9,7 +9,21 @@ const menuButtonBase =
   "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold";
 
 const AppSidebar: React.FC = () => {
-  const { admin, masters } = useMemo(getAdminNavigation, []);
+  const { admin, masters, emMasters } = useMemo(getAdminNavigation, []);
+  const findPrimaryPath = useCallback((items: NavItem[]) => {
+    for (const item of items) {
+      if (item.path) return item.path;
+      if (item.subItems?.length) return item.subItems[0]?.path;
+    }
+    return null;
+  }, []);
+
+  const withAdminPrefix = useCallback((path: string | null) => {
+    if (!path) return "/admin";
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+    return normalized.startsWith("/admin") ? normalized : `/admin${normalized}`;
+  }, []);
+
   const { isExpanded, isMobileOpen, setActiveItem, activeItem } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
@@ -20,10 +34,18 @@ const AppSidebar: React.FC = () => {
      Decode current encrypted route
   ---------------------------------------- */
   const currentDecodedPath = useMemo(() => {
-    const [master, module] = location.pathname.split("/").filter(Boolean);
+    const segments = location.pathname.split("/").filter(Boolean);
+
+    // Drop optional leading prefixes
+    const startIndex =
+      segments[0] === "admin" || segments[0] === "admindashboard" ? 1 : 0;
+
+    const encMaster = segments[startIndex] ?? "";
+    const encModule = segments[startIndex + 1] ?? "";
+
     return {
-      master: decryptSegment(master || "") ?? null,
-      module: decryptSegment(module || "") ?? null,
+      master: decryptSegment(encMaster) ?? null,
+      module: decryptSegment(encModule) ?? null,
     };
   }, [location.pathname]);
 
@@ -65,20 +87,30 @@ const AppSidebar: React.FC = () => {
      Sync active section with URL
   ---------------------------------------- */
   useEffect(() => {
-    const directPath = location.pathname;
-    if (directPath.startsWith("/admindashboard/admin")) {
-      setActiveItem("admin");
-      return;
-    }
-    if (directPath.startsWith("/admindashboard/masters")) {
-      setActiveItem("masters");
-      return;
+    const segments = location.pathname.split("/").filter(Boolean);
+
+    // Handle non-encrypted dashboard landing routes
+    if (segments[0] === "admindashboard") {
+      if (segments[1] === "admins") {
+        setActiveItem("admins");
+        return;
+      }
+      if (segments[1] === "masters") {
+        setActiveItem("masters");
+        return;
+      }
+      if (segments[1] === "em-masters") {
+        setActiveItem("em-masters");
+        return;
+      }
     }
 
     if (currentDecodedPath.master === "admins") {
-      setActiveItem("admin");
+      setActiveItem("admins");
     } else if (currentDecodedPath.master === "masters") {
       setActiveItem("masters");
+    } else if (currentDecodedPath.master === "em-masters") {
+      setActiveItem("em-masters");
     } else {
       setActiveItem(null);
     }
@@ -89,11 +121,28 @@ const AppSidebar: React.FC = () => {
   ---------------------------------------- */
   const sections = useMemo(
     () => [
-      { key: "admin", label: "Admin", items: admin },
-      { key: "masters", label: "Masters", items: masters },
+      {
+        key: "admins",
+        label: "Admin",
+        items: admin,
+        defaultPath: findPrimaryPath(admin),
+      },
+      {
+        key: "masters",
+        label: "Masters",
+        items: masters,
+        defaultPath: findPrimaryPath(masters),
+      },
+      {
+        key: "em-masters",
+        label: "EM Masters",
+        items: emMasters,
+        defaultPath: findPrimaryPath(emMasters),
+      },
     ],
-    [admin, masters]
+    [admin, masters, emMasters, findPrimaryPath]
   );
+
 
   /* ----------------------------------------
      Layout (NO SHADOW)
@@ -127,10 +176,8 @@ const AppSidebar: React.FC = () => {
                     type="button"
                     onClick={() => {
                       setActiveItem(section.key);
-                      const target =
-                        section.key === "admin"
-                          ? "/admindashboard/admin"
-                          : "/admindashboard/masters";
+                      const target = withAdminPrefix(section.defaultPath);
+
                       navigate(target, { replace: true });
                     }}
                     className={`${menuButtonBase} ${

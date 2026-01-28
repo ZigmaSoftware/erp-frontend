@@ -1,4 +1,4 @@
-import { adminApi } from "./registry";
+import { adminApi, emMasterApi } from "./registry";
 
 /* -------- Masters -------- */
 export const continentApi = adminApi.continents;
@@ -41,6 +41,9 @@ export const userScreenPermissionApi = adminApi.userscreenpermissions;
 /* -------- Vehicles -------- */
 export const vehicleTypeApi = adminApi.vehicleTypes;
 export const vehicleCreationApi = adminApi.vehicleCreation;
+
+/* -------- EM Masters -------- */
+export const equipmentTypeApi = emMasterApi.equipmentTypes;
 
 /* -------- Utilities -------- */
 export * from "./endpoints";
