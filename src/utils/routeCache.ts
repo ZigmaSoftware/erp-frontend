@@ -51,6 +51,7 @@ export type EncryptedRoutes = {
   encPlantCreation: string;
   encEmMasters: string;
   encEquipmentType: string;
+  encEquipmentModel: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -103,7 +104,8 @@ const plainRoutes: EncryptedRoutes = {
   encUserScreen: "userscreens",
   encUserScreenPermission: "userscreenpermissions",
   encEmMasters: "em-masters",
-  encEquipmentType: "equipment-types"
+  encEquipmentType: "equipment-types",
+  encEquipmentModel: "equipment-model",
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {

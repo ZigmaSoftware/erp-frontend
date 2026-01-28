@@ -10,7 +10,7 @@ import { getAdminNavigation } from "../navigation";
 import ZigmaLogo from "@/images/logo.png";
 
 const AppHeader: React.FC = () => {
-  const [openMenu, setOpenMenu] = useState<"masters" | "admins" | null>(null);
+  const [openMenu, setOpenMenu] = useState<"masters" | "admins" | "em-masters" | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar, activeItem, setActiveItem } =
@@ -19,7 +19,9 @@ const AppHeader: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  const { admin, masters } = useMemo(getAdminNavigation, []);
+  const { admin, masters, emMasters } = useMemo(getAdminNavigation, []);
+
+  console.log("Admin Navigation:", { admin, masters, emMasters });
   const findPrimaryPath = useCallback(
     (items: { path?: string; subItems?: { path: string }[] }[]) => {
       for (const item of items) {
@@ -46,8 +48,14 @@ const AppHeader: React.FC = () => {
     () => withAdminPrefix(findPrimaryPath(masters)),
     [findPrimaryPath, masters, withAdminPrefix]
   );
+  const emMastersDashboardPath = useMemo(
+    () => withAdminPrefix(findPrimaryPath(emMasters)),
+    [emMasters, findPrimaryPath, withAdminPrefix]
+  );
+
   const adminItems = admin[0]?.subItems || [];
   const masterItems = masters[0]?.subItems || [];
+  const emMasterItems = emMasters[0]?.subItems || [];
 
   /* ---------------- effects ---------------- */
 
@@ -75,19 +83,20 @@ const AppHeader: React.FC = () => {
     else toggleMobileSidebar();
   };
 
-  const toggleMenu = (menu: "masters" | "admins") => {
+  const toggleMenu = (menu: "masters" | "admins" | "em-masters") => {
     setActiveItem(menu);
     setOpenMenu((prev) => (prev === menu ? null : menu));
-
+  
     if (menu === "admins") navigate(adminDashboardPath);
     if (menu === "masters") navigate(mastersDashboardPath);
+    if (menu === "em-masters") navigate(emMastersDashboardPath);
   };
 
   /* ---------------- render menu ---------------- */
 
   const renderNavMenu = (
     label: string,
-    menuKey: "masters" | "admins",
+    menuKey: "masters" | "admins" | "em-masters",
     items: { name: string; path: string }[]
   ) => {
     if (activeItem !== menuKey) return null;
@@ -191,6 +200,7 @@ const AppHeader: React.FC = () => {
             <div className="hidden lg:flex gap-3">
               {renderNavMenu("Admin", "admins", adminItems)}
               {renderNavMenu("Masters", "masters", masterItems)}
+              {renderNavMenu("EM Masters", "em-masters", emMasterItems)}
             </div>
           </div>
 
