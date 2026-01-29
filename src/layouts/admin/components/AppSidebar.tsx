@@ -9,7 +9,16 @@ const menuButtonBase =
   "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold";
 
 const AppSidebar: React.FC = () => {
-  const { admin, masters, emMasters } = useMemo(getAdminNavigation, []);
+  const { admin, masters } = useMemo(getAdminNavigation, []);
+  const { isExpanded, isMobileOpen, setActiveItem, activeItem } = useSidebar();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const showFullSidebar = isExpanded || isMobileOpen;
+
+  /* ----------------------------------------
+     Helpers
+  ---------------------------------------- */
   const findPrimaryPath = useCallback((items: NavItem[]) => {
     for (const item of items) {
       if (item.path) return item.path;
@@ -21,103 +30,43 @@ const AppSidebar: React.FC = () => {
   const withAdminPrefix = useCallback((path: string | null) => {
     if (!path) return "/admin";
     const normalized = path.startsWith("/") ? path : `/${path}`;
-    return normalized.startsWith("/admin") ? normalized : `/admin${normalized}`;
+    return normalized.startsWith("/admin")
+      ? normalized
+      : `/admin${normalized}`;
   }, []);
 
-  const { isExpanded, isMobileOpen, setActiveItem, activeItem } = useSidebar();
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const showFullSidebar = isExpanded || isMobileOpen;
-
   /* ----------------------------------------
-     Decode current encrypted route
+     Decode encrypted route
   ---------------------------------------- */
   const currentDecodedPath = useMemo(() => {
     const segments = location.pathname.split("/").filter(Boolean);
-
-    // Drop optional leading prefixes
     const startIndex =
       segments[0] === "admin" || segments[0] === "admindashboard" ? 1 : 0;
 
-    const encMaster = segments[startIndex] ?? "";
-    const encModule = segments[startIndex + 1] ?? "";
-
     return {
-      master: decryptSegment(encMaster) ?? null,
-      module: decryptSegment(encModule) ?? null,
+      master: decryptSegment(segments[startIndex] ?? "") ?? null,
     };
   }, [location.pathname]);
 
   /* ----------------------------------------
-     Active path matcher (sub-item level)
-  ---------------------------------------- */
-  const isActive = useCallback(
-    (path: string, allowNestedRoutes = false) => {
-      if (!path) return false;
-
-      const segments = path.split("/").filter(Boolean);
-      const [encMaster, encModule] = segments;
-
-      const decodedMaster = decryptSegment(encMaster || "");
-      const decodedModule = decryptSegment(encModule || "");
-
-      // fallback for non-encrypted routes
-      if (!decodedMaster && !decodedModule) {
-        if (location.pathname === path) return true;
-        return (
-          allowNestedRoutes &&
-          location.pathname.startsWith(path.endsWith("/") ? path : `${path}/`)
-        );
-      }
-
-      if (decodedMaster !== currentDecodedPath.master) return false;
-      if (!decodedModule) return true;
-
-      if (currentDecodedPath.module === decodedModule) return true;
-      return (
-        allowNestedRoutes &&
-        currentDecodedPath.module?.startsWith(decodedModule)
-      );
-    },
-    [currentDecodedPath, location.pathname]
-  );
-
-  /* ----------------------------------------
-     Sync active section with URL
+     Sync sidebar active item
   ---------------------------------------- */
   useEffect(() => {
-    const segments = location.pathname.split("/").filter(Boolean);
-
-    // Handle non-encrypted dashboard landing routes
-    if (segments[0] === "admindashboard") {
-      if (segments[1] === "admins") {
-        setActiveItem("admins");
-        return;
-      }
-      if (segments[1] === "masters") {
-        setActiveItem("masters");
-        return;
-      }
-      if (segments[1] === "em-masters") {
-        setActiveItem("em-masters");
-        return;
-      }
-    }
-
     if (currentDecodedPath.master === "admins") {
       setActiveItem("admins");
-    } else if (currentDecodedPath.master === "masters") {
+    } else if (
+      currentDecodedPath.master === "masters" ||
+      currentDecodedPath.master === "em-masters"
+    ) {
+      // IMPORTANT: EM Masters collapses into Masters context
       setActiveItem("masters");
-    } else if (currentDecodedPath.master === "em-masters") {
-      setActiveItem("em-masters");
     } else {
       setActiveItem(null);
     }
-  }, [currentDecodedPath.master, location.pathname, setActiveItem]);
+  }, [currentDecodedPath.master, setActiveItem]);
 
   /* ----------------------------------------
-     Sections
+     Sidebar sections (EM removed)
   ---------------------------------------- */
   const sections = useMemo(
     () => [
@@ -133,19 +82,12 @@ const AppSidebar: React.FC = () => {
         items: masters,
         defaultPath: findPrimaryPath(masters),
       },
-      {
-        key: "em-masters",
-        label: "EM Masters",
-        items: emMasters,
-        defaultPath: findPrimaryPath(emMasters),
-      },
     ],
-    [admin, masters, emMasters, findPrimaryPath]
+    [admin, masters, findPrimaryPath]
   );
 
-
   /* ----------------------------------------
-     Layout (NO SHADOW)
+     Render
   ---------------------------------------- */
   return (
     <aside
@@ -160,47 +102,38 @@ const AppSidebar: React.FC = () => {
         <div className="mt-[70px] flex-1 overflow-y-auto pr-2 no-scrollbar">
           <nav className="flex flex-col gap-2">
             {sections.map((section) => {
-              const isSectionActive =
-                activeItem === section.key ||
-                section.items.some((item) =>
-                  item.subItems?.some((sub) => isActive(sub.path, true))
-                );
+              const isActive = activeItem === section.key;
 
               return (
-                <div key={section.key}>
-                  {/* <p className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--admin-mutedText)]">
-                    {section.label}
-                  </p> */}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveItem(section.key);
-                      const target = withAdminPrefix(section.defaultPath);
-
-                      navigate(target, { replace: true });
-                    }}
-                    className={`${menuButtonBase} ${
-                      isSectionActive
-                        ? "bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)]"
-                        : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
+                <button
+                  key={section.key}
+                  type="button"
+                  onClick={() => {
+                    setActiveItem(section.key);
+                    navigate(withAdminPrefix(section.defaultPath), {
+                      replace: true,
+                    });
+                  }}
+                  className={`${menuButtonBase} ${
+                    isActive
+                      ? "bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)]"
+                      : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
+                  }`}
+                >
+                  <span
+                    className={`menu-item-icon-size ${
+                      !showFullSidebar ? "mx-auto" : ""
                     }`}
                   >
-                    <span
-                      className={`menu-item-icon-size ${
-                        !showFullSidebar ? "mx-auto" : ""
-                      }`}
-                    >
-                      {section.items[0]?.icon}
-                    </span>
+                    {section.items[0]?.icon}
+                  </span>
 
-                    {showFullSidebar && (
-                      <span className="text-sm font-semibold">
-                        {section.label}
-                      </span>
-                    )}
-                  </button>
-                </div>
+                  {showFullSidebar && (
+                    <span className="text-sm font-semibold">
+                      {section.label}
+                    </span>
+                  )}
+                </button>
               );
             })}
           </nav>
