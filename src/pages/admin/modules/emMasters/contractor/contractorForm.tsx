@@ -14,15 +14,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+
 
 import { contractorApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
+/* =======================
+   REGEX VALIDATIONS
+======================= */
 const GST_REGEX =
   /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
 export default function ContractorForm() {
+  /* =======================
+     STATE
+  ======================= */
   const [contractorName, setContractorName] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [mobileNo, setMobileNo] = useState("");
@@ -32,7 +40,7 @@ export default function ContractorForm() {
   const [panNo, setPanNo] = useState("");
   const [openingBalance, setOpeningBalance] = useState("");
   const [address, setAddress] = useState("");
-  const [bankAccountNo, setBankAccountNo] = useState("");
+  const [bankDetails, setBankDetails] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -43,37 +51,49 @@ export default function ContractorForm() {
   const { encEmMasters, encContractor } = getEncryptedRoute();
   const ENC_LIST = `/${encEmMasters}/${encContractor}`;
 
+  /* =======================
+     FETCH (EDIT MODE)
+  ======================= */
   useEffect(() => {
     if (!isEdit || !id) return;
 
-    const fetchData = async () => {
-      const data: any = await contractorApi.get(id);
-      setContractorName(data.contractor_name ?? "");
-      setContactPerson(data.contact_person ?? "");
-      setMobileNo(data.mobile_no ?? "");
-      setEmail(data.email ?? "");
-      setGstType(data.gst_type ?? "no");
-      setGstNo(data.gst_no ?? "");
-      setPanNo(data.pan_no ?? "");
-      setOpeningBalance(String(data.opening_balance ?? ""));
-      setAddress(data.address?.address ?? "");
-      setBankAccountNo(data.bank_details?.account_no ?? "");
-      setIsActive(Boolean(data.is_active));
+    const fetchContractor = async () => {
+      try {
+        const data: any = await contractorApi.get(id);
+
+        setContractorName(data.contractor_name ?? "");
+        setContactPerson(data.contact_person ?? "");
+        setMobileNo(data.mobile_no ?? "");
+        setEmail(data.email ?? "");
+        setGstType(data.gst_type ?? "no");
+        setGstNo(data.gst_no ?? "");
+        setPanNo(data.pan_no ?? "");
+        setOpeningBalance(String(data.opening_balance ?? ""));
+        setAddress(data.address ?? "");
+        setBankDetails(data.bank_details ?? "");
+        setIsActive(Boolean(data.is_active));
+      } catch {
+        Swal.fire("Error", "Failed to load contractor", "error");
+      }
     };
 
-    fetchData();
+    fetchContractor();
   }, [id, isEdit]);
 
+  /* =======================
+     SUBMIT
+  ======================= */
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    /* ---- Frontend validation ---- */
     if (gstType === "yes" && !GST_REGEX.test(gstNo)) {
-      Swal.fire({ icon: "error", title: "Invalid GST Number" });
+      Swal.fire("Invalid GST Number", "", "error");
       return;
     }
 
     if (panNo && !PAN_REGEX.test(panNo)) {
-      Swal.fire({ icon: "error", title: "Invalid PAN Number" });
+      Swal.fire("Invalid PAN Number", "", "error");
       return;
     }
 
@@ -89,8 +109,8 @@ export default function ContractorForm() {
         gst_no: gstType === "yes" ? gstNo : null,
         pan_no: panNo || null,
         opening_balance: openingBalance,
-        address: { address },
-        bank_details: { account_no: bankAccountNo },
+        address: address,
+        bank_details: bankDetails || null,
         is_active: isActive,
       };
 
@@ -109,49 +129,67 @@ export default function ContractorForm() {
 
       navigate(ENC_LIST);
     } catch (error: any) {
-      const msg =
+      const message =
         Object.values(error?.response?.data ?? {})
           .flat()
           .join("\n") || "Save failed";
 
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: msg,
-      });
+      Swal.fire("Error", message, "error");
     } finally {
       setLoading(false);
     }
   };
 
+  /* =======================
+     UI
+  ======================= */
   return (
     <ComponentCard title={isEdit ? "Edit Contractor" : "Add Contractor"}>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <Label>Contractor Name *</Label>
-            <Input value={contractorName} onChange={(e) => setContractorName(e.target.value)} />
+            <Input
+              value={contractorName}
+              onChange={(e) => setContractorName(e.target.value)}
+              required
+            />
           </div>
 
           <div>
             <Label>Contact Person *</Label>
-            <Input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} />
+            <Input
+              value={contactPerson}
+              onChange={(e) => setContactPerson(e.target.value)}
+              required
+            />
           </div>
 
           <div>
             <Label>Mobile No *</Label>
-            <Input value={mobileNo} onChange={(e) => setMobileNo(e.target.value)} />
+            <Input
+              value={mobileNo}
+              onChange={(e) => setMobileNo(e.target.value)}
+              maxLength={10}
+              required
+            />
           </div>
 
           <div>
             <Label>Email</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
 
           <div>
             <Label>GST Type</Label>
             <Select value={gstType} onValueChange={(v) => setGstType(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="yes">Yes</SelectItem>
                 <SelectItem value="no">No</SelectItem>
@@ -162,44 +200,62 @@ export default function ContractorForm() {
           {gstType === "yes" && (
             <div>
               <Label>GST No *</Label>
-              <Input value={gstNo} onChange={(e) => setGstNo(e.target.value)} />
+              <Input
+                value={gstNo}
+                onChange={(e) => setGstNo(e.target.value.toUpperCase())}
+              />
             </div>
           )}
 
           <div>
             <Label>PAN No</Label>
-            <Input value={panNo} onChange={(e) => setPanNo(e.target.value)} />
+            <Input
+              value={panNo}
+              onChange={(e) => setPanNo(e.target.value.toUpperCase())}
+            />
           </div>
 
           <div>
             <Label>Opening Balance *</Label>
-            <Input value={openingBalance} onChange={(e) => setOpeningBalance(e.target.value)} />
+            <Input
+              type="number"
+              value={openingBalance}
+              onChange={(e) => setOpeningBalance(e.target.value)}
+              required
+            />
           </div>
-
           <div className="md:col-span-2">
             <Label>Address</Label>
-            <Input
+            <Textarea
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Enter full address"
+              rows={3}
             />
           </div>
 
+
           <div className="md:col-span-2">
-            <Label>Bank Account No</Label>
-            <Input
-              value={bankAccountNo}
-              onChange={(e) => setBankAccountNo(e.target.value)}
-              placeholder="Enter bank account number"
+            <Label>Bank Details</Label>
+            <Textarea
+              value={bankDetails}
+              onChange={(e) => setBankDetails(e.target.value)}
+              placeholder="Bank name, Account No, IFSC, Branch"
+              rows={3}
             />
           </div>
+
         </div>
 
         <div className="flex justify-end gap-3">
           <Button type="submit" disabled={loading}>
             {loading ? "Saving..." : "Save"}
           </Button>
-          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST)}>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => navigate(ENC_LIST)}
+          >
             Cancel
           </Button>
         </div>

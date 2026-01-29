@@ -82,6 +82,8 @@ const ROUTES: RouteMap = {
   "em-masters": {
     "equipment-types": { list: EquipmentTypesList, form: EquipmentTypesForm },
     "equipment-model": { list: EquipmentModelList, form: EquipmentModelForm },
+    "contractor": { list: ContractorList, form: ContractorForm },
+    "vehicle-suppliers": { list: VehicleSupplierList, form: VehicleSupplierForm }
   },
 };
 
