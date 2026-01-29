@@ -28,7 +28,6 @@ export type EncryptedRoutes = {
   encTripSummary: string;
   encUserCreation: string;
   encUserScreenPermission: string;
-
   encUserType: string;
   encVehicleCreation: string;
   encVehicleHistory: string;
@@ -53,6 +52,7 @@ export type EncryptedRoutes = {
   encEquipmentType: string;
   encEquipmentModel: string;
   encContractor: string;
+  encVehicleSupplier: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -83,7 +83,6 @@ const plainRoutes: EncryptedRoutes = {
   encTripSummary: "trip-summary",
   encUserCreation: "user-creation",
   encPlantCreation: "plant-creation",
-
   encUserType: "user-type",
   encVehicleCreation: "vehicle-creation",
   encVehicleHistory: "vehicle-history",
@@ -108,6 +107,7 @@ const plainRoutes: EncryptedRoutes = {
   encEquipmentType: "equipment-types",
   encEquipmentModel: "equipment-model",
   encContractor: "contractor",
+  encVehicleSupplier: "vehicle-suppliers"
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {

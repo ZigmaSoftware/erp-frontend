@@ -14,9 +14,10 @@ const EM_MASTER_BASE = "em-masters";
    EM Masters
 -------------------------------------------------------- */
 export const emMastersEndpoints = {
-  equipmentTypes: `${EM_MASTER_BASE}/equipment-types/`,
+   equipmentTypes: `${EM_MASTER_BASE}/equipment-types/`,
    equipmentModels: `${EM_MASTER_BASE}/equipment-models/`,
    contractorModels: `${EM_MASTER_BASE}/contractor-models/`
+   vehicleSuppliers: `${EM_MASTER_BASE}/vehicle-suppliers/`
 } as const;
 
 export type EmMasterEntity = keyof typeof emMastersEndpoints;

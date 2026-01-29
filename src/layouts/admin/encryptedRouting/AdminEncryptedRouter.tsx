@@ -44,6 +44,8 @@ import EquipmentModelList from "@/pages/admin/modules/emMasters/equipmentModel/e
 import EquipmentModelForm from "@/pages/admin/modules/emMasters/equipmentModel/equipmentModelForm";
 import ContractorList from "@/pages/admin/modules/emMasters/contractor/contractorList";
 import ContractorForm from "@/pages/admin/modules/emMasters/contractor/contractorForm";
+import VehicleSupplierList from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierList";
+import VehicleSupplierForm from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -80,7 +82,6 @@ const ROUTES: RouteMap = {
   "em-masters": {
     "equipment-types": { list: EquipmentTypesList, form: EquipmentTypesForm },
     "equipment-model": { list: EquipmentModelList, form: EquipmentModelForm },
-    "contractor":{list:ContractorList,form:ContractorForm}
   },
 };
 
