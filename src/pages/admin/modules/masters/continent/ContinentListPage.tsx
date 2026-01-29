@@ -53,6 +53,7 @@ export default function ContinentList() {
     try {
       setLoading(true);
       const data = await continentApi.list();
+      console.log(data);
       setContinents(data);
     } catch (error) {
       Swal.fire("Error", "Failed to fetch continents", "error");

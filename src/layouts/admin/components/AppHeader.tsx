@@ -9,19 +9,29 @@ import { cn } from "@/lib/utils";
 import { getAdminNavigation } from "../navigation";
 import ZigmaLogo from "@/images/logo.png";
 
+type MenuKey = "admins" | "masters" | "em-masters" | null;
+
 const AppHeader: React.FC = () => {
-  const [openMenu, setOpenMenu] = useState<"masters" | "admins" | "em-masters" | null>(null);
+  const [openMenu, setOpenMenu] = useState<MenuKey>(null);
   const [scrolled, setScrolled] = useState(false);
 
-  const { isMobileOpen, toggleSidebar, toggleMobileSidebar, activeItem, setActiveItem } =
-    useSidebar();
+  const {
+    isMobileOpen,
+    toggleSidebar,
+    toggleMobileSidebar,
+    activeItem,
+    setActiveItem,
+  } = useSidebar();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const { admin, masters, emMasters } = useMemo(getAdminNavigation, []);
 
-  console.log("Admin Navigation:", { admin, masters, emMasters });
+  /* -------------------------------------------------
+     Helpers
+  ------------------------------------------------- */
+
   const findPrimaryPath = useCallback(
     (items: { path?: string; subItems?: { path: string }[] }[]) => {
       for (const item of items) {
@@ -40,14 +50,20 @@ const AppHeader: React.FC = () => {
       : `/admin${normalized}`;
   }, []);
 
+  /* -------------------------------------------------
+     Dashboard entry paths
+  ------------------------------------------------- */
+
   const adminDashboardPath = useMemo(
     () => withAdminPrefix(findPrimaryPath(admin)),
     [admin, findPrimaryPath, withAdminPrefix]
   );
+
   const mastersDashboardPath = useMemo(
     () => withAdminPrefix(findPrimaryPath(masters)),
-    [findPrimaryPath, masters, withAdminPrefix]
+    [masters, findPrimaryPath, withAdminPrefix]
   );
+
   const emMastersDashboardPath = useMemo(
     () => withAdminPrefix(findPrimaryPath(emMasters)),
     [emMasters, findPrimaryPath, withAdminPrefix]
@@ -57,7 +73,9 @@ const AppHeader: React.FC = () => {
   const masterItems = masters[0]?.subItems || [];
   const emMasterItems = emMasters[0]?.subItems || [];
 
-  /* ---------------- effects ---------------- */
+  /* -------------------------------------------------
+     Scroll + keyboard effects
+  ------------------------------------------------- */
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -76,30 +94,41 @@ const AppHeader: React.FC = () => {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
-  /* ---------------- handlers ---------------- */
+  /* -------------------------------------------------
+     Sidebar toggle
+  ------------------------------------------------- */
 
   const handleSidebarToggle = () => {
     if (window.innerWidth >= 1024) toggleSidebar();
     else toggleMobileSidebar();
   };
 
-  const toggleMenu = (menu: "masters" | "admins" | "em-masters") => {
+  /* -------------------------------------------------
+     Menu orchestration logic (IMPORTANT)
+  ------------------------------------------------- */
+
+  const showMastersGroup =
+    activeItem === "masters" || activeItem === "em-masters";
+
+  const toggleMenu = (menu: MenuKey) => {
     setActiveItem(menu);
     setOpenMenu((prev) => (prev === menu ? null : menu));
-  
+
     if (menu === "admins") navigate(adminDashboardPath);
     if (menu === "masters") navigate(mastersDashboardPath);
     if (menu === "em-masters") navigate(emMastersDashboardPath);
   };
 
-  /* ---------------- render menu ---------------- */
+  /* -------------------------------------------------
+     Menu renderer
+  ------------------------------------------------- */
 
   const renderNavMenu = (
     label: string,
-    menuKey: "masters" | "admins" | "em-masters",
+    menuKey: Exclude<MenuKey, null>,
     items: { name: string; path: string }[]
   ) => {
-    if (activeItem !== menuKey) return null;
+    if (activeItem !== menuKey && !showMastersGroup) return null;
 
     const isOpen = openMenu === menuKey;
 
@@ -165,7 +194,9 @@ const AppHeader: React.FC = () => {
     );
   };
 
-  /* ---------------- JSX ---------------- */
+  /* -------------------------------------------------
+     JSX
+  ------------------------------------------------- */
 
   return (
     <header className="sticky top-0 z-[60] w-full bg-white backdrop-blur-xl">
@@ -185,7 +216,10 @@ const AppHeader: React.FC = () => {
               {isMobileOpen ? "✕" : "☰"}
             </button>
 
-            <Link to="/admindashboard" className="hidden lg:flex items-center gap-3">
+            <Link
+              to="/admindashboard"
+              className="hidden lg:flex items-center gap-3"
+            >
               <img src={ZigmaLogo} className="h-12 w-12 rounded-2xl" />
               <div>
                 <div className="text-xl font-bold bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-accent)] bg-clip-text text-transparent">
@@ -197,10 +231,17 @@ const AppHeader: React.FC = () => {
               </div>
             </Link>
 
+            {/* -------- NAV BAR MENUS -------- */}
             <div className="hidden lg:flex gap-3">
-              {renderNavMenu("Admin", "admins", adminItems)}
-              {renderNavMenu("Masters", "masters", masterItems)}
-              {renderNavMenu("EM Masters", "em-masters", emMasterItems)}
+              {activeItem === "admins" &&
+                renderNavMenu("Admin", "admins", adminItems)}
+
+              {showMastersGroup && (
+                <>
+                  {renderNavMenu("Masters", "masters", masterItems)}
+                  {renderNavMenu("EM Masters", "em-masters", emMasterItems)}
+                </>
+              )}
             </div>
           </div>
 
