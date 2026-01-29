@@ -40,6 +40,10 @@ import PlantList from "@/pages/admin/modules/masters/plantCreation/plancreationL
 import PlantForm from "@/pages/admin/modules/masters/plantCreation/plantcreationForm";
 import EquipmentTypesList from "@/pages/admin/modules/emMasters/equipmentTypes/equipmentTypesList";
 import EquipmentTypesForm from "@/pages/admin/modules/emMasters/equipmentTypes/equipmentTypesForm";
+import EquipmentModelList from "@/pages/admin/modules/emMasters/equipmentModel/equipmentModelList";
+import EquipmentModelForm from "@/pages/admin/modules/emMasters/equipmentModel/equipmentModelForm";
+import VehicleSupplierList from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierList";
+import VehicleSupplierForm from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -75,6 +79,8 @@ const ROUTES: RouteMap = {
   },
   "em-masters": {
     "equipment-types": { list: EquipmentTypesList, form: EquipmentTypesForm },
+    "equipment-model": { list: EquipmentModelList, form: EquipmentModelForm },
+    "vehicle-suppliers": { list: VehicleSupplierList, form: VehicleSupplierForm }
   },
 };
 
