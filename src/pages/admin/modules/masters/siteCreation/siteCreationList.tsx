@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
-import { FilterMatchMode } from "primereact/api";
 
 import { districtApi, siteApi, stateApi } from "@/helpers/admin";
 import { Switch } from "@/components/ui/switch";
@@ -35,21 +34,19 @@ type SiteRecord = {
   weighbridge_count?: number | string;
 };
 
-type TableFilters = {
-  global: { value: string | null; matchMode: FilterMatchMode };
-};
-
 /* ================= COMPONENT ================= */
 
 export default function SiteCreationList() {
   const [sites, setSites] = useState<SiteRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [lazyParams, setLazyParams] = useState({
+    page: 1,
+    rows: 10,
+  });
 
   /* ---- search state (same as PlantList) ---- */
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState<TableFilters>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  });
 
   const { encMasters, encSiteCreation } = getEncryptedRoute();
   const ENC_NEW_PATH = `/${encMasters}/${encSiteCreation}/new`;
@@ -89,66 +86,63 @@ export default function SiteCreationList() {
 
   /* ================= FETCH ================= */
 
+  const fetchSites = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const [siteRes, states, districts] = await Promise.all([
+        siteApi.listPaginated(lazyParams.page, lazyParams.rows),
+        stateApi.list(),
+        districtApi.list(),
+      ]);
+
+      const stateMap = new Map<string, string>();
+      states.forEach((s: any) => {
+        const k = String(s.unique_id ?? s.id ?? s.name ?? "");
+        if (k) stateMap.set(k, s.name);
+      });
+
+      const districtMap = new Map<string, string>();
+      districts.forEach((d: any) => {
+        const k = String(d.unique_id ?? d.id ?? d.name ?? "");
+        if (k) districtMap.set(k, d.name);
+      });
+
+      const mapped = (siteRes.results ?? []).map((site: SiteRecord) => ({
+        ...site,
+        state:
+          site.state_name ??
+          stateMap.get(String(site.state_id)) ??
+          site.state,
+        district:
+          site.district_name ??
+          districtMap.get(String(site.district_id)) ??
+          site.district,
+        status:
+          site.is_active !== undefined
+            ? site.is_active
+              ? "Active"
+              : "Inactive"
+            : site.status,
+      }));
+
+      setSites(mapped);
+      setTotalRecords(siteRes.count ?? 0);
+    } catch {
+      Swal.fire("Error", "Failed to load sites", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [lazyParams.page, lazyParams.rows]);
+
   useEffect(() => {
-    const fetchSites = async () => {
-      try {
-        setLoading(true);
-
-        const [siteData, states, districts] = await Promise.all([
-          siteApi.list(),
-          stateApi.list(),
-          districtApi.list(),
-        ]);
-
-        const stateMap = new Map<string, string>();
-        states.forEach((s: any) => {
-          const k = String(s.unique_id ?? s.id ?? s.name ?? "");
-          if (k) stateMap.set(k, s.name);
-        });
-
-        const districtMap = new Map<string, string>();
-        districts.forEach((d: any) => {
-          const k = String(d.unique_id ?? d.id ?? d.name ?? "");
-          if (k) districtMap.set(k, d.name);
-        });
-
-        const mapped = (siteData as SiteRecord[]).map((site) => ({
-          ...site,
-          state:
-            site.state_name ??
-            stateMap.get(String(site.state_id)) ??
-            site.state,
-          district:
-            site.district_name ??
-            districtMap.get(String(site.district_id)) ??
-            site.district,
-          status:
-            site.is_active !== undefined
-              ? site.is_active
-                ? "Active"
-                : "Inactive"
-              : site.status,
-        }));
-
-        setSites(mapped);
-      } catch {
-        Swal.fire("Error", "Failed to load sites", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSites();
-  }, []);
+  }, [fetchSites]);
 
   /* ================= SEARCH HANDLER ================= */
 
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setFilters({
-      global: { value, matchMode: FilterMatchMode.CONTAINS },
-    });
-    setGlobalFilterValue(value);
+    setGlobalFilterValue(e.target.value);
   };
 
   /* ================= DATATABLE HEADER (SEARCH ONLY) ================= */
@@ -166,6 +160,13 @@ export default function SiteCreationList() {
       </div>
     </div>
   );
+
+  const onPage = (event: any) => {
+    setLazyParams({
+      page: event.page + 1,
+      rows: event.rows,
+    });
+  };
 
   /* ================= RENDER ================= */
 
@@ -195,14 +196,13 @@ export default function SiteCreationList() {
         value={sites}
         dataKey="unique_id"
         loading={loading}
-        filters={filters}
-        globalFilterFields={[
-          "site_name",
-          "state",
-          "district",
-          "ulb",
-          "project_type_details",
-        ]}
+        lazy
+        paginator
+        rows={lazyParams.rows}
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        first={(lazyParams.page - 1) * lazyParams.rows}
+        totalRecords={totalRecords}
+        onPage={onPage}
         header={tableHeader}
         stripedRows
         showGridlines

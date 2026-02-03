@@ -6,7 +6,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { FilterMatchMode } from "primereact/api";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -30,11 +29,12 @@ type StateRecord = {
 export default function StateList() {
   const [states, setStates] = useState<StateRecord[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [lazyParams, setLazyParams] = useState({
+    page: 1,
+    rows: 10,
   });
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const navigate = useNavigate();
 
@@ -48,8 +48,12 @@ export default function StateList() {
   const fetchStates = useCallback(async () => {
     setLoading(true);
     try {
-      const data = (await stateApi.list()) as StateRecord[];
-      setStates(data);
+      const res = await stateApi.listPaginated(
+        lazyParams.page,
+        lazyParams.rows
+      );
+      setStates(res.results as StateRecord[]);
+      setTotalRecords(res.count ?? 0);
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -59,7 +63,7 @@ export default function StateList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lazyParams.page, lazyParams.rows]);
 
   useEffect(() => {
     void fetchStates();
@@ -96,12 +100,7 @@ export default function StateList() {
   };
 
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setFilters({
-      ...filters,
-      global: { ...filters.global, value },
-    });
-    setGlobalFilterValue(value);
+    setGlobalFilterValue(e.target.value);
   };
 
   const renderHeader = () => (
@@ -156,7 +155,15 @@ export default function StateList() {
     </div>
   );
 
-  const indexTemplate = (_: StateRecord, { rowIndex }: any) => rowIndex + 1;
+  const indexTemplate = (_: StateRecord, { rowIndex }: any) =>
+    (lazyParams.page - 1) * lazyParams.rows + rowIndex + 1;
+
+  const onPage = (event: any) => {
+    setLazyParams({
+      page: event.page + 1,
+      rows: event.rows,
+    });
+  };
 
   return (
     <div className="p-3">
@@ -178,16 +185,18 @@ export default function StateList() {
         <DataTable
           value={states}
           dataKey="unique_id"
+          lazy
           paginator
-          rows={10}
+          rows={lazyParams.rows}
           rowsPerPageOptions={[5, 10, 25, 50]}
+          first={(lazyParams.page - 1) * lazyParams.rows}
+          totalRecords={totalRecords}
+          onPage={onPage}
           loading={loading}
-          filters={filters}
           header={renderHeader()}
           stripedRows
           showGridlines
           emptyMessage="No states found."
-          globalFilterFields={["name", "country_name", "label"]}
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "70px" }} />
