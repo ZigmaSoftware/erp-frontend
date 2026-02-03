@@ -6,7 +6,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { FilterMatchMode } from "primereact/api";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
@@ -25,12 +24,12 @@ type DistrictRecord = {
 export default function DistrictListPage() {
   const [districts, setDistricts] = useState<DistrictRecord[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [lazyParams, setLazyParams] = useState({
+    page: 1,
+    rows: 10,
   });
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const navigate = useNavigate();
 
@@ -44,8 +43,11 @@ export default function DistrictListPage() {
   const fetchDistricts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await districtApi.list();
-      const data = res as any[];
+      const res = await districtApi.listPaginated(
+        lazyParams.page,
+        lazyParams.rows
+      );
+      const data = (res.results ?? []) as any[];
 
       const mapped: DistrictRecord[] = data.map((d: any) => ({
         unique_id: d.unique_id,
@@ -57,6 +59,7 @@ export default function DistrictListPage() {
 
       mapped.sort((a, b) => a.name.localeCompare(b.name));
       setDistricts(mapped);
+      setTotalRecords(res.count ?? 0);
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -66,7 +69,7 @@ export default function DistrictListPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lazyParams.page, lazyParams.rows]);
 
   useEffect(() => {
     fetchDistricts();
@@ -97,12 +100,7 @@ export default function DistrictListPage() {
   };
 
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setFilters((prev: any) => ({
-      ...prev,
-      global: { ...prev.global, value },
-    }));
-    setGlobalFilterValue(value);
+    setGlobalFilterValue(e.target.value);
   };
 
   const renderHeader = () => (
@@ -153,7 +151,15 @@ export default function DistrictListPage() {
     </div>
   );
 
-  const indexTemplate = (_: DistrictRecord, { rowIndex }: any) => rowIndex + 1;
+  const indexTemplate = (_: DistrictRecord, { rowIndex }: any) =>
+    (lazyParams.page - 1) * lazyParams.rows + rowIndex + 1;
+
+  const onPage = (event: any) => {
+    setLazyParams({
+      page: event.page + 1,
+      rows: event.rows,
+    });
+  };
 
   return (
     <div className="p-3">
@@ -176,15 +182,17 @@ export default function DistrictListPage() {
           value={districts}
           dataKey="unique_id"
           loading={loading}
+          lazy
           paginator
-          rows={10}
+          rows={lazyParams.rows}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          filters={filters}
+          first={(lazyParams.page - 1) * lazyParams.rows}
+          totalRecords={totalRecords}
+          onPage={onPage}
           header={renderHeader()}
           stripedRows
           showGridlines
           emptyMessage="No districts found."
-          globalFilterFields={["name", "countryName", "stateName"]}
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
