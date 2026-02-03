@@ -13,8 +13,8 @@ import "primeicons/primeicons.css";
 
 import { Switch } from "@/components/ui/switch";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { continentApi } from "@/helpers/admin/continent";
 import { PencilIcon } from "@/icons";
+import { continentApi } from "@/helpers/admin";
 
 /* -----------------------------------------
    Types
@@ -62,7 +62,7 @@ export default function ContinentList() {
       );
 
       setData(res.results);
-      setTotalRecords(res.count);
+      setTotalRecords(Number(res.count));
     } catch {
       Swal.fire("Error", "Failed to fetch continents", "error");
     } finally {
