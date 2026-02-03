@@ -51,6 +51,7 @@ export type EncryptedRoutes = {
   encEmMasters: string;
   encEquipmentType: string;
   encEquipmentModel: string;
+  encContractor: string;
   encVehicleSupplier: string;
 };
 
@@ -105,6 +106,7 @@ const plainRoutes: EncryptedRoutes = {
   encEmMasters: "em-masters",
   encEquipmentType: "equipment-types",
   encEquipmentModel: "equipment-model",
+  encContractor: "contractor",
   encVehicleSupplier: "vehicle-suppliers"
 };
 

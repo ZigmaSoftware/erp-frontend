@@ -45,6 +45,7 @@ export const vehicleCreationApi = adminApi.vehicleCreation;
 /* -------- EM Masters -------- */
 export const equipmentTypeApi = emMasterApi.equipmentTypes;
 export const equipmentModelApi = emMasterApi.equipmentModels;
+export const contractorApi = emMasterApi.contractorModels;
 export const vehicleSupplierApi = emMasterApi.vehicleSuppliers;
 
 /* -------- Utilities -------- */

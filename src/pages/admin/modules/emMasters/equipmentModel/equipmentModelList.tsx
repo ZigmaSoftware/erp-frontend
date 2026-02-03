@@ -44,7 +44,7 @@ export default function EquipmentModelList() {
     try {
       const res = await equipmentModelApi.list();
       const raw = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : (Array.isArray((res as any)?.data?.results) ? (res as any).data.results : []));
-
+console.log("raw", raw);
       setModels(
         raw.map((item: any) => ({
           unique_id: item.unique_id,
@@ -54,11 +54,14 @@ export default function EquipmentModelList() {
           description: item.description,
           is_active: Boolean(item.is_active),
         }))
+      
       );
+      
     } finally {
       setLoading(false);
     }
   };
+    console.log("models", models);
 
   useEffect(() => {
     fetchModels();
@@ -103,9 +106,9 @@ export default function EquipmentModelList() {
       <button onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}>
         <PencilIcon className="size-5 text-blue-600" />
       </button>
-      <button onClick={() => handleDelete(row.unique_id)}>
+      {/* <button onClick={() => handleDelete(row.unique_id)}>
         <TrashBinIcon className="size-5 text-red-600" />
-      </button>
+      </button> */}
     </div>
   );
 
