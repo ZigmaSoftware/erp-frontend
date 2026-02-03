@@ -12,6 +12,11 @@ const normalizePath = (path: string): string => {
 /* -----------------------------------------
    CRUD + Custom Helpers
 ----------------------------------------- */
+type PaginatedResponse<T> = {
+  results: T[];
+  [key: string]: unknown;
+};
+
 export type CrudHelpers<T = any> = {
   list: (config?: AxiosRequestConfig) => Promise<T[]>;
   get: (path: string | number, config?: AxiosRequestConfig) => Promise<T>;
@@ -52,11 +57,30 @@ export const createCrudHelpers = <T = any>(
 ): CrudHelpers<T> => {
   const resource = normalizePath(basePath);
 
+
+
+
+
+  
+
   return {
     list: async (config) => {
-      const { data } = await api.get<T[]>(resource, config);
-      return data;
+      const { data } = await api.get<T[] | PaginatedResponse<T>>(
+        resource,
+        config
+      );
+      if (
+        data &&
+        typeof data === "object" &&
+        "results" in data &&
+        Array.isArray((data as PaginatedResponse<T>).results)
+      ) {
+        return (data as PaginatedResponse<T>).results;
+      }
+      return data as T[];
     },
+
+    
 
     get: async (path, config) => {
       const isRaw =
