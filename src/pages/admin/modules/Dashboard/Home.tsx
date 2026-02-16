@@ -19,7 +19,6 @@ import {
   districtApi,
   cityApi,
   staffCreationApi,
-  userCreationApi,
   userTypeApi,
   staffUserTypeApi,
   mainScreenTypeApi,
@@ -28,6 +27,7 @@ import {
   userScreenActionApi,
   userScreenPermissionApi,
 } from "@/helpers/admin";
+import { authUserApi } from "@/helpers/auth";
 
 import { MetricCard } from "./MetricCard";
 import { DashboardSection } from "./DashboardSection";
@@ -70,7 +70,7 @@ export default function AdminHome() {
         districtApi.list(), // 3
         cityApi.list(), // 4
         staffCreationApi.list(), // 5
-        userCreationApi.list(), // 6
+        authUserApi.list(), // 6
         userTypeApi.list(), // 7
         staffUserTypeApi.list(), // 8
         mainScreenTypeApi.list(), // 9

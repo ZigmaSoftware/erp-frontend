@@ -1,5 +1,6 @@
 import type { AxiosRequestConfig } from "axios";
 import api from "@/api";
+import type { AxiosInstance } from "axios";
 
 /* -----------------------------------------
    Normalize API path (idempotent)
@@ -66,7 +67,8 @@ export type CrudHelpers<T = any> = {
    Factory
 ----------------------------------------- */
 export const createCrudHelpers = <T = any>(
-  basePath: string
+  basePath: string,
+  client: AxiosInstance = api
 ): CrudHelpers<T> => {
   const resource = normalizePath(basePath);
 
@@ -115,19 +117,19 @@ export const createCrudHelpers = <T = any>(
         ? `${resource}${path}`
         : `${resource}${path}/`;
 
-      const { data } = await api.get<T>(url, config);
+      const { data } = await client.get<T>(url, config);
       return data;
     },
 
     /* ---------- MUTATIONS ---------- */
 
     create: async (payload, config) => {
-      const { data } = await api.post<T>(resource, payload, config);
+      const { data } = await client.post<T>(resource, payload, config);
       return data;
     },
 
     update: async (id, payload, config) => {
-      const { data } = await api.patch<T>(
+      const { data } = await client.patch<T>(
         `${resource}${id}/`,
         payload,
         config
@@ -136,7 +138,7 @@ export const createCrudHelpers = <T = any>(
     },
 
     remove: async (id, config) => {
-      await api.delete(`${resource}${id}/`, config);
+      await client.delete(`${resource}${id}/`, config);
     },
 
     /* ---------- CUSTOM ACTION ---------- */
@@ -157,7 +159,7 @@ export const createCrudHelpers = <T = any>(
     /* ---------- FILE UPLOADS ---------- */
 
     upload: async (payload, config) => {
-      const { data } = await api.post(resource, payload, {
+      const { data } = await client.post(resource, payload, {
         ...config,
         headers: {
           "Content-Type": "multipart/form-data",
@@ -168,7 +170,7 @@ export const createCrudHelpers = <T = any>(
     },
 
     uploadUpdate: async (id, payload, config) => {
-      const { data } = await api.patch(
+      const { data } = await client.patch(
         `${resource}${id}/`,
         payload,
         {
