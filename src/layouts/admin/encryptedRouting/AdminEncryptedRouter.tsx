@@ -41,6 +41,7 @@ import ContractorForm from "@/pages/admin/modules/emMasters/contractor/contracto
 import VehicleSupplierList from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierList";
 import VehicleSupplierForm from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierForm";
 import UserCreationList from "@/pages/admin/modules/admin/userCreation/user-creationList";
+import UserCreationForm from "@/pages/admin/modules/admin/userCreation/user-creationForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -56,7 +57,7 @@ type RouteMap = Record<string, Record<string, RouteConfig>>;
 const ROUTES: RouteMap = {
   admins: {
     "user-type": { list: UserTypeList, form: UserTypeForm },
-    "user-creation": {list: UserCreationList, form: UserScreenActionForm},
+    "user-creation": {list: UserCreationList, form: UserCreationForm},
     "mainscreen-type": {list: MainScreenTypeList, form: MainScreenTypeForm},
     "userscreen-action": {list:UserScreenActionList, form: UserScreenActionForm },
     "mainscreens": {list: MainScreenList, form: MainScreenForm},
