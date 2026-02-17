@@ -9,14 +9,15 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Eye, EyeOff } from "lucide-react";
+
+import type { UserType } from "../types/admin.types";
 import { userTypeApi, userCreationApi } from "@/helpers/admin";
 
-/* =======================
-   ROUTES
-   ======================= */
+/* ================= ROUTES ================= */
 const { encAdmins, encUserCreation } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encAdmins}/${encUserCreation}`;
 
+/* ================= HELPERS ================= */
 const normalizeList = (payload: any) =>
   Array.isArray(payload)
     ? payload
@@ -24,17 +25,16 @@ const normalizeList = (payload: any) =>
       ? payload.data
       : payload?.data?.results ?? [];
 
-/* =======================
-   COMPONENT
-   ======================= */
+/* ================= COMPONENT ================= */
 export default function UserCreationForm() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  /* ---------- STATE ---------- */
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  /* ---------- FORM STATE ---------- */
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -43,64 +43,87 @@ export default function UserCreationForm() {
   const [isActive, setIsActive] = useState(true);
   const [isStaff, setIsStaff] = useState(false);
 
-  const [roles, setRoles] = useState<any[]>([]);
+  const [roles, setRoles] = useState<UserType[]>([]);
   const [roleIds, setRoleIds] = useState<string[]>([]);
 
-  /* ---------- ROLES ---------- */
+  /* ================= LOAD ROLES ================= */
   useEffect(() => {
-    userTypeApi
-      .list()
-      .then((res) => {
+    const loadRoles = async () => {
+      try {
+        const res = await userTypeApi.list();
         setRoles(normalizeList(res));
-      })
-      .catch((err) => {
+      } catch (err) {
+        console.error(err);
         Swal.fire("Error", "Unable to load roles", "error");
-        console.error("Role load failed:", err);
-      });
+      }
+    };
+
+    loadRoles();
   }, []);
 
-  /* ---------- EDIT ---------- */
+  /* ================= LOAD USER (EDIT) ================= */
   useEffect(() => {
     if (!isEdit || !id) return;
 
-    userCreationApi
-      .get(id)
-      .then((u) => {
+    const loadUser = async () => {
+      try {
+        const u = await userCreationApi.get(id);
+
         setUsername(u.username ?? "");
         setEmail(u.email ?? "");
         setFirstName(u.first_name ?? "");
         setLastName(u.last_name ?? "");
         setIsActive(Boolean(u.is_active));
         setIsStaff(Boolean(u.is_staff));
-      })
-      .catch((err) => {
+
+        // If backend returns role_ids or roles
+        if (u.role_ids) {
+          setRoleIds(u.role_ids.map(String));
+        } else if (u.roles) {
+          setRoleIds(u.roles.map((r: any) => String(r.id)));
+        }
+      } catch (err) {
+        console.error(err);
         Swal.fire("Error", "Unable to load user", "error");
-        console.error("User load failed:", err);
-      });
+      }
+    };
+
+    loadUser();
   }, [id, isEdit]);
 
-  /* ---------- ROLE TOGGLE ---------- */
+  /* ================= ROLE TOGGLE ================= */
   const toggleRole = (roleId: string) => {
     setRoleIds((prev) =>
       prev.includes(roleId)
-        ? prev.filter((id) => id !== roleId)
+        ? prev.filter((r) => r !== roleId)
         : [...prev, roleId]
     );
   };
 
-  /* ---------- SUBMIT ---------- */
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-
+  /* ================= VALIDATION ================= */
+  const validate = () => {
     if (!username.trim()) {
-      Swal.fire({ icon: "error", title: "Username is required" });
-      return;
+      Swal.fire("Validation Error", "Username is required", "error");
+      return false;
+    }
+
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+      Swal.fire("Validation Error", "Invalid email format", "error");
+      return false;
     }
 
     if (!isEdit && !password.trim()) {
-      Swal.fire({ icon: "error", title: "Password is required" });
-      return;
+      Swal.fire("Validation Error", "Password is required", "error");
+      return false;
     }
+
+    return true;
+  };
+
+  /* ================= SUBMIT ================= */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
 
     const payload: any = {
       username,
@@ -113,36 +136,46 @@ export default function UserCreationForm() {
 
     if (!isEdit) {
       payload.password = password;
-      if (roleIds.length > 0) {
-        payload.role_ids = roleIds;
-      }
+      payload.role_ids = roleIds;
     }
 
     try {
       setLoading(true);
-      if (isEdit) {
-        if (!id) {
-          throw new Error("Missing user id");
-        }
+
+      if (isEdit && id) {
         await userCreationApi.update(id, payload);
       } else {
         await userCreationApi.create(payload);
       }
 
-      Swal.fire({ icon: "success", title: "Saved Successfully" });
+      await Swal.fire({
+        icon: "success",
+        title: isEdit ? "User Updated" : "User Created",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
       navigate(ENC_LIST_PATH);
     } catch (err: any) {
-      Swal.fire({ icon: "error", title: "Save failed", text: JSON.stringify(err.response?.data) });
+      console.error(err);
+
+      const message =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        "Something went wrong";
+
+      Swal.fire("Error", message, "error");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ---------- RENDER ---------- */
+  /* ================= RENDER ================= */
   return (
     <ComponentCard title={isEdit ? "Edit User" : "Add User"}>
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Username */}
           <div>
             <Label>Username *</Label>
             <Input
@@ -151,6 +184,7 @@ export default function UserCreationForm() {
             />
           </div>
 
+          {/* Email */}
           <div>
             <Label>Email</Label>
             <Input
@@ -160,6 +194,7 @@ export default function UserCreationForm() {
             />
           </div>
 
+          {/* First Name */}
           <div>
             <Label>First Name</Label>
             <Input
@@ -168,6 +203,7 @@ export default function UserCreationForm() {
             />
           </div>
 
+          {/* Last Name */}
           <div>
             <Label>Last Name</Label>
             <Input
@@ -176,6 +212,7 @@ export default function UserCreationForm() {
             />
           </div>
 
+          {/* Password (Create only) */}
           {!isEdit && (
             <div>
               <Label>Password *</Label>
@@ -188,7 +225,7 @@ export default function UserCreationForm() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
+                  onClick={() => setShowPassword((p) => !p)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -197,47 +234,63 @@ export default function UserCreationForm() {
             </div>
           )}
 
+          {/* Status */}
           <div className="flex items-center gap-3">
             <Switch checked={isActive} onCheckedChange={setIsActive} />
             <Label>Status (Active)</Label>
           </div>
 
+          {/* Staff */}
           <div className="flex items-center gap-3">
             <Switch checked={isStaff} onCheckedChange={setIsStaff} />
             <Label>Staff User</Label>
           </div>
         </div>
 
+        {/* Roles */}
         <div className="mt-6">
           <Label>Roles</Label>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
             {roles.length === 0 && (
               <p className="text-sm text-gray-500">No roles available.</p>
             )}
+
             {roles.map((role) => (
-              <label key={role.id} className="flex items-center gap-2 text-sm">
+              <label
+                key={role.id}
+                className="flex items-center gap-2 text-sm"
+              >
                 <Checkbox
                   checked={roleIds.includes(String(role.id))}
                   onCheckedChange={() => toggleRole(String(role.id))}
-                  disabled={isEdit}
                 />
                 <span>{role.name}</span>
               </label>
             ))}
           </div>
-          {isEdit && (
-            <p className="text-xs text-gray-500 mt-2">
-              Role assignment is available during user creation only.
-            </p>
-          )}
         </div>
 
+        {/* Buttons */}
         <div className="flex justify-end gap-3 mt-6">
-          <button type="button" onClick={() => navigate(ENC_LIST_PATH)} className="bg-red-400 px-4 py-2 text-white rounded">
+          <button
+            type="button"
+            onClick={() => navigate(ENC_LIST_PATH)}
+            className="bg-red-400 px-4 py-2 text-white rounded"
+          >
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="bg-green-custom px-4 py-2 text-white rounded">
-            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-green-custom px-4 py-2 text-white rounded"
+          >
+            {loading
+              ? "Saving..."
+              : isEdit
+              ? "Update"
+              : "Save"}
           </button>
         </div>
       </form>

@@ -26,6 +26,14 @@ export interface MainScreen extends BaseEntity {
   description: string;
 }
 
+export interface UserCreation{
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  
+}
+
 /* ===========================================================
    USER SCREENS (Second-Level Menu)
 =========================================================== */
