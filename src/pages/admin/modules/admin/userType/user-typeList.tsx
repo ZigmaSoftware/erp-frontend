@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 
 import type { UserType } from "../types/admin.types"; 
 
-import { userTypeApi } from "@/helpers/admin";
+import { userRoleApi } from "@/helpers/admin";
 
 export default function UserTypePage() {
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
@@ -35,18 +35,19 @@ export default function UserTypePage() {
   const { encAdmins, encUserType } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encAdmins}/${encUserType}/new`;
-  const ENC_EDIT_PATH = (unique_id: string) =>
-    `/${encAdmins}/${encUserType}/${unique_id}/edit`;
+  const ENC_EDIT_PATH = (id: string) =>
+    `/${encAdmins}/${encUserType}/${id}/edit`;
 
   const fetchUserTypes = async () => {
     try {
-      const res = await userTypeApi.list();
+      const res = await userRoleApi.list();
       const payload: any = res;
       const data = Array.isArray(payload)
         ? payload
         : Array.isArray(payload.data)
           ? payload.data
           : (payload.data?.results ?? []);
+      console.log(data);
       setUserTypes(data);
     } finally {
       setLoading(false);
@@ -57,7 +58,7 @@ export default function UserTypePage() {
     fetchUserTypes();
   }, []);
 
-  const handleDelete = async (unique_id: string) => {
+  const handleDelete = async (id: string) => {
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
       text: "This userType will be permanently deleted!",
@@ -70,7 +71,7 @@ export default function UserTypePage() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await userTypeApi.remove(unique_id);
+    await userRoleApi.remove(id);
 
     Swal.fire({
       icon: "success",
@@ -98,7 +99,7 @@ export default function UserTypePage() {
       <button
         title="Edit"
         className="text-blue-600 hover:text-blue-800"
-        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
       >
         <PencilIcon className="size-5" />
       </button>
@@ -115,7 +116,7 @@ export default function UserTypePage() {
 
   const statusTemplate = (row: UserType) => {
     const updateStatus = async (value: boolean) => {
-      await userTypeApi.update(row.unique_id, {
+      await userRoleApi.update(row.id, {
         name: row.name, // correct field name
         is_active: value,
       });

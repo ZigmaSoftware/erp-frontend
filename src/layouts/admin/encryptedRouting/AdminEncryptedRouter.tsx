@@ -17,15 +17,9 @@ import CityForm from "@/pages/admin/modules/masters/city/CityForm";
 import SiteCreationList from "@/pages/admin/modules/masters/siteCreation/siteCreationList";
 import SiteCreationForm from "@/pages/admin/modules/masters/siteCreation/siteCreationForm";
 
-import StaffCreationList from "@/pages/admin/modules/masters/staffCreation/staffcreationList";
-import StaffCreationForm from "@/pages/admin/modules/masters/staffCreation/staffcreationForm";
 // Admin
 import UserTypeList from "@/pages/admin/modules/admin/userType/user-typeList";
 import UserTypeForm from "@/pages/admin/modules/admin/userType/user-typeForm";
-import UserCreationList from "@/pages/admin/modules/admin/userCreation/user-creationList";
-import UserCreationForm from "@/pages/admin/modules/admin/userCreation/user-creationForm";
-import StaffUserTypeForm from "@/pages/admin/modules/admin/staffUserType/staffUserTypeForm";
-import StaffUserTypeList from "@/pages/admin/modules/admin/staffUserType/staffUserTypeList";
 import MainScreenTypeList from "@/pages/admin/modules/admin/mainScreenType/mainScreenTypeList";
 import MainScreenTypeForm from "@/pages/admin/modules/admin/mainScreenType/mainScreenTypeForm";
 import UserScreenActionList from "@/pages/admin/modules/admin/userScreenAction/userScreenActionList";
@@ -42,8 +36,11 @@ import EquipmentTypesList from "@/pages/admin/modules/emMasters/equipmentTypes/e
 import EquipmentTypesForm from "@/pages/admin/modules/emMasters/equipmentTypes/equipmentTypesForm";
 import EquipmentModelList from "@/pages/admin/modules/emMasters/equipmentModel/equipmentModelList";
 import EquipmentModelForm from "@/pages/admin/modules/emMasters/equipmentModel/equipmentModelForm";
+import ContractorList from "@/pages/admin/modules/emMasters/contractor/contractorList";
+import ContractorForm from "@/pages/admin/modules/emMasters/contractor/contractorForm";
 import VehicleSupplierList from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierList";
 import VehicleSupplierForm from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierForm";
+import UserCreationList from "@/pages/admin/modules/admin/userCreation/user-creationList";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -59,8 +56,7 @@ type RouteMap = Record<string, Record<string, RouteConfig>>;
 const ROUTES: RouteMap = {
   admins: {
     "user-type": { list: UserTypeList, form: UserTypeForm },
-    "user-creation": { list: UserCreationList, form: UserCreationForm },
-    "staff-user-type": { list: StaffUserTypeList, form: StaffUserTypeForm },
+    "user-creation": {list: UserCreationList, form: UserScreenActionForm},
     "mainscreen-type": {list: MainScreenTypeList, form: MainScreenTypeForm},
     "userscreen-action": {list:UserScreenActionList, form: UserScreenActionForm },
     "mainscreens": {list: MainScreenList, form: MainScreenForm},
@@ -74,12 +70,12 @@ const ROUTES: RouteMap = {
     districts: { list: DistrictList, form: DistrictForm },
     cities: { list: CityList, form: CityForm },
     "site-creation": { list: SiteCreationList, form: SiteCreationForm },
-    "staff-creation": { list: StaffCreationList, form: StaffCreationForm },
     "plant-creation": {list: PlantList, form: PlantForm}
   },
   "em-masters": {
     "equipment-types": { list: EquipmentTypesList, form: EquipmentTypesForm },
     "equipment-model": { list: EquipmentModelList, form: EquipmentModelForm },
+    "contractor": { list: ContractorList, form: ContractorForm },
     "vehicle-suppliers": { list: VehicleSupplierList, form: VehicleSupplierForm }
   },
 };

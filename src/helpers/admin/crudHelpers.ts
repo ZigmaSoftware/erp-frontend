@@ -4,39 +4,65 @@ import api from "@/api";
 /* -----------------------------------------
    Normalize API path (idempotent)
 ----------------------------------------- */
+const isAbsoluteUrl = (value: string): boolean => /^(https?:)?\/\/+/i.test(value);
+
 const normalizePath = (path: string): string => {
-  const cleaned = path.replace(/^\/+/, "").replace(/\/+$/, "");
-  return `/${cleaned}/`;
+  const cleaned = path.trim().replace(/\/+$/, "");
+
+  if (isAbsoluteUrl(cleaned)) {
+    return `${cleaned.replace(/\/+$/, "")}/`;
+  }
+
+  const trimmed = cleaned.replace(/^\/+/, "");
+  return `/${trimmed}/`;
 };
 
 /* -----------------------------------------
-   CRUD + Custom Helpers
+   Types
 ----------------------------------------- */
+export type PaginatedResponse<T> = {
+  results: T[];
+  count?: number;
+  next?: string | null;
+  previous?: string | null;
+  [key: string]: unknown;
+};
+
 export type CrudHelpers<T = any> = {
   list: (config?: AxiosRequestConfig) => Promise<T[]>;
+
+  listPaginated: (
+    page?: number,
+    limit?: number,
+    config?: AxiosRequestConfig
+  ) => Promise<PaginatedResponse<T>>;
+
   get: (path: string | number, config?: AxiosRequestConfig) => Promise<T>;
-  create: <P = unknown>(payload: P, config?: AxiosRequestConfig) => Promise<T>;
+
+  create: <P = unknown>(
+    payload: P,
+    config?: AxiosRequestConfig
+  ) => Promise<T>;
+
   update: <P = unknown>(
     id: string | number,
     payload: P,
     config?: AxiosRequestConfig
   ) => Promise<T>;
+
   remove: (id: string | number, config?: AxiosRequestConfig) => Promise<void>;
 
-  /** Generic POST/GET action */
   action: <R = any, P = any>(
     action: string,
     payload?: P,
     config?: AxiosRequestConfig
   ) => Promise<R>;
 
-  /** 🔥 Multipart upload support */
   upload: <R = any>(
     payload: FormData,
     config?: AxiosRequestConfig
   ) => Promise<R>;
 
-  /** 🔥 Multipart update */
   uploadUpdate: <R = any>(
     id: string | number,
     payload: FormData,
@@ -53,10 +79,40 @@ export const createCrudHelpers = <T = any>(
   const resource = normalizePath(basePath);
 
   return {
+    /* ---------- LIST ---------- */
+
     list: async (config) => {
-      const { data } = await api.get<T[]>(resource, config);
+      const { data } = await api.get<T[] | PaginatedResponse<T>>(
+        resource,
+        config
+      );
+
+      if (
+        data &&
+        typeof data === "object" &&
+        "results" in data &&
+        Array.isArray(data.results)
+      ) {
+        return data.results;
+      }
+
+      return data as T[];
+    },
+
+    listPaginated: async (page = 1, limit = 5, config) => {
+      const { data } = await api.get<PaginatedResponse<T>>(resource, {
+        ...config,
+        params: {
+          page,
+          limit,
+          ...config?.params,
+        },
+      });
+
       return data;
     },
+
+    /* ---------- GET ---------- */
 
     get: async (path, config) => {
       const isRaw =
@@ -70,6 +126,8 @@ export const createCrudHelpers = <T = any>(
       const { data } = await api.get<T>(url, config);
       return data;
     },
+
+    /* ---------- MUTATIONS ---------- */
 
     create: async (payload, config) => {
       const { data } = await api.post<T>(resource, payload, config);
@@ -89,18 +147,18 @@ export const createCrudHelpers = <T = any>(
       await api.delete(`${resource}${id}/`, config);
     },
 
+    /* ---------- CUSTOM ACTION ---------- */
+
     action: async (action, payload, config) => {
       const cleanAction = action.replace(/^\/+/, "");
       const url = `${resource}${cleanAction}${
         cleanAction.endsWith("/") ? "" : "/"
       }`;
 
-      if (payload) {
-        const { data } = await api.post(url, payload, config);
-        return data;
-      }
+      const { data } = payload
+        ? await api.post(url, payload, config)
+        : await api.get(url, config);
 
-      const { data } = await api.get(url, config);
       return data;
     },
 

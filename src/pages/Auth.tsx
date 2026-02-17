@@ -35,25 +35,6 @@ type LoginResponse = {
   };
 };
 
-const DUMMY_ACCESS_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDAsInN1YiI6IklXTVNfUk5EIn0.dHVubmVsLXNpZ25hdHVyZQ";
-
-const RND_PROFILES: Record<
-  UserRole,
-  { name: string; email: string; uniqueId: string }
-> = {
-  admin: {
-    name: "Admin Preview",
-    email: "admin-preview@rnd.local",
-    uniqueId: "RND-ADMIN",
-  },
-  user: {
-    name: "Dashboard Preview",
-    email: "dashboard-preview@rnd.local",
-    uniqueId: "RND-USER",
-  },
-};
-
 export default function Auth() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -65,20 +46,6 @@ export default function Auth() {
   const { t } = useTranslation();
   const { setUser } = useUser();
 
-  const handleRndAccess = (targetRole: UserRole) => {
-    const normalizedRole: UserRole = ADMIN_ROLE;
-    const profile = RND_PROFILES[targetRole] ?? RND_PROFILES[DEFAULT_ROLE];
-
-    localStorage.setItem("access_token", DUMMY_ACCESS_TOKEN);
-    localStorage.setItem(USER_ROLE_STORAGE_KEY, normalizedRole);
-    localStorage.setItem("unique_id", profile.uniqueId);
-    setUser({
-      name: profile.name,
-      email: profile.email,
-    });
-
-    navigate("/admin", { replace: true });
-  };
 
   const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -90,6 +57,7 @@ export default function Auth() {
         username,
         password,
       });
+      console.log(res);
 
       const {
         access_token,

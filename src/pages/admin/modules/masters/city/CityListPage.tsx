@@ -6,7 +6,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { FilterMatchMode } from "primereact/api";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -31,11 +30,12 @@ type CityRecord = {
 export default function CityList() {
   const [cities, setCities] = useState<CityRecord[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [lazyParams, setLazyParams] = useState({
+    page: 1,
+    rows: 10,
   });
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const navigate = useNavigate();
 
@@ -49,8 +49,12 @@ export default function CityList() {
   const fetchCities = useCallback(async () => {
     setLoading(true);
     try {
-      const data = (await cityApi.list()) as CityRecord[];
-      setCities(data);
+      const res = await cityApi.listPaginated(
+        lazyParams.page,
+        lazyParams.rows
+      );
+      setCities(res.results as CityRecord[]);
+      setTotalRecords(res.count ?? 0);
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -60,7 +64,7 @@ export default function CityList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lazyParams.page, lazyParams.rows]);
 
   useEffect(() => {
     fetchCities();
@@ -91,12 +95,7 @@ export default function CityList() {
   };
 
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setFilters({
-      ...filters,
-      global: { ...filters.global, value },
-    });
-    setGlobalFilterValue(value);
+    setGlobalFilterValue(e.target.value);
   };
 
   const renderHeader = () => (
@@ -148,7 +147,14 @@ export default function CityList() {
   );
 
   const indexTemplate = (_: CityRecord, { rowIndex }: { rowIndex: number }) =>
-    rowIndex + 1;
+    (lazyParams.page - 1) * lazyParams.rows + rowIndex + 1;
+
+  const onPage = (event: any) => {
+    setLazyParams({
+      page: event.page + 1,
+      rows: event.rows,
+    });
+  };
 
   return (
     <div className="p-3">
@@ -170,21 +176,18 @@ export default function CityList() {
         <DataTable
           value={cities}
           dataKey="unique_id"
+          lazy
           paginator
-          rows={10}
+          rows={lazyParams.rows}
           rowsPerPageOptions={[5, 10, 25, 50]}
+          first={(lazyParams.page - 1) * lazyParams.rows}
+          totalRecords={totalRecords}
+          onPage={onPage}
           loading={loading}
-          filters={filters}
           header={renderHeader()}
           stripedRows
           showGridlines
           emptyMessage="No cities found."
-          globalFilterFields={[
-            "name",
-            "country_name",
-            "state_name",
-            "district_name",
-          ]}
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />

@@ -30,11 +30,9 @@ export function getAdminNavigation(): AdminNavConfig {
     encDistricts,
     encCities,
     encSiteCreation,
-    encStaffCreation,
     encAdmins,
     encUserType,
     encUserCreation,
-    encStaffUserType,
     encMainScreenType,
     encUserScreenAction,
     encMainScreen,
@@ -44,6 +42,7 @@ export function getAdminNavigation(): AdminNavConfig {
     encEmMasters,
     encEquipmentType,
     encEquipmentModel,
+    encContractor,
     encVehicleSupplier
   } = getEncryptedRoute();
 
@@ -63,7 +62,6 @@ export function getAdminNavigation(): AdminNavConfig {
         { name: "User Screen Permission", path: `/${encAdmins}/${encUserScreenPermission}` },
         { name: "User Type", path: `/${encAdmins}/${encUserType}` },
         { name: "User Creation", path: `/${encAdmins}/${encUserCreation}` },
-        { name: "Staff User Type", path: `/${encAdmins}/${encStaffUserType}` },
       ],
     },
   ];
@@ -79,7 +77,6 @@ export function getAdminNavigation(): AdminNavConfig {
         { name: "District", path: `/${encMasters}/${encDistricts}` },
         { name: "City", path: `/${encMasters}/${encCities}` },
         { name: "Site Creation", path: `/${encMasters}/${encSiteCreation}` },
-        { name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` },
         { name: "Plant Creation", path: `/${encMasters}/${encPlantCreation}`}
       ],
     },
@@ -92,7 +89,8 @@ export function getAdminNavigation(): AdminNavConfig {
       subItems: [
         { name: "Equipment Type Masters", path: `/${encEmMasters}/${encEquipmentType}` },
         { name: "Equipment Model Masters", path: `/${encEmMasters}/${encEquipmentModel}` },
-        { name: "Vehicle Supplier Masters", path: `/${encEmMasters}/${encVehicleSupplier}`}
+        { name: "Contractor Masters", path: `/${encEmMasters}/${encContractor}` },
+        { name: "Vehicle Supplier Masters", path: `/${encEmMasters}/${encVehicleSupplier}` }
       ],
     },
   ];

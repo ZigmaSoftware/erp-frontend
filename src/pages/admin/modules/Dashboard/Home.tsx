@@ -18,7 +18,6 @@ import {
   stateApi,
   districtApi,
   cityApi,
-  staffCreationApi,
   userCreationApi,
   userTypeApi,
   staffUserTypeApi,
@@ -69,7 +68,6 @@ export default function AdminHome() {
         stateApi.list(), // 2
         districtApi.list(), // 3
         cityApi.list(), // 4
-        staffCreationApi.list(), // 5
         userCreationApi.list(), // 6
         userTypeApi.list(), // 7
         staffUserTypeApi.list(), // 8

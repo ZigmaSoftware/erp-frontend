@@ -1,82 +1,118 @@
-/* --------------------------------------------------------
-   Base prefixes
--------------------------------------------------------- */
-const MASTER_BASE = "masters";
-const ASSET_BASE = "assets";
+/* ========================================================
+    API BASE CONFIG
+======================================================== */
+const API_BASE = "api";
+
+/* Services */
+const AUTH_SERVICE = "auth-service";
+const MASTER_SERVICE = "master-service";
+
+/* Apps */
+const AUTH_APP = "auth";
+const MASTER_APP = "masters";
+const EM_APP = "em-masters";
+
+/* Sub Modules */
 const SCREEN_BASE = "screen-management";
 const ROLE_BASE = "role-assign";
-const USER_BASE = "user-creation";
-const CUSTOMER_BASE = "customers";
-const VEHICLE_BASE = "vehicles";
-const EM_MASTER_BASE = "em-masters";
 
-/* --------------------------------------------------------
-   EM Masters
--------------------------------------------------------- */
+/* ========================================================
+    SERVICE BASE URL REGISTRY (From .env)
+======================================================== */
+const SERVICE_BASE_URLS: Record<string, string> = {
+  [MASTER_SERVICE]: import.meta.env.VITE_API_MASTERSERVICE,
+  [AUTH_SERVICE]: import.meta.env.VITE_API_AUTHSERVICE,
+};
+
+/* ========================================================
+    SMART URL BUILDER
+   - Detects service automatically
+   - Attaches correct port
+   - Returns FULL URL
+======================================================== */
+const buildUrl = (path: string): string => {
+  const [service] = path.split("/");
+
+  const baseUrl = SERVICE_BASE_URLS[service];
+
+  if (!baseUrl) {
+    throw new Error(`Base URL not configured for service: ${service}`);
+  }
+
+  return `${baseUrl}${API_BASE}/${path}`;
+};
+
+/* ========================================================
+    EM MASTER ENDPOINTS
+======================================================== */
 export const emMastersEndpoints = {
-   equipmentTypes: `${EM_MASTER_BASE}/equipment-types/`,
-   equipmentModels: `${EM_MASTER_BASE}/equipment-model/`,
-   vehicleSuppliers: `${EM_MASTER_BASE}/vehicle-suppliers/`
+  equipmentTypes: `${MASTER_SERVICE}/v1/${EM_APP}/equipment-types/`,
+  equipmentModels: `${MASTER_SERVICE}/v1/${EM_APP}/equipment-models/`,
+  contractorModels: `${MASTER_SERVICE}/v1/${EM_APP}/contractor-models/`,
+  vehicleSuppliers: `${MASTER_SERVICE}/v1/${EM_APP}/vehicle-suppliers/`,
 } as const;
 
 export type EmMasterEntity = keyof typeof emMastersEndpoints;
 
-/* --------------------------------------------------------
-   Admin endpoint registry
--------------------------------------------------------- */
-export const adminMasterEndpoints = {
-  /* MASTERS */
-  continents: `${MASTER_BASE}/continents/`,
-  countries: `${MASTER_BASE}/countries/`,
-  bins: `${MASTER_BASE}/bins/`,
-  states: `${MASTER_BASE}/states/`,
-  districts: `${MASTER_BASE}/districts/`,
-  cities: `${MASTER_BASE}/cities/`,
-  zones: `${MASTER_BASE}/zones/`,
-  wards: `${MASTER_BASE}/wards/`,
-  sites: `${MASTER_BASE}/sites/`,
-  plants: `${MASTER_BASE}/plants/`,
-
-  /* ASSETS */
-  fuels: `${ASSET_BASE}/fuels/`,
-  properties: `${ASSET_BASE}/properties/`,
-  subProperties: `${ASSET_BASE}/subproperties/`,
-
-  /* SCREEN MANAGEMENT */
-  mainScreenType: `${SCREEN_BASE}/mainscreentype/`,
-  mainScreens: `${SCREEN_BASE}/mainscreens/`,
-  userScreens: `${SCREEN_BASE}/userscreens/`,
-  userScreenAction: `${SCREEN_BASE}/userscreen-action/`,
-  userScreenPermissions: `${SCREEN_BASE}/userscreenpermissions/`,
-
-  /* ROLE ASSIGNMENT */
-  userTypes: `${ROLE_BASE}/user-type/`,
-  staffUserTypes: `${ROLE_BASE}/staffusertypes/`,
-
-  /* USER CREATION */
-  userCreations: `${USER_BASE}/users-creation/`,
-  staffCreation: `${USER_BASE}/staffcreation/`,
-
-  /* CUSTOMERS */
-  customerCreations: `${CUSTOMER_BASE}/customercreations/`,
-  wasteCollections: `${CUSTOMER_BASE}/wastecollections/`,
-  feedbacks: `${CUSTOMER_BASE}/feedbacks/`,
-  complaints: `${CUSTOMER_BASE}/complaints/`,
-  mainCategory: `${CUSTOMER_BASE}/main-category/`,
-  subCategory: `${CUSTOMER_BASE}/sub-category/`,
-
-  /* VEHICLES */
-  vehicleTypes: `${VEHICLE_BASE}/vehicle-type/`,
-  vehicleCreation: `${VEHICLE_BASE}/vehicle-creation/`,
+/* ========================================================
+    COMMON MASTER ENDPOINTS
+======================================================== */
+export const commonMasterEndpoints = {
+  continents: `${MASTER_SERVICE}/v1/${MASTER_APP}/continents/`,
+  countries: `${MASTER_SERVICE}/v1/${MASTER_APP}/countries/`,
+  states: `${MASTER_SERVICE}/v1/${MASTER_APP}/states/`,
+  districts: `${MASTER_SERVICE}/v1/${MASTER_APP}/districts/`,
+  cities: `${MASTER_SERVICE}/v1/${MASTER_APP}/cities/`,
+  sites: `${MASTER_SERVICE}/v1/${MASTER_APP}/sites/`,
+  plants: `${MASTER_SERVICE}/v1/${MASTER_APP}/plants/`,
+  bins: `${MASTER_SERVICE}/v1/${MASTER_APP}/bins/`,
+  zones: `${MASTER_SERVICE}/v1/${MASTER_APP}/zones/`,
+  wards: `${MASTER_SERVICE}/v1/${MASTER_APP}/wards/`,
+  fuels: `${MASTER_SERVICE}/v1/assets/fuels/`,
+  properties: `${MASTER_SERVICE}/v1/assets/properties/`,
+  subProperties: `${MASTER_SERVICE}/v1/assets/subproperties/`,
+  customerCreations: `${MASTER_SERVICE}/v1/customers/customercreations/`,
+  wasteCollections: `${MASTER_SERVICE}/v1/customers/wastecollections/`,
+  feedbacks: `${MASTER_SERVICE}/v1/customers/feedbacks/`,
+  complaints: `${MASTER_SERVICE}/v1/customers/complaints/`,
+  mainCategory: `${MASTER_SERVICE}/v1/customers/main-category/`,
+  subCategory: `${MASTER_SERVICE}/v1/customers/sub-category/`,
+  vehicleTypes: `${MASTER_SERVICE}/v1/vehicles/vehicle-type/`,
+  vehicleCreation: `${MASTER_SERVICE}/v1/vehicles/vehicle-creation/`,
 } as const;
 
-export type AdminEntity = keyof typeof adminMasterEndpoints;
+export type CommonMasterEntity = keyof typeof commonMasterEndpoints;
 
-/* --------------------------------------------------------
-   Helpers
--------------------------------------------------------- */
-export const getAdminEndpointPath = (entity: AdminEntity): string =>
-  `/${adminMasterEndpoints[entity]}`;
+/* ========================================================
+    ADMIN MASTER ENDPOINTS
+======================================================== */
+export const adminMasterEndpoints = {
+  mainScreenType: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/mainscreentype/`,
+  userScreenAction: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/userscreen-action/`,
+  mainScreens: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/mainscreens/`,
+  userScreens: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/userscreens/`,
+  userScreenPermissions: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/userscreenpermissions/`,
+ 
 
-export const getEmMasterEndpointPath = (entity: EmMasterEntity): string =>
-  `/${emMastersEndpoints[entity]}`;
+  staffUserTypes: `${AUTH_SERVICE}/v1/${ROLE_BASE}/staffusertypes/`,
+
+  userTypes: `${AUTH_SERVICE}/v1/${AUTH_APP}/user-role/`,
+  userCreations: `${AUTH_SERVICE}/v1/${AUTH_APP}/user-creation/`,
+} as const;
+
+export type AdminMasterEntity = keyof typeof adminMasterEndpoints;
+
+/* ========================================================
+    PUBLIC HELPERS
+======================================================== */
+export const getCommonMasterEndpointPath = (
+  entity: CommonMasterEntity
+): string => buildUrl(commonMasterEndpoints[entity]);
+
+export const getAdminMasterEndpointPath = (
+  entity: AdminMasterEntity
+): string => buildUrl(adminMasterEndpoints[entity]);
+
+export const getEmMasterEndpointPath = (
+  entity: EmMasterEntity
+): string => buildUrl(emMastersEndpoints[entity]);
