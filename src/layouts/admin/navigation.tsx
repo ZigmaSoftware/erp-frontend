@@ -30,11 +30,9 @@ export function getAdminNavigation(): AdminNavConfig {
     encDistricts,
     encCities,
     encSiteCreation,
-    encStaffCreation,
     encAdmins,
     encUserType,
     encUserCreation,
-    encStaffUserType,
     encMainScreenType,
     encUserScreenAction,
     encMainScreen,
@@ -64,7 +62,6 @@ export function getAdminNavigation(): AdminNavConfig {
         { name: "User Screen Permission", path: `/${encAdmins}/${encUserScreenPermission}` },
         { name: "User Type", path: `/${encAdmins}/${encUserType}` },
         { name: "User Creation", path: `/${encAdmins}/${encUserCreation}` },
-        { name: "Staff User Type", path: `/${encAdmins}/${encStaffUserType}` },
       ],
     },
   ];
@@ -80,7 +77,6 @@ export function getAdminNavigation(): AdminNavConfig {
         { name: "District", path: `/${encMasters}/${encDistricts}` },
         { name: "City", path: `/${encMasters}/${encCities}` },
         { name: "Site Creation", path: `/${encMasters}/${encSiteCreation}` },
-        { name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` },
         { name: "Plant Creation", path: `/${encMasters}/${encPlantCreation}`}
       ],
     },

@@ -1,46 +1,36 @@
-import { adminApi, emMasterApi } from "./registry";
+import { commonMasterApi, emMasterApi, adminMasterApi } from "./registry";
 
 /* -------- Masters -------- */
-export const continentApi = adminApi.continents;
-export const countryApi = adminApi.countries;
-export const binApi = adminApi.bins;
-export const stateApi = adminApi.states;
-export const districtApi = adminApi.districts;
-export const cityApi = adminApi.cities;
-export const zoneApi = adminApi.zones;
-export const wardApi = adminApi.wards;
-export const siteApi = adminApi.sites;
-export const plantApi = adminApi.plants;
-
-/* -------- Assets -------- */
-export const fuelApi = adminApi.fuels;
-export const propertiesApi = adminApi.properties;
-export const subPropertiesApi = adminApi.subProperties;
+export const continentApi = commonMasterApi.continents;
+export const countryApi = commonMasterApi.countries;
+export const stateApi = commonMasterApi.states;
+export const districtApi = commonMasterApi.districts;
+export const cityApi = commonMasterApi.cities;
+export const siteApi = commonMasterApi.sites;
+export const plantApi = commonMasterApi.plants;
 
 /* -------- User / Staff -------- */
-export const staffCreationApi = adminApi.staffCreation;
-export const staffUserTypeApi = adminApi.staffUserTypes;
-export const userTypeApi = adminApi.userTypes;
-export const userCreationApi = adminApi.usercreations;
+export const staffUserTypeApi = adminMasterApi.staffUserTypes;
+export const userTypeApi = adminMasterApi.userTypes;
+export const userCreationApi = adminMasterApi.userCreations;
 
 /* -------- Customers -------- */
-export const customerCreationApi = adminApi.customerCreations;
-export const wasteCollectionApi = adminApi.wasteCollections;
-export const complaintApi = adminApi.complaints;
-export const feedbackApi = adminApi.feedbacks;
-export const mainCategoryApi = adminApi.mainCategory;
-export const subCategoryApi = adminApi.subCategory;
+export const customerCreationApi = commonMasterApi.customerCreations;
+export const wasteCollectionApi = commonMasterApi.wasteCollections;
+export const complaintApi = commonMasterApi.complaints;
+export const feedbackApi = commonMasterApi.feedbacks;
+export const mainCategoryApi = commonMasterApi.mainCategory;
+export const subCategoryApi = commonMasterApi.subCategory;
 
 /* -------- Screens & Permissions -------- */
-export const mainScreenTypeApi = adminApi.mainscreentype;
-export const mainScreenApi = adminApi.mainscreens;
-export const userScreenApi = adminApi.userscreens;
-export const userScreenActionApi = adminApi.userscreenaction;
-export const userScreenPermissionApi = adminApi.userscreenpermissions;
+export const mainScreenTypeApi = adminMasterApi.mainScreenType;
+export const mainScreenApi = adminMasterApi.mainScreens;
+export const userScreenApi = adminMasterApi.userScreens;
+export const userScreenActionApi = adminMasterApi.userScreenAction;
+export const userScreenPermissionApi =
+  adminMasterApi.userScreenPermissions;
 
-/* -------- Vehicles -------- */
-export const vehicleTypeApi = adminApi.vehicleTypes;
-export const vehicleCreationApi = adminApi.vehicleCreation;
+export const userRoleApi = adminMasterApi.userTypes;
 
 /* -------- EM Masters -------- */
 export const equipmentTypeApi = emMasterApi.equipmentTypes;

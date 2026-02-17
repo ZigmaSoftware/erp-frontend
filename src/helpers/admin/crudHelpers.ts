@@ -4,9 +4,17 @@ import api from "@/api";
 /* -----------------------------------------
    Normalize API path (idempotent)
 ----------------------------------------- */
+const isAbsoluteUrl = (value: string): boolean => /^(https?:)?\/\/+/i.test(value);
+
 const normalizePath = (path: string): string => {
-  const cleaned = path.replace(/^\/+/, "").replace(/\/+$/, "");
-  return `/${cleaned}/`;
+  const cleaned = path.trim().replace(/\/+$/, "");
+
+  if (isAbsoluteUrl(cleaned)) {
+    return `${cleaned.replace(/\/+$/, "")}/`;
+  }
+
+  const trimmed = cleaned.replace(/^\/+/, "");
+  return `/${trimmed}/`;
 };
 
 /* -----------------------------------------

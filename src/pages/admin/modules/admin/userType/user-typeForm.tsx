@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 
 import { Input } from "@/components/ui/input";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { userTypeApi } from "@/helpers/admin";
+import { userRoleApi } from "@/helpers/admin";
 
 const { encAdmins, encUserType } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encAdmins}/${encUserType}`;
@@ -27,7 +27,7 @@ export default function UserTypeForm() {
 
     const loadData = async () => {
       try {
-        const res = await userTypeApi.get(userTypeId as string);
+        const res = await userRoleApi.get(userTypeId as string);
         const data = res?.data || res;
 
         setName(data.name);
@@ -59,7 +59,7 @@ export default function UserTypeForm() {
     try {
       if (isEdit) {
         // UPDATE
-        await userTypeApi.update(userTypeId as string, payload);
+        await userRoleApi.update(userTypeId as string, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -68,7 +68,7 @@ export default function UserTypeForm() {
         });
       } else {
         // CREATE
-        await userTypeApi.create(payload);
+        await userRoleApi.create(payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",
