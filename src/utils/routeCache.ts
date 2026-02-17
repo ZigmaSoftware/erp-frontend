@@ -20,8 +20,6 @@ export type EncryptedRoutes = {
   encProperties: string;
   encReport: string;
   encSiteCreation: string;
-  encStaffCreation: string;
-  encStaffUserType: string;
   encStates: string;
   encSubComplaintCategory: string;
   encSubProperties: string;
@@ -75,8 +73,6 @@ const plainRoutes: EncryptedRoutes = {
   encProperties: "properties",
   encReport: "reports",
   encSiteCreation: "site-creation",
-  encStaffCreation: "staff-creation",
-  encStaffUserType: "staff-user-type",
   encStates: "states",
   encSubComplaintCategory: "sub-complaint-category",
   encSubProperties: "sub-properties",

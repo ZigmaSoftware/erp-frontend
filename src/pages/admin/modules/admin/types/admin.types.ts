@@ -51,6 +51,7 @@ export interface UserScreenAction extends BaseEntity {
    USER TYPES (HR ROLE DEFINITION)
 =========================================================== */
 export interface UserType extends BaseEntity {
+  id: string;
   name: string;
 }
 
