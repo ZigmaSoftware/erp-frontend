@@ -56,9 +56,9 @@ export default function Auth() {
         username,
         password,
       };
-      const res = await loginApi.create<LoginResponse>(payload);
+      const response = await loginApi.create<LoginResponse>(payload);
 
-      console.log(res);
+      console.log(response);
 
       const {
         access_token,
@@ -69,7 +69,8 @@ export default function Auth() {
         username: apiUsername,
         email,
         user,
-      } = res.data;
+        is_superuser
+      } = response;
 
       const groups: string[] = Array.isArray(user?.groups) ? user.groups : [];
 
@@ -84,6 +85,10 @@ export default function Auth() {
       const resolvedUsername = user?.username ?? apiUsername ?? username;
 
       localStorage.setItem("access_token", access_token);
+      if(is_superuser){
+         localStorage.setItem("role", "admin");
+      }
+     
       if (refresh_token) {
         localStorage.setItem("refresh_token", refresh_token);
       } else {
