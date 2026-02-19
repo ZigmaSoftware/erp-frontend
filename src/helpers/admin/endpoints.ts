@@ -16,6 +16,10 @@ const EM_APP = "em-masters";
 const SCREEN_BASE = "screen-management";
 const ROLE_BASE = "role-assign";
 
+/* Version */
+
+const CURRENT_VERSION = "v1";
+
 /* ========================================================
     SERVICE BASE URL REGISTRY (From .env)
 ======================================================== */
@@ -46,10 +50,10 @@ const buildUrl = (path: string): string => {
     EM MASTER ENDPOINTS
 ======================================================== */
 export const emMastersEndpoints = {
-  equipmentTypes: `${MASTER_SERVICE}/v1/${EM_APP}/equipment-types/`,
-  equipmentModels: `${MASTER_SERVICE}/v1/${EM_APP}/equipment-models/`,
-  contractorModels: `${MASTER_SERVICE}/v1/${EM_APP}/contractor-models/`,
-  vehicleSuppliers: `${MASTER_SERVICE}/v1/${EM_APP}/vehicle-suppliers/`,
+  equipmentTypes: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/equipment-types/`,
+  equipmentModels: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/equipment-models/`,
+  contractorModels: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/contractor-models/`,
+  vehicleSuppliers: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/vehicle-suppliers/`,
 } as const;
 
 export type EmMasterEntity = keyof typeof emMastersEndpoints;
@@ -58,27 +62,27 @@ export type EmMasterEntity = keyof typeof emMastersEndpoints;
     COMMON MASTER ENDPOINTS
 ======================================================== */
 export const commonMasterEndpoints = {
-  continents: `${MASTER_SERVICE}/v1/${MASTER_APP}/continents/`,
-  countries: `${MASTER_SERVICE}/v1/${MASTER_APP}/countries/`,
-  states: `${MASTER_SERVICE}/v1/${MASTER_APP}/states/`,
-  districts: `${MASTER_SERVICE}/v1/${MASTER_APP}/districts/`,
-  cities: `${MASTER_SERVICE}/v1/${MASTER_APP}/cities/`,
-  sites: `${MASTER_SERVICE}/v1/${MASTER_APP}/sites/`,
-  plants: `${MASTER_SERVICE}/v1/${MASTER_APP}/plants/`,
-  bins: `${MASTER_SERVICE}/v1/${MASTER_APP}/bins/`,
-  zones: `${MASTER_SERVICE}/v1/${MASTER_APP}/zones/`,
-  wards: `${MASTER_SERVICE}/v1/${MASTER_APP}/wards/`,
-  fuels: `${MASTER_SERVICE}/v1/assets/fuels/`,
-  properties: `${MASTER_SERVICE}/v1/assets/properties/`,
-  subProperties: `${MASTER_SERVICE}/v1/assets/subproperties/`,
-  customerCreations: `${MASTER_SERVICE}/v1/customers/customercreations/`,
-  wasteCollections: `${MASTER_SERVICE}/v1/customers/wastecollections/`,
-  feedbacks: `${MASTER_SERVICE}/v1/customers/feedbacks/`,
-  complaints: `${MASTER_SERVICE}/v1/customers/complaints/`,
-  mainCategory: `${MASTER_SERVICE}/v1/customers/main-category/`,
-  subCategory: `${MASTER_SERVICE}/v1/customers/sub-category/`,
-  vehicleTypes: `${MASTER_SERVICE}/v1/vehicles/vehicle-type/`,
-  vehicleCreation: `${MASTER_SERVICE}/v1/vehicles/vehicle-creation/`,
+  continents: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/continents/`,
+  countries: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/countries/`,
+  states: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/states/`,
+  districts: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/districts/`,
+  cities: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/cities/`,
+  sites: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/sites/`,
+  plants: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/plants/`,
+  bins: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/bins/`,
+  zones: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/zones/`,
+  wards: `${MASTER_SERVICE}/${CURRENT_VERSION}/${MASTER_APP}/wards/`,
+  fuels: `${MASTER_SERVICE}/${CURRENT_VERSION}/assets/fuels/`,
+  properties: `${MASTER_SERVICE}/${CURRENT_VERSION}/assets/properties/`,
+  subProperties: `${MASTER_SERVICE}/${CURRENT_VERSION}/assets/subproperties/`,
+  customerCreations: `${MASTER_SERVICE}/${CURRENT_VERSION}/customers/customercreations/`,
+  wasteCollections: `${MASTER_SERVICE}/${CURRENT_VERSION}/customers/wastecollections/`,
+  feedbacks: `${MASTER_SERVICE}/${CURRENT_VERSION}/customers/feedbacks/`,
+  complaints: `${MASTER_SERVICE}/${CURRENT_VERSION}/customers/complaints/`,
+  mainCategory: `${MASTER_SERVICE}/${CURRENT_VERSION}/customers/main-category/`,
+  subCategory: `${MASTER_SERVICE}/${CURRENT_VERSION}/customers/sub-category/`,
+  vehicleTypes: `${MASTER_SERVICE}/${CURRENT_VERSION}/vehicles/vehicle-type/`,
+  vehicleCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/vehicles/vehicle-creation/`,
 } as const;
 
 export type CommonMasterEntity = keyof typeof commonMasterEndpoints;
@@ -87,17 +91,16 @@ export type CommonMasterEntity = keyof typeof commonMasterEndpoints;
     ADMIN MASTER ENDPOINTS
 ======================================================== */
 export const adminMasterEndpoints = {
-  mainScreenType: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/mainscreentype/`,
-  userScreenAction: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/userscreen-action/`,
-  mainScreens: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/mainscreens/`,
-  userScreens: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/userscreens/`,
-  userScreenPermissions: `${AUTH_SERVICE}/v1/${SCREEN_BASE}/userscreenpermissions/`,
- 
-
-  staffUserTypes: `${AUTH_SERVICE}/v1/${ROLE_BASE}/staffusertypes/`,
-
-  userTypes: `${AUTH_SERVICE}/v1/${AUTH_APP}/user-role/`,
-  userCreations: `${AUTH_SERVICE}/v1/${AUTH_APP}/user-creation/`,
+  mainScreenType: `${AUTH_SERVICE}/${CURRENT_VERSION}/${SCREEN_BASE}/mainscreentype/`,
+  userScreenAction: `${AUTH_SERVICE}/${CURRENT_VERSION}/${SCREEN_BASE}/userscreen-action/`,
+  mainScreens: `${AUTH_SERVICE}/${CURRENT_VERSION}/${SCREEN_BASE}/mainscreens/`,
+  userScreens: `${AUTH_SERVICE}/${CURRENT_VERSION}/${SCREEN_BASE}/userscreens/`,
+  userScreenPermissions: `${AUTH_SERVICE}/${CURRENT_VERSION}/${SCREEN_BASE}/userscreenpermissions/`,
+  staffUserTypes: `${AUTH_SERVICE}/${CURRENT_VERSION}/${ROLE_BASE}/staffusertypes/`,
+  userTypes: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/user-role/`,
+  userCreations: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/user-creation/`,
+  login: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/login/`,
+  generateRefresh:`${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/refresh/`,
 } as const;
 
 export type AdminMasterEntity = keyof typeof adminMasterEndpoints;
