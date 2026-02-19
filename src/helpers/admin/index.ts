@@ -38,6 +38,10 @@ export const equipmentModelApi = emMasterApi.equipmentModels;
 export const contractorApi = emMasterApi.contractorModels;
 export const vehicleSupplierApi = emMasterApi.vehicleSuppliers;
 
+
+/* -------- Login And Refresh -------- */
+export const loginApi = adminMasterApi.login;
+
 /* -------- Utilities -------- */
 export * from "./endpoints";
 export * from "./crudHelpers";
