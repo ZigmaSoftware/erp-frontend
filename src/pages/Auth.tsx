@@ -1,6 +1,11 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { useNavigate } from "react-router-dom";
-import api from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +15,6 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useUser } from "@/contexts/UserContext";
 import {
   ADMIN_ROLE,
-  DEFAULT_ROLE,
   USER_ROLE_STORAGE_KEY,
   normalizeRole,
   type UserRole,
@@ -18,11 +22,12 @@ import {
 import { Eye, EyeOff } from "lucide-react";
 import ZigmaLogo from "../images/logo.png";
 import BgImg from "../images/bgSignin.png";
-import { loginApi } from "@/helpers/admin";
+import { jwtDecode } from "jwt-decode";
+import { loginApi, refreshLoginApi } from "@/helpers/admin";
 
 type LoginResponse = {
   access_token: string;
-  refresh_token?: string;
+  refresh_token: string;
   expires_in?: number;
   role?: string;
   unique_id?: string;
@@ -34,6 +39,11 @@ type LoginResponse = {
     username?: string;
     groups?: string[];
   };
+  is_superuser?: boolean;
+};
+
+type JwtPayload = {
+  exp?: number;
 };
 
 export default function Auth() {
@@ -47,19 +57,25 @@ export default function Auth() {
   const { t } = useTranslation();
   const { setUser } = useUser();
 
-  const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
+  const isAccessTokenValid = useCallback((token?: string) => {
+    if (!token) {
+      return false;
+    }
 
     try {
-      const payload: any = {
-        username,
-        password,
-      };
-      const response = await loginApi.create<LoginResponse>(payload);
+      const decoded = jwtDecode<JwtPayload>(token);
+      const now = Math.floor(Date.now() / 1000);
+      console.log(now);
 
-      console.log(response);
+      return decoded.exp ? decoded.exp > now : true;
+    } catch (err) {
+      console.error("Invalid access token", err);
+      return false;
+    }
+  }, []);
 
+  const persistSession = useCallback(
+    (payload: LoginResponse, fallbackUsername: string): UserRole => {
       const {
         access_token,
         refresh_token,
@@ -69,8 +85,8 @@ export default function Auth() {
         username: apiUsername,
         email,
         user,
-        is_superuser
-      } = response;
+        is_superuser,
+      } = payload;
 
       const groups: string[] = Array.isArray(user?.groups) ? user.groups : [];
 
@@ -79,34 +95,88 @@ export default function Auth() {
         .find((group): group is UserRole => Boolean(group));
 
       const normalizedRole =
-        normalizeRole(role) ?? roleFromGroups ?? ADMIN_ROLE;
+        normalizeRole(role) ??
+        roleFromGroups ??
+        (is_superuser ? ADMIN_ROLE : null) ??
+        ADMIN_ROLE;
+
       const resolvedUniqueId =
         unique_id ?? (user?.id != null ? String(user.id) : "");
-      const resolvedUsername = user?.username ?? apiUsername ?? username;
+      const resolvedUsername = user?.username ?? apiUsername ?? fallbackUsername;
 
       localStorage.setItem("access_token", access_token);
-      if(is_superuser){
-         localStorage.setItem("role", "admin");
-      }
-     
+
       if (refresh_token) {
         localStorage.setItem("refresh_token", refresh_token);
       } else {
         localStorage.removeItem("refresh_token");
       }
+
       localStorage.setItem(USER_ROLE_STORAGE_KEY, normalizedRole);
+
       if (resolvedUniqueId) {
         localStorage.setItem("unique_id", resolvedUniqueId);
       } else {
         localStorage.removeItem("unique_id");
       }
 
-      await Promise.resolve();
+      const finalName = name ?? resolvedUsername;
+      const finalEmail = email ?? "";
 
       setUser({
-        name: name ?? resolvedUsername,
-        email: email ?? "",
+        name: finalName,
+        email: finalEmail,
       });
+
+      return normalizedRole;
+    },
+    [setUser]
+  );
+
+  useEffect(() => {
+    const bootstrapSession = async () => {
+      const storedAccessToken = localStorage.getItem("access_token");
+      const storedRefreshToken = localStorage.getItem("refresh_token");
+
+      if (storedAccessToken && isAccessTokenValid(storedAccessToken)) {
+        navigate("/admindashboard", { replace: true });
+        return;
+      }
+
+      if (!storedRefreshToken) {
+        return;
+      }
+
+      try {
+        const refreshed = await refreshLoginApi.create({
+          refresh_token: storedRefreshToken,
+        });
+        const normalizedRole = persistSession(refreshed, "");
+        if (normalizedRole === ADMIN_ROLE) {
+          navigate("/admindashboard", { replace: true });
+        }
+      } catch (err) {
+        console.error("Failed to refresh session", err);
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+      }
+    };
+
+    bootstrapSession();
+  }, [navigate, persistSession, isAccessTokenValid]);
+
+  const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const payload: any = {
+        username,
+        password,
+      };
+
+      const response = await loginApi.create<LoginResponse>(payload);
+      const normalizedRole = persistSession(response, username);
 
       if (normalizedRole !== ADMIN_ROLE) {
         toast({
@@ -128,8 +198,6 @@ export default function Auth() {
       setLoading(false);
     }
   };
-
-  console.log(username + " " + password);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f3f6f4] p-4 font-sans">
@@ -238,30 +306,6 @@ export default function Auth() {
             >
               {loading ? t("login.authenticating") : t("login.sign_in")}
             </Button>
-
-            {/* <div className="pt-6 border-t border-dashed border-gray-200">
-              <p className="text-xs uppercase tracking-[0.2em] text-gray-400 text-center">
-                {t("login.rnd_shortcuts_label")}
-              </p>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 h-11 border-dashed border-[#43A047] text-[#2e7d32]"
-                  onClick={() => handleRndAccess(DEFAULT_ROLE)}
-                >
-                  {t("login.rnd_dashboard")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 h-11 border-dashed border-orange-500 text-orange-700"
-                  onClick={() => handleRndAccess(ADMIN_ROLE)}
-                >
-                  {t("login.rnd_admin")}
-                </Button>
-              </div>
-            </div> */}
           </form>
         </div>
       </div>
