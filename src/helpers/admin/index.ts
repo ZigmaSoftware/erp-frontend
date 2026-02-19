@@ -41,6 +41,7 @@ export const vehicleSupplierApi = emMasterApi.vehicleSuppliers;
 
 /* -------- Login And Refresh -------- */
 export const loginApi = adminMasterApi.login;
+export const refreshLoginApi = adminMasterApi.generateRefresh;
 
 /* -------- Utilities -------- */
 export * from "./endpoints";
