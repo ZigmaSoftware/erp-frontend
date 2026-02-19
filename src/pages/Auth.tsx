@@ -15,9 +15,10 @@ import {
   normalizeRole,
   type UserRole,
 } from "@/types/roles";
-import { Eye, EyeOff } from "lucide-react"; 
+import { Eye, EyeOff } from "lucide-react";
 import ZigmaLogo from "../images/logo.png";
 import BgImg from "../images/bgSignin.png";
+import { loginApi } from "@/helpers/admin";
 
 type LoginResponse = {
   access_token: string;
@@ -46,17 +47,17 @@ export default function Auth() {
   const { t } = useTranslation();
   const { setUser } = useUser();
 
-
   const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const loginUrl = import.meta.env.VITE_API_LOGIN;
-      const res = await api.post<LoginResponse>(loginUrl, {
+      const payload: any = {
         username,
         password,
-      });
+      };
+      const res = await loginApi.create<LoginResponse>(payload);
+
       console.log(res);
 
       const {
@@ -70,15 +71,17 @@ export default function Auth() {
         user,
       } = res.data;
 
-      const groups = Array.isArray(user?.groups) ? user?.groups : [];
+      const groups: string[] = Array.isArray(user?.groups) ? user.groups : [];
+
       const roleFromGroups = groups
         .map((group) => normalizeRole(group))
         .find((group): group is UserRole => Boolean(group));
-      const normalizedRole = normalizeRole(role) ?? roleFromGroups ?? ADMIN_ROLE;
+
+      const normalizedRole =
+        normalizeRole(role) ?? roleFromGroups ?? ADMIN_ROLE;
       const resolvedUniqueId =
         unique_id ?? (user?.id != null ? String(user.id) : "");
-      const resolvedUsername =
-        user?.username ?? apiUsername ?? username;
+      const resolvedUsername = user?.username ?? apiUsername ?? username;
 
       localStorage.setItem("access_token", access_token);
       if (refresh_token) {
@@ -110,12 +113,10 @@ export default function Auth() {
       }
 
       navigate("/admindashboard", { replace: true });
-
     } catch (error: any) {
       toast({
         title: t("login.title"),
-        description:
-          error?.response?.data?.detail || "Invalid credentials",
+        description: error?.response?.data?.detail || "Invalid credentials",
         variant: "destructive",
       });
     } finally {
@@ -216,8 +217,7 @@ export default function Auth() {
                 onClick={() =>
                   toast({
                     title: t("login.forgot_password"),
-                    description:
-                      "Password recovery is being implemented.",
+                    description: "Password recovery is being implemented.",
                   })
                 }
               >
@@ -231,9 +231,7 @@ export default function Auth() {
               className="w-full h-12 rounded-lg bg-[#43A047] hover:bg-[#2e7d32]
                 text-white text-base font-semibold shadow-md transition-all"
             >
-              {loading
-                ? t("login.authenticating")
-                : t("login.sign_in")}
+              {loading ? t("login.authenticating") : t("login.sign_in")}
             </Button>
 
             {/* <div className="pt-6 border-t border-dashed border-gray-200">
