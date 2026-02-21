@@ -19,13 +19,7 @@ import {
   districtApi,
   cityApi,
   userCreationApi,
-  userTypeApi,
-  staffUserTypeApi,
-  mainScreenTypeApi,
-  mainScreenApi,
-  userScreenApi,
-  userScreenActionApi,
-  userScreenPermissionApi,
+  userRoleApi
 } from "@/helpers/admin";
 
 import { MetricCard } from "./MetricCard";
@@ -69,13 +63,7 @@ export default function AdminHome() {
         districtApi.list(), // 3
         cityApi.list(), // 4
         userCreationApi.list(), // 6
-        userTypeApi.list(), // 7
-        staffUserTypeApi.list(), // 8
-        mainScreenTypeApi.list(), // 9
-        mainScreenApi.list(), // 10
-        userScreenApi.list(), // 11
-        userScreenActionApi.list(), // 12
-        userScreenPermissionApi.list(), // 13
+        userRoleApi.list(), // 7
       ];
 
       const results = await Promise.allSettled(requests);
