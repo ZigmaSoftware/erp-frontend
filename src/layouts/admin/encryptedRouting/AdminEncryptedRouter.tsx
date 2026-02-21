@@ -20,16 +20,6 @@ import SiteCreationForm from "@/pages/admin/modules/masters/siteCreation/siteCre
 // Admin
 import UserTypeList from "@/pages/admin/modules/admin/userType/user-typeList";
 import UserTypeForm from "@/pages/admin/modules/admin/userType/user-typeForm";
-import MainScreenTypeList from "@/pages/admin/modules/admin/mainScreenType/mainScreenTypeList";
-import MainScreenTypeForm from "@/pages/admin/modules/admin/mainScreenType/mainScreenTypeForm";
-import UserScreenActionList from "@/pages/admin/modules/admin/userScreenAction/userScreenActionList";
-import UserScreenActionForm from "@/pages/admin/modules/admin/userScreenAction/userScreenActionForm";
-import MainScreenList from "@/pages/admin/modules/admin/mainScreen/mainScreenList";
-import MainScreenForm from "@/pages/admin/modules/admin/mainScreen/mainScreenForm";
-import UserScreenList from "@/pages/admin/modules/admin/userScreen/userScreenList";
-import UserScreenForm from "@/pages/admin/modules/admin/userScreen/userScreenForm";
-import UserScreenPermissionForm from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionForm";
-import UserScreenPermissionList from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionList";
 import PlantList from "@/pages/admin/modules/masters/plantCreation/plancreationList";
 import PlantForm from "@/pages/admin/modules/masters/plantCreation/plantcreationForm";
 import EquipmentTypesList from "@/pages/admin/modules/emMasters/equipmentTypes/equipmentTypesList";
@@ -58,11 +48,6 @@ const ROUTES: RouteMap = {
   admins: {
     "user-type": { list: UserTypeList, form: UserTypeForm },
     "user-creation": {list: UserCreationList, form: UserCreationForm},
-    "mainscreen-type": {list: MainScreenTypeList, form: MainScreenTypeForm},
-    "userscreen-action": {list:UserScreenActionList, form: UserScreenActionForm },
-    "mainscreens": {list: MainScreenList, form: MainScreenForm},
-    "userscreens": {list: UserScreenList, form: UserScreenForm},
-    "userscreenpermissions": {list: UserScreenPermissionList,form: UserScreenPermissionForm}
   },
   masters: {
     continents: { list: ContinentList, form: ContinentForm },

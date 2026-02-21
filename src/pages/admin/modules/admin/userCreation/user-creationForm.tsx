@@ -11,7 +11,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import { Eye, EyeOff } from "lucide-react";
 
 import type { UserType } from "../types/admin.types";
-import { userTypeApi, userCreationApi } from "@/helpers/admin";
+import { userRoleApi, userCreationApi } from "@/helpers/admin";
 
 /* ================= ROUTES ================= */
 const { encAdmins, encUserCreation } = getEncryptedRoute();
@@ -50,7 +50,7 @@ export default function UserCreationForm() {
   useEffect(() => {
     const loadRoles = async () => {
       try {
-        const res = await userTypeApi.list();
+        const res = await userRoleApi.list();
         setRoles(normalizeList(res));
       } catch (err) {
         console.error(err);

@@ -10,26 +10,7 @@ export const siteApi = commonMasterApi.sites;
 export const plantApi = commonMasterApi.plants;
 
 /* -------- User / Staff -------- */
-export const staffUserTypeApi = adminMasterApi.staffUserTypes;
-export const userTypeApi = adminMasterApi.userTypes;
 export const userCreationApi = adminMasterApi.userCreations;
-
-/* -------- Customers -------- */
-export const customerCreationApi = commonMasterApi.customerCreations;
-export const wasteCollectionApi = commonMasterApi.wasteCollections;
-export const complaintApi = commonMasterApi.complaints;
-export const feedbackApi = commonMasterApi.feedbacks;
-export const mainCategoryApi = commonMasterApi.mainCategory;
-export const subCategoryApi = commonMasterApi.subCategory;
-
-/* -------- Screens & Permissions -------- */
-export const mainScreenTypeApi = adminMasterApi.mainScreenType;
-export const mainScreenApi = adminMasterApi.mainScreens;
-export const userScreenApi = adminMasterApi.userScreens;
-export const userScreenActionApi = adminMasterApi.userScreenAction;
-export const userScreenPermissionApi =
-  adminMasterApi.userScreenPermissions;
-
 export const userRoleApi = adminMasterApi.userTypes;
 
 /* -------- EM Masters -------- */
