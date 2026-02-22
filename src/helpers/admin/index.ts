@@ -18,6 +18,7 @@ export const equipmentTypeApi = emMasterApi.equipmentTypes;
 export const equipmentModelApi = emMasterApi.equipmentModels;
 export const contractorApi = emMasterApi.contractorModels;
 export const vehicleSupplierApi = emMasterApi.vehicleSuppliers;
+export const vehicleRequestApi = emMasterApi.vehicleRequest;
 
 
 /* -------- Login And Refresh -------- */
