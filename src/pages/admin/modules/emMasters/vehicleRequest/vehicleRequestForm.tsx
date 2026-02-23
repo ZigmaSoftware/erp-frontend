@@ -338,11 +338,6 @@ export default function VehicleRequestForm() {
       return false;
     }
 
-    if (!staffId) {
-      Swal.fire("Validation error", "Please select a staff member", "error");
-      return false;
-    }
-
     const filledItems = items.filter((item) => item.equipment_model);
     if (!filledItems.length) {
       Swal.fire("Validation error", "Add at least one item", "error");
@@ -365,13 +360,12 @@ export default function VehicleRequestForm() {
 
     const payload = {
       description,
-      site: siteId,
-      staff: staffId,
+      site_id: siteId,
       request_status: requestStatus,
       items: items
         .filter((item) => item.equipment_model)
         .map((item) => ({
-          equipment_model: item.equipment_model,
+          equipment_model_id: item.equipment_model,
           qty: Number(item.qty),
           unit: item.unit?.trim() ?? "",
           purpose: item.purpose?.trim() ?? "",
@@ -445,26 +439,6 @@ export default function VehicleRequestForm() {
               </Select>
             </div>
 
-            <div>
-              <Label>
-                Staff <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={staffId || undefined}
-                onValueChange={(value) => setStaffId(value ?? "")}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staffOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <div>
               <Label>Status</Label>
