@@ -382,7 +382,7 @@ export default function VehicleRequestList() {
         <Column header="S.No" body={(_, { rowIndex }) => rowIndex + 1} />
         <Column field="unique_id" header="Request ID" />
         <Column field="site_name" header="Site" sortable />
-        <Column field="staff_name" header="Staff" sortable />
+
         <Column
           header="Items"
           body={(row: VehicleRequestRecord) => row.items.length}
