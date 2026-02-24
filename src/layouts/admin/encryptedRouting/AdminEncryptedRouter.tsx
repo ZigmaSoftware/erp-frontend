@@ -30,6 +30,8 @@ import ContractorList from "@/pages/admin/modules/emMasters/contractor/contracto
 import ContractorForm from "@/pages/admin/modules/emMasters/contractor/contractorForm";
 import VehicleSupplierList from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierList";
 import VehicleSupplierForm from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierForm";
+import VehicleRequestList from "@/pages/admin/modules/emMasters/vehicleRequest/vehicleRequestList";
+import VehicleRequestForm from "@/pages/admin/modules/emMasters/vehicleRequest/vehicleRequestForm";
 import UserCreationList from "@/pages/admin/modules/admin/userCreation/user-creationList";
 import UserCreationForm from "@/pages/admin/modules/admin/userCreation/user-creationForm";
 import GroupPermissionList from "@/pages/admin/modules/admin/groupPermission/group-permissionList";
@@ -65,7 +67,8 @@ const ROUTES: RouteMap = {
     "equipment-types": { list: EquipmentTypesList, form: EquipmentTypesForm },
     "equipment-model": { list: EquipmentModelList, form: EquipmentModelForm },
     "contractor": { list: ContractorList, form: ContractorForm },
-    "vehicle-suppliers": { list: VehicleSupplierList, form: VehicleSupplierForm }
+    "vehicle-suppliers": { list: VehicleSupplierList, form: VehicleSupplierForm },
+    "vehicle-request": { list: VehicleRequestList, form: VehicleRequestForm },
   },
 };
 

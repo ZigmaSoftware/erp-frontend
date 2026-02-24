@@ -211,12 +211,6 @@ export default function Auth() {
         {/* LEFT */}
         <div className="flex flex-col items-center justify-center p-10 bg-[#e8f5e9] text-center border-r border-gray-200">
           <img src={ZigmaLogo} className="h-40 w-40 mb-4" />
-          <h2 className="text-2xl font-bold text-[#2e7d32]">
-            {t("login.left_title")}
-          </h2>
-          <p className="text-gray-700 text-sm mt-3 max-w-xs leading-relaxed">
-            {t("login.left_text")}
-          </p>
         </div>
 
         {/* RIGHT */}
