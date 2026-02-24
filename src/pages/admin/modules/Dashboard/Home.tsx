@@ -2,17 +2,6 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GIcon } from "@/components/ui/gicon";
 import {
-  PieChart,
-  Pie,
-  BarChart,
-  Bar,
-  Tooltip,
-  ResponsiveContainer,
-  XAxis,
-  Cell,
-} from "recharts";
-
-import {
   continentApi,
   countryApi,
   stateApi,
@@ -57,13 +46,13 @@ export default function AdminHome() {
 
     try {
       const requests = [
-        continentApi.list(), // 0
-        countryApi.list(), // 1
-        stateApi.list(), // 2
-        districtApi.list(), // 3
-        cityApi.list(), // 4
-        userCreationApi.list(), // 6
-        userRoleApi.list(), // 7
+        continentApi.list(), 
+        countryApi.list(),
+        stateApi.list(), 
+        districtApi.list(), 
+        cityApi.list(), 
+        userCreationApi.list(), 
+        userRoleApi.list(), 
       ];
 
       const results = await Promise.allSettled(requests);
