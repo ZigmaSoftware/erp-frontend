@@ -150,9 +150,9 @@ const pickFirstString = (...values: unknown[]): string => {
     }
   }
   return "";
-};
+}
 
-export default function VehicleRequestList() {
+function VehicleRequestList() {
   const [requests, setRequests] = useState<VehicleRequestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const siteLookupRef = useRef<Map<string, string>>(new Map());
@@ -398,3 +398,4 @@ export default function VehicleRequestList() {
     </div>
   );
 }
+export default VehicleRequestList;

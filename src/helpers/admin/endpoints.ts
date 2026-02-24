@@ -50,7 +50,9 @@ export const emMastersEndpoints = {
   equipmentModels: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/equipment-models/`,
   contractorModels: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/contractor-models/`,
   vehicleSuppliers: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/vehicle-suppliers/`,
-  vehicleRequest: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/vehicle-requests/`
+  vehicleRequest: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/vehicle-requests/`,
+  vehicleCreations: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/vehicle-creation`,
+  machineryHires: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/machinery-hires`
 } as const;
 
 export type EmMasterEntity = keyof typeof emMastersEndpoints;
@@ -75,7 +77,9 @@ export type CommonMasterEntity = keyof typeof commonMasterEndpoints;
 ======================================================== */
 export const adminMasterEndpoints = {
   userTypes: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/user-role/`,
+  permissions: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/permissions/`,
   userCreations: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/user-creation/`,
+  groupPermissions: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/group-permission/`,
   login: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/login/`,
   generateRefresh:`${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/refresh/`,
 } as const;
