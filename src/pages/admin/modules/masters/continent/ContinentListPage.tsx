@@ -3,7 +3,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { FilterMatchMode } from "primereact/api";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -13,8 +12,8 @@ import "primeicons/primeicons.css";
 
 import { Switch } from "@/components/ui/switch";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { PencilIcon } from "@/icons";
 import { continentApi } from "@/helpers/admin";
+import { PencilIcon } from "@/icons";
 
 /* -----------------------------------------
    Types
@@ -25,6 +24,9 @@ type Continent = {
   is_active: boolean;
 };
 
+/* -----------------------------------------
+   Routes
+----------------------------------------- */
 const encMasters = encryptSegment("masters");
 const encContinents = encryptSegment("continents");
 
@@ -38,20 +40,25 @@ const ENC_EDIT_PATH = (id: string) =>
 export default function ContinentList() {
   const navigate = useNavigate();
 
+  /* ------------------------------
+     State
+  ------------------------------ */
   const [data, setData] = useState<Continent[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
 
+  // ✅ pagination state
   const [lazyParams, setLazyParams] = useState({
     page: 1,
-    rows: 5,
+    rows: 10, // default 10 records
   });
 
+  // ✅ KEEPING YOUR PREVIOUS SEARCH STATE
   const [globalFilter, setGlobalFilter] = useState("");
 
-  /* -----------------------------------------
-     Fetch (Server-Side Pagination)
-  ----------------------------------------- */
+  /* ------------------------------
+     Fetch Data
+  ------------------------------ */
   const fetchContinents = useCallback(async () => {
     try {
       setLoading(true);
@@ -62,21 +69,21 @@ export default function ContinentList() {
       );
 
       setData(res.results);
-      setTotalRecords(Number(res.count));
+      setTotalRecords(res.count ?? 0);
     } catch {
       Swal.fire("Error", "Failed to fetch continents", "error");
     } finally {
       setLoading(false);
     }
-  }, [lazyParams]);
+  }, [lazyParams.page, lazyParams.rows]);
 
   useEffect(() => {
     fetchContinents();
   }, [fetchContinents]);
 
-  /* -----------------------------------------
+  /* ------------------------------
      Pagination Event
-  ----------------------------------------- */
+  ------------------------------ */
   const onPage = (event: any) => {
     setLazyParams({
       page: event.page + 1, // PrimeReact is 0-based
@@ -84,9 +91,9 @@ export default function ContinentList() {
     });
   };
 
-  /* -----------------------------------------
+  /* ------------------------------
      Status Toggle
-  ----------------------------------------- */
+  ------------------------------ */
   const statusTemplate = (row: Continent) => {
     const updateStatus = async (checked: boolean) => {
       try {
@@ -103,9 +110,9 @@ export default function ContinentList() {
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
-  /* -----------------------------------------
+  /* ------------------------------
      Actions
-  ----------------------------------------- */
+  ------------------------------ */
   const actionTemplate = (row: Continent) => (
     <button
       onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
@@ -118,10 +125,12 @@ export default function ContinentList() {
 
   const indexTemplate = (_: any, options: any) =>
     (lazyParams.page - 1) * lazyParams.rows + options.rowIndex + 1;
+  const cap = (str?: string) =>
+    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  /* -----------------------------------------
-     Header
-  ----------------------------------------- */
+  /* ------------------------------
+     HEADER (UNCHANGED)
+  ------------------------------ */
   const header = (
     <div className="flex justify-end">
       <span className="p-input-icon-left">
@@ -136,9 +145,9 @@ export default function ContinentList() {
     </div>
   );
 
-  /* -----------------------------------------
+  /* ------------------------------
      Render
-  ----------------------------------------- */
+  ------------------------------ */
   return (
     <div className="p-3">
       <div className="flex justify-between items-center mb-6">
@@ -162,6 +171,7 @@ export default function ContinentList() {
         lazy
         paginator
         rows={lazyParams.rows}
+        rowsPerPageOptions={[5, 10, 20, 50]}
         first={(lazyParams.page - 1) * lazyParams.rows}
         totalRecords={totalRecords}
         onPage={onPage}
@@ -177,8 +187,8 @@ export default function ContinentList() {
         <Column
           field="name"
           header="Continent Name"
-          sortable={false}
           style={{ minWidth: "200px" }}
+          body={(r) => cap(r.name)}
         />
 
         <Column

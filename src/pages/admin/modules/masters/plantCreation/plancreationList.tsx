@@ -3,7 +3,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { FilterMatchMode } from "primereact/api";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -28,10 +27,6 @@ type PlantRecord = {
   is_active: boolean;
 };
 
-type TableFilters = {
-  global: { value: string | null; matchMode: FilterMatchMode };
-};
-
 
 /* --------------------------------------------------------
    ROUTES
@@ -42,18 +37,19 @@ const encPlantCreation = encryptSegment("plant-creation");
 const ENC_NEW_PATH = `/${encMasters}/${encPlantCreation}/new`;
 const ENC_EDIT_PATH = (id: string) =>
   `/${encMasters}/${encPlantCreation}/${id}/edit`;
-
+ 
 /* --------------------------------------------------------
    COMPONENT
 -------------------------------------------------------- */
 export default function PlantList() {
   const [plants, setPlants] = useState<PlantRecord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
-
-  const [filters, setFilters] = useState<TableFilters>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [lazyParams, setLazyParams] = useState({
+    page: 1,
+    rows: 10,
   });
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const navigate = useNavigate();
 
@@ -63,8 +59,12 @@ export default function PlantList() {
   const fetchPlants = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await plantApi.list();
-      const data = res as any[];
+      const res = await plantApi.listPaginated(
+        lazyParams.page,
+        lazyParams.rows
+      
+      );
+      const data = (res.results ?? []) as any[];
 
       const mapped: PlantRecord[] = data.map((item) => ({
         unique_id: item.unique_id,
@@ -75,6 +75,7 @@ export default function PlantList() {
 
       mapped.sort((a, b) => a.plantName.localeCompare(b.plantName));
       setPlants(mapped);
+      setTotalRecords(res.count ?? 0);
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -84,7 +85,7 @@ export default function PlantList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lazyParams.page, lazyParams.rows]);
 
   useEffect(() => {
     fetchPlants();
@@ -94,13 +95,7 @@ export default function PlantList() {
      GLOBAL SEARCH
   -------------------------------------------------------- */
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-
-    setFilters({
-      global: { value, matchMode: FilterMatchMode.CONTAINS },
-    });
-
-    setGlobalFilterValue(value);
+    setGlobalFilterValue(e.target.value);
   };
 
   /* --------------------------------------------------------
@@ -135,7 +130,15 @@ export default function PlantList() {
     </div>
   );
 
-  const indexTemplate = (_: any, options: any) => options.rowIndex + 1;
+  const indexTemplate = (_: any, options: any) =>
+    (lazyParams.page - 1) * lazyParams.rows + options.rowIndex + 1;
+
+  const onPage = (event: any) => {
+    setLazyParams({
+      page: event.page + 1,
+      rows: event.rows,
+    });
+  };
 
   /* --------------------------------------------------------
      HEADER
@@ -176,12 +179,14 @@ export default function PlantList() {
       <DataTable
         value={plants}
         dataKey="unique_id"
+        lazy
         paginator
-        rows={10}
+        rows={lazyParams.rows}
         rowsPerPageOptions={[5, 10, 25, 50]}
+        first={(lazyParams.page - 1) * lazyParams.rows}
+        totalRecords={totalRecords}
+        onPage={onPage}
         loading={loading}
-        filters={filters}
-        globalFilterFields={["plantName", "siteName"]}
         header={header}
         stripedRows
         showGridlines
