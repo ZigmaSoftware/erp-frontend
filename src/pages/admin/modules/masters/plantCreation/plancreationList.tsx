@@ -37,7 +37,7 @@ const encPlantCreation = encryptSegment("plant-creation");
 const ENC_NEW_PATH = `/${encMasters}/${encPlantCreation}/new`;
 const ENC_EDIT_PATH = (id: string) =>
   `/${encMasters}/${encPlantCreation}/${id}/edit`;
-
+ 
 /* --------------------------------------------------------
    COMPONENT
 -------------------------------------------------------- */
@@ -62,6 +62,7 @@ export default function PlantList() {
       const res = await plantApi.listPaginated(
         lazyParams.page,
         lazyParams.rows
+      
       );
       const data = (res.results ?? []) as any[];
 
