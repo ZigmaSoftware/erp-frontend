@@ -44,7 +44,7 @@ export default function EquipmentModelList() {
     try {
       const res = await equipmentModelApi.list();
       const raw = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : (Array.isArray((res as any)?.data?.results) ? (res as any).data.results : []));
-console.log("raw", raw);
+      console.log("raw", raw);
       setModels(
         raw.map((item: any) => ({
           unique_id: item.unique_id,

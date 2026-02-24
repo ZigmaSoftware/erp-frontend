@@ -36,6 +36,8 @@ import UserCreationList from "@/pages/admin/modules/admin/userCreation/user-crea
 import UserCreationForm from "@/pages/admin/modules/admin/userCreation/user-creationForm";
 import GroupPermissionList from "@/pages/admin/modules/admin/groupPermission/group-permissionList";
 import GroupPermissionForm from "@/pages/admin/modules/admin/groupPermission/group-permissionForm";
+import MachineryHireList from "@/pages/admin/modules/emMasters/machineryHire/machineryHireList";
+import MachineryHireForm from "@/pages/admin/modules/emMasters/machineryHire/machineryHireForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -69,6 +71,7 @@ const ROUTES: RouteMap = {
     "contractor": { list: ContractorList, form: ContractorForm },
     "vehicle-suppliers": { list: VehicleSupplierList, form: VehicleSupplierForm },
     "vehicle-request": { list: VehicleRequestList, form: VehicleRequestForm },
+    "machinery-hire": {list: MachineryHireList, form: MachineryHireForm}
   },
 };
 
