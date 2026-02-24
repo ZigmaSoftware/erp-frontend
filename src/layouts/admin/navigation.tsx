@@ -33,6 +33,7 @@ export function getAdminNavigation(): AdminNavConfig {
     encAdmins,
     encUserType,
     encUserCreation,
+    encGroupPermission,
     encPlantCreation,
     encEmMasters,
     encEquipmentType,
@@ -52,6 +53,7 @@ export function getAdminNavigation(): AdminNavConfig {
       subItems: [
         { name: "User Type", path: `/${encAdmins}/${encUserType}` },
         { name: "User Creation", path: `/${encAdmins}/${encUserCreation}` },
+        { name: "Group Permission", path: `/${encAdmins}/${encGroupPermission}` },
       ],
     },
   ];

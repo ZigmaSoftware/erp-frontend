@@ -32,6 +32,8 @@ import VehicleSupplierList from "@/pages/admin/modules/emMasters/VehicleSupplier
 import VehicleSupplierForm from "@/pages/admin/modules/emMasters/VehicleSupplier/vehicleSupplierForm";
 import UserCreationList from "@/pages/admin/modules/admin/userCreation/user-creationList";
 import UserCreationForm from "@/pages/admin/modules/admin/userCreation/user-creationForm";
+import GroupPermissionList from "@/pages/admin/modules/admin/groupPermission/group-permissionList";
+import GroupPermissionForm from "@/pages/admin/modules/admin/groupPermission/group-permissionForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -48,6 +50,7 @@ const ROUTES: RouteMap = {
   admins: {
     "user-type": { list: UserTypeList, form: UserTypeForm },
     "user-creation": {list: UserCreationList, form: UserCreationForm},
+    "group-permission": { list: GroupPermissionList, form: GroupPermissionForm },
   },
   masters: {
     continents: { list: ContinentList, form: ContinentForm },

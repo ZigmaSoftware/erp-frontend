@@ -25,6 +25,7 @@ export type EncryptedRoutes = {
   encSubProperties: string;
   encTripSummary: string;
   encUserCreation: string;
+  encGroupPermission: string;
   encUserScreenPermission: string;
   encUserType: string;
   encVehicleCreation: string;
@@ -78,6 +79,7 @@ const plainRoutes: EncryptedRoutes = {
   encSubProperties: "sub-properties",
   encTripSummary: "trip-summary",
   encUserCreation: "user-creation",
+  encGroupPermission: "group-permission",
   encPlantCreation: "plant-creation",
   encUserType: "user-type",
   encVehicleCreation: "vehicle-creation",

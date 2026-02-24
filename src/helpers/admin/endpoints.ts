@@ -76,6 +76,7 @@ export type CommonMasterEntity = keyof typeof commonMasterEndpoints;
 export const adminMasterEndpoints = {
   userTypes: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/user-role/`,
   userCreations: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/user-creation/`,
+  groupPermissions: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/group-permission/`,
   login: `${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/login/`,
   generateRefresh:`${AUTH_SERVICE}/${CURRENT_VERSION}/${AUTH_APP}/refresh/`,
 } as const;

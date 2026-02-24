@@ -62,6 +62,7 @@ export default function PlantList() {
       const res = await plantApi.listPaginated(
         lazyParams.page,
         lazyParams.rows
+      
       );
       const data = (res.results ?? []) as any[];
 

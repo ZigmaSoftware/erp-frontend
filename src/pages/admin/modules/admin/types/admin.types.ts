@@ -27,3 +27,10 @@ export interface UserType extends BaseEntity {
   name: string;
 }
 
+export interface GroupPermission {
+  id?: string | number;
+  group_id: number;
+  group_name: string;
+  permission_ids: number[];
+  message?: string;
+}
