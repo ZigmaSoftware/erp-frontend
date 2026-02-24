@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "primereact/button";
 import { Column } from "primereact/column";
@@ -18,11 +18,17 @@ import type { GroupPermission } from "../types/admin.types";
 type TableFilters = {
   global: { value: string | null; matchMode: FilterMatchMode };
   group_name: { value: string | null; matchMode: FilterMatchMode };
+  permission_names_text: { value: string | null; matchMode: FilterMatchMode };
 };
 
-const normalizeList = (payload: unknown): GroupPermission[] => {
+type GroupPermissionRow = GroupPermission & {
+  permission_ids: number[];
+  permission_names_text: string;
+};
+
+const normalizeList = <T,>(payload: unknown): T[] => {
   if (Array.isArray(payload)) {
-    return payload as GroupPermission[];
+    return payload as T[];
   }
 
   if (
@@ -31,7 +37,7 @@ const normalizeList = (payload: unknown): GroupPermission[] => {
     "data" in payload &&
     Array.isArray((payload as { data?: unknown }).data)
   ) {
-    return (payload as { data: GroupPermission[] }).data;
+    return (payload as { data: T[] }).data;
   }
 
   if (
@@ -41,7 +47,7 @@ const normalizeList = (payload: unknown): GroupPermission[] => {
     (payload as { data?: { results?: unknown } }).data &&
     Array.isArray((payload as { data?: { results?: unknown[] } }).data?.results)
   ) {
-    return (payload as { data: { results: GroupPermission[] } }).data.results;
+    return (payload as { data: { results: T[] } }).data.results;
   }
 
   if (
@@ -50,19 +56,20 @@ const normalizeList = (payload: unknown): GroupPermission[] => {
     "results" in payload &&
     Array.isArray((payload as { results?: unknown[] }).results)
   ) {
-    return (payload as { results: GroupPermission[] }).results;
+    return (payload as { results: T[] }).results;
   }
 
   return [];
 };
 
 export default function GroupPermissionList() {
-  const [records, setRecords] = useState<GroupPermission[]>([]);
+  const [records, setRecords] = useState<GroupPermissionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<TableFilters>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     group_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    permission_names_text: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
   const navigate = useNavigate();
@@ -72,10 +79,28 @@ export default function GroupPermissionList() {
   const ENC_EDIT_PATH = (id: string | number) =>
     `/${encAdmins}/${encGroupPermission}/${id}/edit`;
 
-  const fetchGroupPermissions = async () => {
+  const fetchData = async () => {
     try {
-      const res = await groupPermissionApi.list();
-      setRecords(normalizeList(res));
+      const groupPermissionRes = await groupPermissionApi.list();
+      const groupPermissions = normalizeList<GroupPermission>(groupPermissionRes);
+
+      const rows: GroupPermissionRow[] = groupPermissions.map((row) => {
+        const permissionIds = (row.permissions ?? [])
+          .map((permission) => Number(permission.id))
+          .filter((idValue) => Number.isInteger(idValue) && idValue > 0);
+
+        const permissionNames = (row.permissions ?? []).map(
+          (permission) => permission.name || permission.codename || `Permission ${permission.id}`
+        );
+
+        return {
+          ...row,
+          permission_ids: permissionIds,
+          permission_names_text: permissionNames.join(", "),
+        };
+      });
+
+      setRecords(rows);
     } catch (error) {
       console.error("Failed to load group permissions", error);
       setRecords([]);
@@ -85,7 +110,7 @@ export default function GroupPermissionList() {
   };
 
   useEffect(() => {
-    fetchGroupPermissions();
+    void fetchData();
   }, []);
 
   const onGlobalFilterChange = (e: { target: { value: string } }) => {
@@ -97,15 +122,13 @@ export default function GroupPermissionList() {
     }));
   };
 
-  const indexTemplate = (_: GroupPermission, { rowIndex }: { rowIndex: number }) =>
+  const indexTemplate = (_: GroupPermissionRow, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
-  const permissionIdsTemplate = (row: GroupPermission) =>
-    row.permission_ids?.length
-      ? row.permission_ids.join(", ")
-      : "—";
+  const permissionNamesTemplate = (row: GroupPermissionRow) =>
+    row.permission_names_text || "—";
 
-  const actionTemplate = (row: GroupPermission) => {
+  const actionTemplate = (row: GroupPermissionRow) => {
     const rowId = row.id ?? row.group_id;
     return (
       <div className="flex gap-2 justify-center">
@@ -120,30 +143,29 @@ export default function GroupPermissionList() {
     );
   };
 
-  const header = (
-    <div className="flex justify-end items-center">
-      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
-        <i className="pi pi-search text-gray-500" />
-        <InputText
-          value={globalFilterValue}
-          onChange={onGlobalFilterChange}
-          placeholder="Search group permissions..."
-          className="p-inputtext-sm !border-0 !shadow-none"
-        />
+  const header = useMemo(
+    () => (
+      <div className="flex justify-end items-center">
+        <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
+          <i className="pi pi-search text-gray-500" />
+          <InputText
+            value={globalFilterValue}
+            onChange={onGlobalFilterChange}
+            placeholder="Search group permissions..."
+            className="p-inputtext-sm !border-0 !shadow-none"
+          />
+        </div>
       </div>
-    </div>
+    ),
+    [globalFilterValue]
   );
 
   return (
     <div className="px-3 py-3 w-full">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-1">
-            Group Permission
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Manage group to permission mapping
-          </p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-1">Group Permission</h1>
+          <p className="text-gray-500 text-sm">Manage group to permission mapping</p>
         </div>
 
         <Button
@@ -161,7 +183,7 @@ export default function GroupPermissionList() {
         loading={loading}
         filters={filters}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        globalFilterFields={["group_name", "group_id"]}
+        globalFilterFields={["group_name", "group_id", "permission_names_text"]}
         header={header}
         emptyMessage="No group permissions found."
         stripedRows
@@ -170,8 +192,17 @@ export default function GroupPermissionList() {
       >
         <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
         <Column field="group_id" header="Group ID" sortable style={{ width: "140px" }} />
-        <Column field="group_name" header="Group Name" sortable style={{ minWidth: "220px" }} />
-        <Column header="Permission IDs" body={permissionIdsTemplate} style={{ minWidth: "260px" }} />
+        <Column
+          field="group_name"
+          header="Group Name"
+          sortable
+          style={{ minWidth: "220px" }}
+        />
+        <Column
+          header="Permissions"
+          body={permissionNamesTemplate}
+          style={{ minWidth: "320px" }}
+        />
         <Column header="Actions" body={actionTemplate} style={{ width: "150px" }} />
       </DataTable>
     </div>

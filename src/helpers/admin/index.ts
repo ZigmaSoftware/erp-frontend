@@ -12,6 +12,7 @@ export const plantApi = commonMasterApi.plants;
 /* -------- User / Staff -------- */
 export const userCreationApi = adminMasterApi.userCreations;
 export const userRoleApi = adminMasterApi.userTypes;
+export const permissionApi = adminMasterApi.permissions;
 export const groupPermissionApi = adminMasterApi.groupPermissions;
 
 /* -------- EM Masters -------- */

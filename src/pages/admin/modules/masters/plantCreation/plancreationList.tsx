@@ -37,7 +37,7 @@ const encPlantCreation = encryptSegment("plant-creation");
 const ENC_NEW_PATH = `/${encMasters}/${encPlantCreation}/new`;
 const ENC_EDIT_PATH = (id: string) =>
   `/${encMasters}/${encPlantCreation}/${id}/edit`;
-
+ 
 /* --------------------------------------------------------
    COMPONENT
 -------------------------------------------------------- */

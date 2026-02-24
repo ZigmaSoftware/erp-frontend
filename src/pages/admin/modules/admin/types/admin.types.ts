@@ -32,5 +32,13 @@ export interface GroupPermission {
   group_id: number;
   group_name: string;
   permission_ids: number[];
+  permissions?: PermissionMeta[];
   message?: string;
+}
+
+export interface PermissionMeta {
+  id: number;
+  codename: string;
+  name: string;
+  content_type: number;
 }
