@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
+import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ const ENC_LIST_PATH = `/${encEmMasters}/${encMachineryHire}`;
 
 export default function MachineryHireForm() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
 
   /* ---------------- STATE ---------------- */
@@ -48,9 +49,13 @@ export default function MachineryHireForm() {
   const [equipmentModels, setEquipmentModels] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
 
-  const [loading, setLoading] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(true);
+  const [recordLoading, setRecordLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  /* ---------------- SAFE ARRAY EXTRACTOR ---------------- */
+  const isBusy = lookupLoading || (isEdit && recordLoading);
+
+  /* ---------------- SAFE ARRAY ---------------- */
 
   const extractArray = (res: any): any[] => {
     if (Array.isArray(res)) return res;
@@ -59,58 +64,76 @@ export default function MachineryHireForm() {
     return [];
   };
 
-  /* ---------------- LOAD DROPDOWNS ---------------- */
+  /* ---------------- LOAD LOOKUPS ---------------- */
+
+  const loadLookups = useCallback(async () => {
+    setLookupLoading(true);
+    try {
+      const [s, t, m, v] = await Promise.all([
+        siteApi.list(),
+        equipmentTypeApi.list(),
+        equipmentModelApi.list(),
+        vehicleCreationApi.list(),
+      ]);
+
+      setSites(extractArray(s));
+      console.log("s",s);
+     
+      setEquipmentTypes(extractArray(t));
+      setEquipmentModels(extractArray(m));
+      setVehicles(extractArray(v));
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Error", "Failed to load dropdown data", "error");
+    } finally {
+      setLookupLoading(false);
+    }
+  }, []);
+   console.log("sites",sites);
 
   useEffect(() => {
-    const loadDropdowns = async () => {
-      try {
-        const [s, t, m, v] = await Promise.all([
-          siteApi.list(),
-          equipmentTypeApi.list(),
-          equipmentModelApi.list(),
-          vehicleCreationApi.list(),
-        ]);
-
-        setSites(extractArray(s));
-        setEquipmentTypes(extractArray(t));
-        setEquipmentModels(extractArray(m));
-        setVehicles(extractArray(v));
-      } catch {
-        Swal.fire("Error", "Failed to load dropdown data", "error");
-      }
-    };
-
-    loadDropdowns();
-  }, []);
+    loadLookups();
+  }, [loadLookups]);
 
   /* ---------------- EDIT MODE ---------------- */
 
   useEffect(() => {
-    if (!isEdit || !id) return;
+    if (!id) return;
 
     const fetchData = async () => {
+      setRecordLoading(true);
+
+      // reset before loading new record
+      setSiteId("");
+      setEquipmentTypeId("");
+      setEquipmentModelId("");
+      setVehicleId("");
+      setDate("");
+      setHireRate("");
+
       try {
         const res: any = await machineryHireApi.get(id);
         const data = res?.data ?? res;
 
-        // IMPORTANT: convert to string (Select expects string)
         setSiteId(String(data.site_id ?? ""));
         setEquipmentTypeId(String(data.equipment_type_id ?? ""));
         setEquipmentModelId(String(data.equipment_model_id ?? ""));
         setVehicleId(String(data.vehicle_id ?? ""));
-
         setDate(data.date ?? "");
         setDieselStatus(data.diesel_status ?? "WITH_DIESEL");
         setHireRate(String(data.hire_rate ?? ""));
         setUnit(data.unit ?? "HR");
         setIsActive(Boolean(data.is_active));
-      } catch {
+      } catch (error) {
+        console.error(error);
         Swal.fire("Error", "Failed to load machinery hire", "error");
+      } finally {
+        setRecordLoading(false);
       }
     };
 
     fetchData();
-  }, [id, isEdit]);
+  }, [id]);
 
   /* ---------------- SUBMIT ---------------- */
 
@@ -121,8 +144,6 @@ export default function MachineryHireForm() {
       Swal.fire("Warning", "Please fill all required fields", "warning");
       return;
     }
-
-    setLoading(true);
 
     const payload = {
       site_id: siteId,
@@ -137,19 +158,25 @@ export default function MachineryHireForm() {
       is_deleted: false,
     };
 
+    setSubmitting(true);
     try {
       if (isEdit && id) {
         await machineryHireApi.update(id, payload);
+        Swal.fire({
+          icon: "success",
+          title: "Updated successfully!",
+          timer: 1500,
+          showConfirmButton: false,
+        });
       } else {
         await machineryHireApi.create(payload);
+        Swal.fire({
+          icon: "success",
+          title: "Added successfully!",
+          timer: 1500,
+          showConfirmButton: false,
+        });
       }
-
-      Swal.fire({
-        icon: "success",
-        title: isEdit ? "Updated successfully!" : "Added successfully!",
-        timer: 1500,
-        showConfirmButton: false,
-      });
 
       navigate(ENC_LIST_PATH);
     } catch (error: any) {
@@ -159,38 +186,39 @@ export default function MachineryHireForm() {
         "error"
       );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  /* ---------------- LOADING UI ---------------- */
+
+  if (isBusy) {
+    return (
+      <div className="p-3">
+        <ComponentCard title={isEdit ? "Edit Machinery Hire" : "New Machinery Hire"}>
+          <p className="text-sm text-gray-500">Loading data…</p>
+        </ComponentCard>
+      </div>
+    );
+  }
 
   /* ---------------- UI ---------------- */
 
   return (
-    <div className="p-8">
-      <div className="mx-auto bg-white rounded-xl border shadow-sm">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold">
-            {isEdit ? "Edit Machinery Hire" : "Add Machinery Hire"}
-          </h2>
-        </div>
-
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+    <div className="p-3">
+      <ComponentCard title={isEdit ? "Edit Machinery Hire" : "New Machinery Hire"}>
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             {/* SITE */}
             <div>
               <Label>Site *</Label>
-              <Select value={siteId} onValueChange={setSiteId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Site" />
-                </SelectTrigger>
+              <Select value={siteId || undefined} onValueChange={(v) => setSiteId(v ?? "")}>
+                <SelectTrigger><SelectValue placeholder="Select Site" /></SelectTrigger>
                 <SelectContent>
                   {sites.map((s) => (
-                    <SelectItem
-                      key={s.unique_id}
-                      value={String(s.unique_id)}
-                    >
-                      {s.site_name}
+                    <SelectItem key={s.unique_id} value={String(s.unique_id)}>
+                      {s.site_name ?? s.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -200,19 +228,11 @@ export default function MachineryHireForm() {
             {/* EQUIPMENT TYPE */}
             <div>
               <Label>Equipment Type *</Label>
-              <Select
-                value={equipmentTypeId}
-                onValueChange={setEquipmentTypeId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Type" />
-                </SelectTrigger>
+              <Select value={equipmentTypeId || undefined} onValueChange={(v) => setEquipmentTypeId(v ?? "")}>
+                <SelectTrigger><SelectValue placeholder="Select Type" /></SelectTrigger>
                 <SelectContent>
                   {equipmentTypes.map((t) => (
-                    <SelectItem
-                      key={t.unique_id}
-                      value={String(t.unique_id)}
-                    >
+                    <SelectItem key={t.unique_id} value={String(t.unique_id)}>
                       {t.equipment_type_name ?? t.name}
                     </SelectItem>
                   ))}
@@ -223,20 +243,12 @@ export default function MachineryHireForm() {
             {/* EQUIPMENT MODEL */}
             <div>
               <Label>Equipment Model *</Label>
-              <Select
-                value={equipmentModelId}
-                onValueChange={setEquipmentModelId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Model" />
-                </SelectTrigger>
+              <Select value={equipmentModelId || undefined} onValueChange={(v) => setEquipmentModelId(v ?? "")}>
+                <SelectTrigger><SelectValue placeholder="Select Model" /></SelectTrigger>
                 <SelectContent>
                   {equipmentModels.map((m) => (
-                    <SelectItem
-                      key={m.unique_id}
-                      value={String(m.unique_id)}
-                    >
-                      {m.model_name ?? m.equipment_model_name}
+                    <SelectItem key={m.unique_id} value={String(m.unique_id)}>
+                      {m.model_name ?? m.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -246,68 +258,43 @@ export default function MachineryHireForm() {
             {/* VEHICLE */}
             <div>
               <Label>Vehicle *</Label>
-              <Select value={vehicleId} onValueChange={setVehicleId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Vehicle" />
-                </SelectTrigger>
+              <Select value={vehicleId || undefined} onValueChange={(v) => setVehicleId(v ?? "")}>
+                <SelectTrigger><SelectValue placeholder="Select Vehicle" /></SelectTrigger>
                 <SelectContent>
                   {vehicles.map((v) => (
-                    <SelectItem
-                      key={v.unique_id}
-                      value={String(v.unique_id)}
-                    >
-                      {v.vehicle_code}
+                    <SelectItem key={v.unique_id} value={String(v.unique_id)}>
+                      {v.vehicle_code ?? v.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* DATE */}
             <div>
               <Label>Date *</Label>
-              <Input
-                type="date"
-                value={date}
-                required
-                onChange={(e) => setDate(e.target.value)}
-              />
+              <Input type="date" value={date} required onChange={(e) => setDate(e.target.value)} />
             </div>
 
-            {/* DIESEL STATUS */}
             <div>
               <Label>Diesel Status</Label>
               <Select value={dieselStatus} onValueChange={setDieselStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="WITH_DIESEL">With Diesel</SelectItem>
-                  <SelectItem value="WITHOUT_DIESEL">
-                    Without Diesel
-                  </SelectItem>
+                  <SelectItem value="WITHOUT_DIESEL">Without Diesel</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* HIRE RATE */}
             <div>
               <Label>Hire Rate *</Label>
-              <Input
-                type="number"
-                value={hireRate}
-                required
-                onChange={(e) => setHireRate(e.target.value)}
-              />
+              <Input type="number" value={hireRate} required onChange={(e) => setHireRate(e.target.value)} />
             </div>
 
-            {/* UNIT */}
             <div>
               <Label>Unit</Label>
               <Select value={unit} onValueChange={setUnit}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="HR">Per Hour</SelectItem>
                   <SelectItem value="DAY">Per Day</SelectItem>
@@ -315,16 +302,10 @@ export default function MachineryHireForm() {
               </Select>
             </div>
 
-            {/* STATUS */}
             <div>
               <Label>Status</Label>
-              <Select
-                value={isActive ? "true" : "false"}
-                onValueChange={(v) => setIsActive(v === "true")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={isActive ? "true" : "false"} onValueChange={(v) => setIsActive(v === "true")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="true">Active</SelectItem>
                   <SelectItem value="false">Inactive</SelectItem>
@@ -335,20 +316,15 @@ export default function MachineryHireForm() {
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : isEdit ? "Update" : "Save"}
-            </Button>
-
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => navigate(ENC_LIST_PATH)}
-            >
+            <Button type="button" variant="outline" onClick={() => navigate(ENC_LIST_PATH)}>
               Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Saving..." : isEdit ? "Update" : "Save"}
             </Button>
           </div>
         </form>
-      </div>
+      </ComponentCard>
     </div>
   );
 }
