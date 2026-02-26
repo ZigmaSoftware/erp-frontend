@@ -13,6 +13,7 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
+import { Switch } from "@/components/ui/switch";
 import { vehicleCreationApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
@@ -28,6 +29,7 @@ type VehicleCreationRow = {
   equipment_model_name: string;
   contractor_name: string;
   supplier_name: string;
+  is_active: boolean;
 };
 
 type TableFilters = {
@@ -53,6 +55,16 @@ const pickFirstString = (...values: unknown[]): string => {
     if (resolved !== undefined) return resolved;
   }
   return "";
+};
+
+const toBoolean = (value: unknown): boolean => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "active";
+  }
+  return false;
 };
 
 const normalizeRow = (payload: Record<string, unknown>): VehicleCreationRow => {
@@ -95,6 +107,7 @@ const normalizeRow = (payload: Record<string, unknown>): VehicleCreationRow => {
       supplier?.["supplier_name"],
       supplier?.["name"],
     ),
+    is_active: toBoolean(payload["is_active"] ?? payload["status"]),
   };
 };
 
@@ -181,8 +194,18 @@ export default function VehicleCreationList() {
     </div>
   );
 
-  const ownerTemplate = (row: VehicleCreationRow) => {
-    return row.contractor_name || row.supplier_name || "—";
+  const statusTemplate = (row: VehicleCreationRow) => {
+    const updateStatus = async (value: boolean) => {
+      try {
+        await vehicleCreationApi.update(row.unique_id, { is_active: value });
+        fetchRows();
+      } catch (error) {
+        console.error(error);
+        Swal.fire("Error", "Failed to update vehicle status", "error");
+      }
+    };
+
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   const header = (
@@ -232,6 +255,7 @@ export default function VehicleCreationList() {
           "equipment_model_name",
           "contractor_name",
           "supplier_name",
+          "is_active",
         ]}
         header={header}
         stripedRows
@@ -239,30 +263,28 @@ export default function VehicleCreationList() {
         emptyMessage="No vehicle creation records found"
       >
         <Column header="S.No" body={(_, options) => options.rowIndex + 1} />
-  <Column field="vehicle_code" header="Vehicle Code" sortable />
-  <Column field="vehicle_reg_no" header="Reg No" sortable />
-  <Column field="hire_type" header="Hire Type" sortable />
-  <Column field="request_no" header="Request No" sortable />
-  <Column field="site_name" header="Site" sortable />
-  <Column field="equipment_type_name" header="Equipment Type" sortable />
-  <Column field="equipment_model_name" header="Equipment Model" sortable />
-
-  {/* NEW Separate Columns */}
-  <Column
-    field="contractor_name"
-    header="Contractor"
-    sortable
-    body={(row) => row.contractor_name || "—"}
-  />
-  <Column
-    field="supplier_name"
-    header="Supplier"
-    sortable
-    body={(row) => row.supplier_name || "—"}
-  />
-
-  <Column field="rental_basis" header="Rental Basis" sortable />
-  <Column header="Actions" body={actionTemplate} />
+        <Column field="vehicle_code" header="Vehicle Code" sortable />
+        <Column field="vehicle_reg_no" header="Reg No" sortable />
+        <Column field="hire_type" header="Hire Type" sortable />
+        <Column field="request_no" header="Request No" sortable />
+        <Column field="site_name" header="Site" sortable />
+        <Column field="equipment_type_name" header="Equipment Type" sortable />
+        <Column field="equipment_model_name" header="Equipment Model" sortable />
+        <Column
+          field="contractor_name"
+          header="Contractor"
+          sortable
+          body={(row) => row.contractor_name || "—"}
+        />
+        <Column
+          field="supplier_name"
+          header="Supplier"
+          sortable
+          body={(row) => row.supplier_name || "—"}
+        />
+        <Column header="Status" body={statusTemplate} />
+        <Column field="rental_basis" header="Rental Basis" sortable />
+        <Column header="Actions" body={actionTemplate} />
       </DataTable>
     </div>
   );
