@@ -40,7 +40,8 @@ export function getAdminNavigation(): AdminNavConfig {
     encEquipmentModel,
     encContractor,
     encVehicleSupplier,
-    encVehicleRequest
+    encVehicleRequest,
+    encMachineryHire
   } = getEncryptedRoute();
 
   const home: NavItem[] = [
@@ -84,7 +85,8 @@ export function getAdminNavigation(): AdminNavConfig {
         { name: "Equipment Model Masters", path: `/${encEmMasters}/${encEquipmentModel}` },
         { name: "Contractor Masters", path: `/${encEmMasters}/${encContractor}` },
         { name: "Vehicle Supplier Masters", path: `/${encEmMasters}/${encVehicleSupplier}` },
-        { name: "Vehicle Request", path: `/${encEmMasters}/${encVehicleRequest}`}
+        { name: "Vehicle Request", path: `/${encEmMasters}/${encVehicleRequest}`},
+        { name: "Machinery Hire", path: `/${encEmMasters}/${encMachineryHire}`}
       ],
     },
   ];

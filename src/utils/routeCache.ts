@@ -53,6 +53,7 @@ export type EncryptedRoutes = {
   encContractor: string;
   encVehicleSupplier: string;
   encVehicleRequest: string;
+  encMachineryHire: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -108,6 +109,7 @@ const plainRoutes: EncryptedRoutes = {
   encContractor: "contractor",
   encVehicleSupplier: "vehicle-suppliers",
   encVehicleRequest: "vehicle-request",
+  encMachineryHire: "machinery-hire"
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {
