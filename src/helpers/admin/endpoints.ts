@@ -51,8 +51,8 @@ export const emMastersEndpoints = {
   contractorModels: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/contractor-models/`,
   vehicleSuppliers: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/vehicle-suppliers/`,
   vehicleRequest: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/vehicle-requests/`,
-  vehicleCreations: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/vehicle-creations`,
-  machineryHires: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/machinery-hires`
+  vehicleCreations: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/vehicle-creations/`,
+  machineryHires: `${MASTER_SERVICE}/${CURRENT_VERSION}/${EM_APP}/machinery-hires`,
 } as const;
 
 export type EmMasterEntity = keyof typeof emMastersEndpoints;

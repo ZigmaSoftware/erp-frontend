@@ -206,6 +206,7 @@ export default function VehicleRequestForm() {
     try {
       const [models, sites, users] = (await Promise.all([
         equipmentModelApi.list(),
+
         siteApi.list(),
         userCreationApi.list(),
       ])) as [unknown[], unknown[], unknown[]];
@@ -218,6 +219,7 @@ export default function VehicleRequestForm() {
           (item) => resolveModelLabel(item)
         )
       );
+      console.log(models, sites, users);
 
       setSiteOptions(
         toSelectOptions(

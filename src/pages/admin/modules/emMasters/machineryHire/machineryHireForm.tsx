@@ -26,6 +26,9 @@ import {
 const { encEmMasters, encMachineryHire } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encEmMasters}/${encMachineryHire}`;
 
+const isTruthyActive = (value: unknown): boolean =>
+  value === true || value === 1 || value === "1" || value === "true";
+
 export default function MachineryHireForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -77,8 +80,6 @@ export default function MachineryHireForm() {
       ]);
 
       setSites(extractArray(s));
-      console.log("s",s);
-     
       setEquipmentTypes(extractArray(t));
       setEquipmentModels(extractArray(m));
       setVehicles(extractArray(v));
@@ -89,7 +90,6 @@ export default function MachineryHireForm() {
       setLookupLoading(false);
     }
   }, []);
-   console.log("sites",sites);
 
   useEffect(() => {
     loadLookups();
@@ -261,7 +261,9 @@ export default function MachineryHireForm() {
               <Select value={vehicleId || undefined} onValueChange={(v) => setVehicleId(v ?? "")}>
                 <SelectTrigger><SelectValue placeholder="Select Vehicle" /></SelectTrigger>
                 <SelectContent>
-                  {vehicles.map((v) => (
+                  {vehicles
+                    .filter((v) => isTruthyActive(v?.is_active))
+                    .map((v) => (
                     <SelectItem key={v.unique_id} value={String(v.unique_id)}>
                       {v.vehicle_code ?? v.name}
                     </SelectItem>
