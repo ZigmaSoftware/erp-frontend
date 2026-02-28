@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,60 +17,133 @@ import {
 
 import { encryptSegment } from "@/utils/routeCrypto";
 import { extractErrorMessage } from "@/utils/errorUtils";
-import type { SelectOption } from "@/types/forms";
 import {
   stateApi,
   useContinentsSelectOptions,
-  useCountriesNormalized,
+  useCountriesSelectOptions,
 } from "@/helpers/admin";
-import type { StateRecord } from "@/types/tanstack/masters";
+import type {
+  CountrySelectOption,
+  StateRecord,
+} from "@/types/tanstack/masters";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+
+/* ---------------- ROUTE ---------------- */
 
 const encMasters = encryptSegment("masters");
 const encStates = encryptSegment("states");
 const ENC_LIST_PATH = `/${encMasters}/${encStates}`;
 
-const normalizeNullableId = (
-  value: string | number | null | undefined
-): string | null => {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  return String(value);
+/* ---------------- TYPES ---------------- */
+
+type StateFormValues = {
+  name: string;
+  label: string;
+  continent_id: string;
+  country_id: string;
+  is_active: string; // string for Select
 };
 
+const buildInitialFormData = (): StateFormValues => ({
+  name: "",
+  label: "",
+  continent_id: "",
+  country_id: "",
+  is_active: "true",
+});
+
+const includeSelectedOption = <Option extends { value: string }>(
+  base: Option[],
+  options: Option[],
+  selectedId: string
+): Option[] => {
+  if (!selectedId) return base;
+  if (base.some((option) => option.value === selectedId)) {
+    return base;
+  }
+  const selected = options.find((option) => option.value === selectedId);
+  return selected ? [...base, selected] : base;
+};
+
+const isOptionActive = (option: { isActive?: boolean }) =>
+  option.isActive !== false;
+
+/* ---------------- COMPONENT ---------------- */
+
 function StateForm() {
-  const [name, setName] = useState("");
-  const [label, setLabel] = useState("");
-  const [isActive, setIsActive] = useState(true);
-  const [continentId, setContinentId] = useState("");
-  const [countryId, setCountryId] = useState("");
-  const [pendingCountryId, setPendingCountryId] = useState("");
-  const [filteredCountries, setFilteredCountries] =
-    useState<SelectOption<string>[]>([]);
+  const [formData, setFormData] =
+    useState<StateFormValues>(buildInitialFormData);
 
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
   const queryClient = useQueryClient();
 
+  /* ---------------- CONTINENTS ---------------- */
+
   const continentsQuery = useContinentsSelectOptions();
   const continentOptions = continentsQuery.selectOptions;
 
-  const countriesQuery = useCountriesNormalized();
-  const normalizedCountries = countriesQuery.normalized;
+  const continentOptionsWithSelected = useMemo(() => {
+    if (!formData.continent_id) return continentOptions;
+    if (continentOptions.some((option) => option.value === formData.continent_id)) {
+      return continentOptions;
+    }
 
-  const detailQueryKey = [
-    ...masterQueryKeys.states,
-    "detail",
-    id ?? "new",
-  ] as const;
+    const selected = continentsQuery.data?.find(
+      (item) => String(item.unique_id) === formData.continent_id
+    );
+
+    if (!selected) return continentOptions;
+    return [
+      ...continentOptions,
+      { value: String(selected.unique_id), label: selected.name },
+    ];
+  }, [formData.continent_id, continentOptions, continentsQuery.data]);
+
+  /* ---------------- COUNTRIES ---------------- */
+
+  const countriesQuery = useCountriesSelectOptions();
+  const countryOptions = countriesQuery.selectOptions;
+
+  const filteredCountries = useMemo<CountrySelectOption[]>(() => {
+    if (!formData.continent_id) return [];
+
+    const active = countryOptions.filter(
+      (country) =>
+        country.continentId === formData.continent_id &&
+        isOptionActive(country)
+    );
+
+    return includeSelectedOption(active, countryOptions, formData.country_id);
+  }, [countryOptions, formData.continent_id, formData.country_id]);
+
+  /* ---------------- DETAIL QUERY ---------------- */
 
   const detailQuery = useQuery<StateRecord>({
-    queryKey: detailQueryKey,
+    queryKey: [...masterQueryKeys.states, "detail", id],
     queryFn: () => stateApi.get(id as string),
     enabled: isEdit,
+    refetchOnMount: "always",
   });
+
+  /* ---------------- POPULATE EDIT DATA ---------------- */
+
+  useEffect(() => {
+    if (!detailQuery.data) return;
+
+    const data = detailQuery.data;
+
+    setFormData({
+      name: data.name ?? "",
+      label: data.label ?? "",
+      continent_id: String(data.continent_id ?? ""),
+      country_id: String(data.country_id ?? ""),
+      is_active: data.is_active ? "true" : "false",
+    });
+  }, [detailQuery.data]);
+
+  /* ---------------- ERROR HANDLING ---------------- */
 
   useEffect(() => {
     if (detailQuery.isError) {
@@ -83,25 +156,10 @@ function StateForm() {
   }, [detailQuery.isError, detailQuery.error]);
 
   useEffect(() => {
-    if (!detailQuery.data) return;
-
-    setName(detailQuery.data.name ?? "");
-    setLabel(detailQuery.data.label ?? "");
-    setIsActive(Boolean(detailQuery.data.is_active));
-
-    const cId = normalizeNullableId(detailQuery.data.continent_id);
-    const countryIdValue = normalizeNullableId(detailQuery.data.country_id);
-
-    setContinentId(cId ?? "");
-    setCountryId(countryIdValue ?? "");
-    setPendingCountryId(countryIdValue ?? "");
-  }, [detailQuery.data]);
-
-  useEffect(() => {
     if (continentsQuery.error) {
       Swal.fire({
         icon: "error",
-        title: "Failed to fetch continents",
+        title: "Failed to load continents",
         text: extractErrorMessage(continentsQuery.error),
       });
     }
@@ -111,84 +169,37 @@ function StateForm() {
     if (countriesQuery.error) {
       Swal.fire({
         icon: "error",
-        title: "Failed to fetch countries",
+        title: "Failed to load countries",
         text: extractErrorMessage(countriesQuery.error),
       });
     }
   }, [countriesQuery.error]);
 
-  useEffect(() => {
-    if (!continentId) {
-      setFilteredCountries([]);
-      if (!pendingCountryId) {
-        setCountryId("");
-      }
-      return;
-    }
-
-    const filtered = normalizedCountries
-      .filter(
-        (country) => country.isActive && country.continentId === continentId
-      )
-      .map<SelectOption<string>>((country) => ({
-        value: country.id,
-        label: country.name,
-      }));
-
-    const withSelected = [...filtered];
-    if (countryId && !withSelected.some((option) => option.value === countryId)) {
-      const selected = normalizedCountries.find((country) => country.id === countryId);
-      if (selected) {
-        withSelected.push({ value: selected.id, label: selected.name });
-      }
-    }
-
-    setFilteredCountries(withSelected);
-    setCountryId((prev) => {
-      if (pendingCountryId) {
-        return prev;
-      }
-      return filtered.some((option) => option.value === prev) ? prev : "";
-    });
-  }, [continentId, normalizedCountries, pendingCountryId]);
-
-  useEffect(() => {
-    if (!pendingCountryId) return;
-    if (filteredCountries.length === 0) return;
-
-    const exists = filteredCountries.some(
-      (country) => country.value === pendingCountryId
-    );
-
-    if (exists) {
-      setCountryId(pendingCountryId);
-      setPendingCountryId("");
-    }
-  }, [filteredCountries, pendingCountryId]);
+  /* ---------------- MUTATION ---------------- */
 
   const saveMutation = useMutation({
-    mutationFn: (payload: {
-      name: string;
-      label: string;
-      continent_id: string;
-      country_id: string;
-      is_active: boolean;
-    }) =>
+    mutationFn: (payload: any) =>
       isEdit
         ? stateApi.update(id as string, payload)
         : stateApi.create(payload),
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: masterQueryKeys.states,
       });
+
       Swal.fire({
         icon: "success",
-        title: isEdit ? "State updated successfully!" : "State created successfully!",
+        title: isEdit
+          ? "State updated successfully!"
+          : "State created successfully!",
         timer: 1500,
         showConfirmButton: false,
       });
+
       navigate(ENC_LIST_PATH);
     },
+
     onError: (error) => {
       Swal.fire({
         icon: "error",
@@ -198,17 +209,29 @@ function StateForm() {
     },
   });
 
-  const isSubmitting = saveMutation.isPending;
-  const isDetailLoading = detailQuery.isFetching;
+  /* ---------------- HANDLERS ---------------- */
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleChange = (
+    name: keyof StateFormValues,
+    value: string
+  ) => {
+    setFormData((prev) => {
+      // Reset country if continent changes
+      if (name === "continent_id") {
+        return { ...prev, continent_id: value, country_id: "" };
+      }
+      return { ...prev, [name]: value };
+    });
+  };
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
     if (
-      !continentId ||
-      !countryId ||
-      !name.trim() ||
-      !label.trim()
+      !formData.name.trim() ||
+      !formData.label.trim() ||
+      !formData.continent_id ||
+      !formData.country_id
     ) {
       Swal.fire({
         icon: "warning",
@@ -219,43 +242,44 @@ function StateForm() {
     }
 
     saveMutation.mutate({
-      name: name.trim(),
-      label: label.trim(),
-      continent_id: continentId,
-      country_id: countryId,
-      is_active: isActive,
+      name: formData.name.trim(),
+      label: formData.label.trim(),
+      continent_id: formData.continent_id,
+      country_id: formData.country_id,
+      is_active: formData.is_active === "true",
     });
   };
 
+  const isSubmitting = saveMutation.isPending;
+  const isLoading = detailQuery.isFetching;
+
+  /* ---------------- UI ---------------- */
+
   return (
     <ComponentCard title={isEdit ? "Edit State" : "Add State"}>
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Continent */}
           <div>
-            <Label htmlFor="continent">
-              Continent Name <span className="text-red-500">*</span>
-            </Label>
+            <Label>Continent Name *</Label>
             <Select
-              value={continentId || undefined}
-              onValueChange={(value) => {
-                setContinentId(value);
-                setCountryId("");
-                setPendingCountryId("");
-              }}
-              disabled={isDetailLoading}
+              value={formData.continent_id || undefined}
+              onValueChange={(v) => handleChange("continent_id", v)}
+              disabled={isLoading}
             >
-              <SelectTrigger className="input-validate w-full" id="continent">
+              <SelectTrigger>
                 <SelectValue placeholder="Select continent" />
               </SelectTrigger>
               <SelectContent>
-                {continentOptions.length === 0 ? (
+                {continentOptionsWithSelected.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
-                    {continentsQuery.isLoading
+                    {continentsQuery.isFetching
                       ? "Loading continents..."
                       : "No continents available"}
                   </div>
                 ) : (
-                  continentOptions.map((option) => (
+                  continentOptionsWithSelected.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -265,22 +289,21 @@ function StateForm() {
             </Select>
           </div>
 
+          {/* Country */}
           <div>
-            <Label htmlFor="country">
-              Country Name <span className="text-red-500">*</span>
-            </Label>
+            <Label>Country Name *</Label>
             <Select
-              value={countryId || undefined}
-              onValueChange={(value) => setCountryId(value)}
-              disabled={!continentId || isDetailLoading}
+              value={formData.country_id || undefined}
+              onValueChange={(v) => handleChange("country_id", v)}
+              disabled={!formData.continent_id || isLoading}
             >
-              <SelectTrigger className="input-validate w-full" id="country">
+              <SelectTrigger>
                 <SelectValue placeholder="Select country" />
               </SelectTrigger>
               <SelectContent>
                 {filteredCountries.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
-                    {continentId
+                    {formData.continent_id
                       ? "No countries available"
                       : "Select a continent first"}
                   </div>
@@ -295,48 +318,41 @@ function StateForm() {
             </Select>
           </div>
 
+          {/* State Name */}
           <div>
-            <Label htmlFor="stateName">
-              State Name <span className="text-red-500">*</span>
-            </Label>
+            <Label>State Name *</Label>
             <Input
-              id="stateName"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter state name"
-              className="input-validate w-full"
-              required
-              disabled={isDetailLoading}
+              value={formData.name}
+              onChange={(e) =>
+                handleChange("name", e.target.value)
+              }
+              disabled={isLoading}
             />
           </div>
 
+          {/* State Label */}
           <div>
-            <Label htmlFor="stateLabel">
-              State Label <span className="text-red-500">*</span>
-            </Label>
+            <Label>State Label *</Label>
             <Input
-              id="stateLabel"
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="Enter state label"
-              className="input-validate w-full"
-              required
-              disabled={isDetailLoading}
+              value={formData.label}
+              onChange={(e) =>
+                handleChange("label", e.target.value)
+              }
+              disabled={isLoading}
             />
           </div>
 
+          {/* Status */}
           <div>
-            <Label htmlFor="isActive">
-              Active Status <span className="text-red-500">*</span>
-            </Label>
+            <Label>Active Status *</Label>
             <Select
-              value={isActive ? "true" : "false"}
-              onValueChange={(value) => setIsActive(value === "true")}
-              disabled={isDetailLoading}
+              value={formData.is_active}
+              onValueChange={(v) =>
+                handleChange("is_active", v)
+              }
+              disabled={isLoading}
             >
-              <SelectTrigger className="input-validate w-full" id="isActive">
+              <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -345,13 +361,25 @@ function StateForm() {
               </SelectContent>
             </Select>
           </div>
+
         </div>
 
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="flex justify-end gap-3">
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update" : "Save"}
+            {isSubmitting
+              ? isEdit
+                ? "Updating..."
+                : "Saving..."
+              : isEdit
+                ? "Update"
+                : "Save"}
           </Button>
-          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
+
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => navigate(ENC_LIST_PATH)}
+          >
             Cancel
           </Button>
         </div>
