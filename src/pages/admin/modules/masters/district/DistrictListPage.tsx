@@ -1,37 +1,42 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 
-import { PencilIcon, TrashBinIcon } from "@/icons";
+import "primereact/resources/themes/lara-light-blue/theme.css";
+import "primereact/resources/primereact.min.css";
+import "primeicons/primeicons.css";
+
+import { PencilIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";
 import { districtApi } from "@/helpers/admin";
 import { extractErrorMessage } from "@/utils/errorUtils";
+import type { PaginatedResponse } from "@/helpers/admin";
+import { masterQueryKeys } from "@/types/tanstack/masters";
 
 type DistrictRecord = {
   unique_id: string;
-  countryName: string;
-  stateName: string;
+  country_name: string;
+  state_name: string;
   name: string;
   is_active: boolean;
 };
 
-export default function DistrictListPage() {
-  const [districts, setDistricts] = useState<DistrictRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [lazyParams, setLazyParams] = useState({
-    page: 1,
-    rows: 10,
-  });
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
+const districtListQueryKey = (page: number, rows: number) =>
+  [...masterQueryKeys.districts, "list", page, rows] as const;
 
+export default function DistrictListPage() {
+  const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const encMasters = encryptSegment("masters");
   const encDistricts = encryptSegment("districts");
@@ -40,70 +45,61 @@ export default function DistrictListPage() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encDistricts}/${id}/edit`;
 
-  const fetchDistricts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await districtApi.listPaginated(
-        lazyParams.page,
-        lazyParams.rows
-      );
-      const data = (res.results ?? []) as any[];
+  const query = useQuery<PaginatedResponse<DistrictRecord>>({
+    queryKey: districtListQueryKey(lazyParams.page, lazyParams.rows),
+    queryFn: () => districtApi.listPaginated(lazyParams.page, lazyParams.rows),
+  });
 
-      const mapped: DistrictRecord[] = data.map((d: any) => ({
-        unique_id: d.unique_id,
-        countryName: d.country_name,
-        stateName: d.state_name,
-        name: d.name,
-        is_active: d.is_active,
-      }));
-
-      mapped.sort((a, b) => a.name.localeCompare(b.name));
-      setDistricts(mapped);
-      setTotalRecords(res.count ?? 0);
-    } catch (error) {
+  useEffect(() => {
+    if (query.error) {
       Swal.fire({
         icon: "error",
         title: "Unable to load districts",
+        text: extractErrorMessage(query.error),
+      });
+    }
+  }, [query.error]);
+
+  const statusMutation = useMutation({
+    mutationFn: (payload: { id: string; is_active: boolean }) =>
+      districtApi.update(payload.id, { is_active: payload.is_active }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: masterQueryKeys.districts,
+      });
+    },
+    onError: (error) => {
+      Swal.fire({
+        icon: "error",
+        title: "Failed to update status",
         text: extractErrorMessage(error),
       });
-    } finally {
-      setLoading(false);
-    }
-  }, [lazyParams.page, lazyParams.rows]);
+    },
+  });
 
-  useEffect(() => {
-    fetchDistricts();
-  }, [fetchDistricts]);
+  const isUpdatingStatus = statusMutation.isPending;
 
-  const handleDelete = async (id: string) => {
-    const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This district will be permanently deleted!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
-    });
+  const districts = useMemo<DistrictRecord[]>(() => {
+    const results = query.data?.results ?? [];
+    return [...results].sort((a, b) => a.name.localeCompare(b.name));
+  }, [query.data]);
+  console.log(districts);
 
-    if (!confirm.isConfirmed) return;
+  const totalRecords = query.data?.count ?? 0;
+  const loading = query.isLoading || query.isFetching;
 
-    await districtApi.remove(id);
-
-    Swal.fire({
-      icon: "success",
-      title: "Deleted successfully!",
-      timer: 1500,
-      showConfirmButton: false,
-    });
-
-    fetchDistricts();
-  };
-
-  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onGlobalFilterChange = (e: ChangeEvent<HTMLInputElement>) => {
     setGlobalFilterValue(e.target.value);
   };
 
-  const renderHeader = () => (
+  const onPage = (event: any) => {
+    setLazyParams({
+      page: event.page + 1,
+      rows: event.rows,
+    });
+  };
+
+  const header = (
     <div className="flex justify-end items-center">
       <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
         <i className="pi pi-search text-gray-500" />
@@ -120,18 +116,15 @@ export default function DistrictListPage() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  const statusTemplate = (row: DistrictRecord) => {
-    const updateStatus = async (value: boolean) => {
-      try {
-        await districtApi.update(row.unique_id, { is_active: value });
-        fetchDistricts();
-      } catch (e) {
-        console.error("Toggle update failed:", e);
+  const statusTemplate = (row: DistrictRecord) => (
+    <Switch
+      checked={row.is_active}
+      disabled={isUpdatingStatus}
+      onCheckedChange={(value) =>
+        statusMutation.mutate({ id: row.unique_id, is_active: value })
       }
-    };
-
-    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
-  };
+    />
+  );
 
   const actionTemplate = (row: DistrictRecord) => (
     <div className="flex gap-3 justify-center">
@@ -141,83 +134,76 @@ export default function DistrictListPage() {
       >
         <PencilIcon className="size-5" />
       </button>
-
-      {/* <button
-        onClick={() => handleDelete(row.unique_id)}
-        className="text-red-600 hover:text-red-800"
-      >
-        <TrashBinIcon className="size-5" />
-      </button> */}
     </div>
   );
 
   const indexTemplate = (_: DistrictRecord, { rowIndex }: any) =>
     (lazyParams.page - 1) * lazyParams.rows + rowIndex + 1;
 
-  const onPage = (event: any) => {
-    setLazyParams({
-      page: event.page + 1,
-      rows: event.rows,
-    });
-  };
-
   return (
     <div className="p-3">
-  
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Districts</h1>
-            <p className="text-gray-500 text-sm">Manage district records</p>
-          </div>
-
-          <Button
-            label="Add District"
-            icon="pi pi-plus"
-            className="p-button-success"
-            onClick={() => navigate(ENC_NEW_PATH)}
-          />
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-1">Districts</h1>
+          <p className="text-gray-500 text-sm">Manage district records</p>
         </div>
 
-        <DataTable
-          value={districts}
-          dataKey="unique_id"
-          loading={loading}
-          lazy
-          paginator
-          rows={lazyParams.rows}
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          first={(lazyParams.page - 1) * lazyParams.rows}
-          totalRecords={totalRecords}
-          onPage={onPage}
-          header={renderHeader()}
-          stripedRows
-          showGridlines
-          emptyMessage="No districts found."
-          className="p-datatable-sm"
-        >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
-          <Column
-            field="countryName"
-            header="Country"
-            body={(row) => cap(row.countryName)}
-            sortable
-          />
-          <Column
-            field="stateName"
-            header="State"
-            body={(row) => cap(row.stateName)}
-            sortable
-          />
-          <Column
-            field="name"
-            header="District"
-            body={(row) => cap(row.name)}
-            sortable
-          />
-          <Column header="Status" body={statusTemplate} />
-          <Column header="Actions" body={actionTemplate} />
-        </DataTable>
-    
+        <Button
+          label="Add District"
+          icon="pi pi-plus"
+          className="p-button-success"
+          onClick={() => navigate(ENC_NEW_PATH)}
+        />
+      </div>
+
+      <DataTable
+        value={districts}
+        dataKey="unique_id"
+        loading={loading}
+        lazy
+        paginator
+        rows={lazyParams.rows}
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        first={(lazyParams.page - 1) * lazyParams.rows}
+        totalRecords={totalRecords}
+        onPage={onPage}
+        header={header}
+        stripedRows
+        showGridlines
+        emptyMessage="No districts found."
+        className="p-datatable-sm"
+      >
+        <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+        <Column
+          field="country_name"
+          header="Country"
+          body={(r) => cap(r.country_name)}
+          sortable
+        />
+
+        <Column
+          field="state_name"
+          header="State"
+          body={(r) => cap(r.state_name)}
+          sortable
+        />
+        <Column
+          field="name"
+          header="District"
+          body={(r) => cap(r.name)}
+          sortable
+        />
+        <Column
+          header="Status"
+          body={statusTemplate}
+          style={{ width: "150px", textAlign: "center" }}
+        />
+        <Column
+          header="Actions"
+          body={actionTemplate}
+          style={{ width: "120px", textAlign: "center" }}
+        />
+      </DataTable>
     </div>
   );
 }
