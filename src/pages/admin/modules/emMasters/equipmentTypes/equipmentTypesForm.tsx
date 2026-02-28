@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import { create } from "zustand";
 
 import { Input } from "@/components/ui/input";
 import { getEncryptedRoute } from "@/utils/routeCache";
@@ -9,19 +10,75 @@ import { equipmentTypeApi } from "@/helpers/admin";
 const { encEmMasters, encEquipmentType } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encEmMasters}/${encEquipmentType}`;
 
+type EquipmentTypeFormStore = {
+  name: string;
+  description: string;
+  category: string;
+  imageFile: File | null;
+  existingImage: string;
+  isActive: boolean;
+  loading: boolean;
+  setName: (value: string) => void;
+  setDescription: (value: string) => void;
+  setCategory: (value: string) => void;
+  setImageFile: (value: File | null) => void;
+  setExistingImage: (value: string) => void;
+  setIsActive: (value: boolean) => void;
+  setLoading: (value: boolean) => void;
+  resetForm: () => void;
+};
+
+const initialState = {
+  name: "",
+  description: "",
+  category: "",
+  imageFile: null,
+  existingImage: "",
+  isActive: true,
+  loading: false,
+};
+
+const useEquipmentTypeFormStore = create<EquipmentTypeFormStore>((set) => ({
+  ...initialState,
+  setName: (value) => set({ name: value }),
+  setDescription: (value) => set({ description: value }),
+  setCategory: (value) => set({ category: value }),
+  setImageFile: (value) => set({ imageFile: value }),
+  setExistingImage: (value) => set({ existingImage: value }),
+  setIsActive: (value) => set({ isActive: value }),
+  setLoading: (value) => set({ loading: value }),
+  resetForm: () => set(initialState),
+}));
+
 export default function EquipmentTypeForm() {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [existingImage, setExistingImage] = useState("");
-  const [isActive, setIsActive] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const {
+    name,
+    description,
+    category,
+    imageFile,
+    existingImage,
+    isActive,
+    loading,
+    setName,
+    setDescription,
+    setCategory,
+    setImageFile,
+    setExistingImage,
+    setIsActive,
+    setLoading,
+    resetForm,
+  } = useEquipmentTypeFormStore();
 
   const navigate = useNavigate();
   const { id } = useParams();
   const equipmentTypeId = id;
   const isEdit = Boolean(equipmentTypeId);
+
+  useEffect(() => {
+    if (!isEdit) {
+      resetForm();
+    }
+  }, [isEdit, resetForm]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -62,7 +119,7 @@ export default function EquipmentTypeForm() {
     loadData();
   }, [isEdit, equipmentTypeId]);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
