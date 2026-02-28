@@ -32,3 +32,4 @@ export const refreshLoginApi = adminMasterApi.generateRefresh;
 /* -------- Utilities -------- */
 export * from "./endpoints";
 export * from "./crudHelpers";
+export * from "@/tanstack/admin";
