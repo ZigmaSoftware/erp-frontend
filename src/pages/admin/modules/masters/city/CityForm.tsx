@@ -18,17 +18,17 @@ import { encryptSegment } from "@/utils/routeCrypto";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import type { SelectOption } from "@/types/forms";
 
-import { continentApi, countryApi, stateApi, districtApi, cityApi } from "@/helpers/admin";
+import {
+  stateApi,
+  districtApi,
+  cityApi,
+  useContinentsSelectOptions,
+  useCountriesNormalized,
+} from "@/helpers/admin";
 
 /* ------------------------------
     TYPES
 ------------------------------ */
-type CountryMeta = {
-  id: string;
-  name: string;
-  continentId: string | null;
-  isActive: boolean;
-};
 
 type StateMeta = {
   id: string;
@@ -94,15 +94,19 @@ export default function CityForm() {
   const [pendingDistrictId, setPendingDistrictId] = useState("");
 
   /* MASTER DATA */
-  const [continents, setContinents] = useState<SelectOption[]>([]);
-  const [allCountries, setAllCountries] = useState<CountryMeta[]>([]);
-  const [filteredCountries, setFilteredCountries] = useState<SelectOption[]>([]);
+  const continentsQuery = useContinentsSelectOptions();
+  const continentOptions = continentsQuery.selectOptions;
+  const countriesQuery = useCountriesNormalized();
+  const normalizedCountries = countriesQuery.normalized;
+  const [filteredCountries, setFilteredCountries] =
+    useState<SelectOption<string>[]>([]);
 
   const [allStates, setAllStates] = useState<StateMeta[]>([]);
-  const [filteredStates, setFilteredStates] = useState<SelectOption[]>([]);
+  const [filteredStates, setFilteredStates] = useState<SelectOption<string>[]>([]);
 
   const [allDistricts, setAllDistricts] = useState<DistrictMeta[]>([]);
-  const [filteredDistricts, setFilteredDistricts] = useState<SelectOption[]>([]);
+  const [filteredDistricts, setFilteredDistricts] =
+    useState<SelectOption<string>[]>([]);
 
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -111,43 +115,17 @@ export default function CityForm() {
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
 
-  /* ==========================================================
-      LOAD MASTER DATA
-  ========================================================== */
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await continentApi.list();
-        setContinents(
-          res
-            .filter((x: any) => x.is_active)
-            .map((x: any) => ({
-              value: String(x.unique_id),
-              label: x.name,
-            }))
-        );
-      } catch (err) {
-        Swal.fire("Error", extractErrorMessage(err), "error");
-      }
-    })();
-  }, []);
+    if (continentsQuery.error) {
+      Swal.fire("Error", extractErrorMessage(continentsQuery.error), "error");
+    }
+  }, [continentsQuery.error]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await countryApi.list();
-        const mapped = res.map((c: any) => ({
-          id: String(c.unique_id),
-          name: c.name,
-          continentId: normalizeNullable(c.continent_id ?? c.continent),
-          isActive: Boolean(c.is_active),
-        }));
-        setAllCountries(mapped);
-      } catch (err) {
-        Swal.fire("Error", extractErrorMessage(err), "error");
-      }
-    })();
-  }, []);
+    if (countriesQuery.error) {
+      Swal.fire("Error", extractErrorMessage(countriesQuery.error), "error");
+    }
+  }, [countriesQuery.error]);
 
   useEffect(() => {
     (async () => {
@@ -192,7 +170,7 @@ export default function CityForm() {
       return;
     }
 
-    const filt = allCountries
+    const filt = normalizedCountries
       .filter((c) => c.isActive && c.continentId === continentId)
       .map((c) => ({ value: c.id, label: c.name }));
 
@@ -200,14 +178,14 @@ export default function CityForm() {
       pendingCountryId &&
       !filt.some((o) => o.value === pendingCountryId)
     ) {
-      const found = allCountries.find((c) => c.id === pendingCountryId);
+      const found = normalizedCountries.find((c) => c.id === pendingCountryId);
       if (found) {
         filt.push({ value: found.id, label: found.name });
       }
     }
 
     setFilteredCountries(filt);
-  }, [continentId, allCountries, pendingCountryId]);
+  }, [continentId, normalizedCountries, pendingCountryId]);
 
   /* ==========================================================
       FILTER STATES BASED ON SELECTED COUNTRY
@@ -307,12 +285,12 @@ export default function CityForm() {
   // If only pendingCountry exists → set continent
   useEffect(() => {
     if (!continentId && pendingCountryId) {
-      const found = allCountries.find((c) => c.id === pendingCountryId);
+      const found = normalizedCountries.find((c) => c.id === pendingCountryId);
       if (found?.continentId) {
         setContinentId(found.continentId);
       }
     }
-  }, [pendingCountryId, continentId, allCountries]);
+  }, [pendingCountryId, continentId, normalizedCountries]);
 
   // If only pendingState exists → get country
   useEffect(() => {
@@ -355,6 +333,9 @@ export default function CityForm() {
         const dis = normalizeNullable(data.district_id ?? data.district);
 
         setContinentId(cont ?? "");
+        setCountryId(ctr ?? "");
+        setStateId(ste ?? "");
+        setDistrictId(dis ?? "");
         setPendingCountryId(ctr ?? "");
         setPendingStateId(ste ?? "");
         setPendingDistrictId(dis ?? "");
@@ -431,11 +412,19 @@ export default function CityForm() {
                 <SelectValue placeholder="Select Continent" />
               </SelectTrigger>
               <SelectContent>
-                {continents.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
-                  </SelectItem>
-                ))}
+                {continentOptions.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {continentsQuery.isLoading
+                      ? "Loading continents..."
+                      : "No continents available"}
+                  </div>
+                ) : (
+                  continentOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
