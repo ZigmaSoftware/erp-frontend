@@ -21,46 +21,71 @@ import { countryApi, useContinentsSelectOptions } from "@/helpers/admin";
 import type { CountryRecord } from "@/types/tanstack/masters";
 import { masterQueryKeys } from "@/types/tanstack/masters";
 
+/* ---------------- ROUTE ---------------- */
+
 const encMasters = encryptSegment("masters");
 const encCountries = encryptSegment("countries");
 const ENC_LIST_PATH = `/${encMasters}/${encCountries}`;
 
-const normalizeNullableId = (
-  value: string | number | null | undefined
-): string | null => {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  return String(value);
+/* ---------------- TYPES ---------------- */
+
+type CountryFormValues = {
+  name: string;
+  mob_code: string;
+  currency: string;
+  continent_id: string;
+  is_active: string; // store as string for Select
 };
 
+const buildInitialFormData = (): CountryFormValues => ({
+  name: "",
+  mob_code: "",
+  currency: "",
+  continent_id: "",
+  is_active: "true",
+});
+
+/* ---------------- COMPONENT ---------------- */
+
 function CountryForm() {
-  const [name, setName] = useState("");
-  const [mobCode, setMobCode] = useState("");
-  const [currency, setCurrency] = useState("");
-  const [continentId, setContinentId] = useState("");
-  const [isActive, setIsActive] = useState(true);
+  const [formData, setFormData] =
+    useState<CountryFormValues>(buildInitialFormData);
 
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
   const queryClient = useQueryClient();
 
-  const detailQueryKey = [
-    ...masterQueryKeys.countries,
-    "detail",
-    id ?? "new",
-  ] as const;
+  /* ---------------- CONTINENTS ---------------- */
 
   const continentsQuery = useContinentsSelectOptions();
   const continentOptions = continentsQuery.selectOptions;
 
+  /* ---------------- DETAIL QUERY ---------------- */
+
   const detailQuery = useQuery<CountryRecord>({
-    queryKey: detailQueryKey,
+    queryKey: [...masterQueryKeys.countries, "detail", id],
     queryFn: () => countryApi.get(id as string),
     enabled: isEdit,
+    refetchOnMount: "always",
   });
-  console.log(detailQuery);
+
+  /* ---------------- POPULATE EDIT DATA ---------------- */
+useEffect(() => {
+  if (!detailQuery.data) return;
+
+  const data = detailQuery.data;
+
+  setFormData({
+    name: data.name ?? "",
+    mob_code: data.mob_code ?? "",
+    currency: data.currency ?? "",
+    continent_id: String(data.continent_id ?? ""),
+    is_active: data.is_active ? "true" : "false",
+  });
+}, [detailQuery.data, detailQuery.dataUpdatedAt, continentOptions]);
+
+  /* ---------------- ERROR HANDLING ---------------- */
 
   useEffect(() => {
     if (detailQuery.isError) {
@@ -73,20 +98,6 @@ function CountryForm() {
   }, [detailQuery.isError, detailQuery.error]);
 
   useEffect(() => {
-    if (!detailQuery.data) return;
-
-    setName(detailQuery.data.name ?? "");
-    setMobCode(detailQuery.data.mob_code ?? "");
-    setCurrency(detailQuery.data.currency ?? "");
-    setIsActive(Boolean(detailQuery.data.is_active));
-
-    const resolvedContinentId = normalizeNullableId(
-      detailQuery.data.continent_id ?? detailQuery.data.continent
-    );
-    setContinentId(resolvedContinentId ?? "");
-  }, [detailQuery.data]);
-
-  useEffect(() => {
     if (continentsQuery.error) {
       Swal.fire({
         icon: "error",
@@ -96,29 +107,29 @@ function CountryForm() {
     }
   }, [continentsQuery.error]);
 
+  /* ---------------- MUTATION ---------------- */
+
   const saveMutation = useMutation({
-    mutationFn: (payload: {
-      name: string;
-      mob_code: string;
-      currency: string;
-      continent_id: string;
-      is_active: boolean;
-    }) =>
+    mutationFn: (payload: any) =>
       isEdit
         ? countryApi.update(id as string, payload)
         : countryApi.create(payload),
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: masterQueryKeys.countries,
       });
+
       Swal.fire({
         icon: "success",
         title: isEdit ? "Updated successfully!" : "Added successfully!",
         timer: 1500,
         showConfirmButton: false,
       });
+
       navigate(ENC_LIST_PATH);
     },
+
     onError: (error) => {
       Swal.fire({
         icon: "error",
@@ -128,117 +139,112 @@ function CountryForm() {
     },
   });
 
-  const isSubmitting = saveMutation.isPending;
-  const isDetailLoading = detailQuery.isFetching;
+  /* ---------------- HANDLERS ---------------- */
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleChange = (name: keyof CountryFormValues, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-    if (!name.trim() || !continentId) {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!formData.name.trim() || !formData.continent_id) {
       Swal.fire({
         icon: "warning",
         title: "Missing Fields",
-        text: "Please fill all the required fields before submitting.",
-        confirmButtonColor: "#3085d6",
+        text: "Please fill all required fields.",
       });
       return;
     }
 
     saveMutation.mutate({
-      name: name.trim(),
-      mob_code: mobCode.trim(),
-      currency: currency.trim(),
-      continent_id: continentId,
-      is_active: isActive,
+      name: formData.name.trim(),
+      mob_code: formData.mob_code.trim(),
+      currency: formData.currency.trim(),
+      continent_id: formData.continent_id,
+      is_active: formData.is_active === "true",
     });
   };
 
+  const isSubmitting = saveMutation.isPending;
+  const isLoading = detailQuery.isFetching;
+
+  /* ---------------- UI ---------------- */
+
   return (
     <ComponentCard title={isEdit ? "Edit Country" : "Add Country"}>
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Continent */}
           <div>
             <Label htmlFor="continent">
               Continent Name <span className="text-red-500">*</span>
             </Label>
             <Select
-              value={continentId || undefined}
-              onValueChange={(val) => setContinentId(val)}
-              disabled={isDetailLoading}
+              value={formData.continent_id}
+              onValueChange={(v) => handleChange("continent_id", v)}
+              disabled={isLoading}
             >
-              <SelectTrigger className="input-validate w-full" id="continent">
+              <SelectTrigger id="continent">
                 <SelectValue placeholder="Select Continent" />
               </SelectTrigger>
               <SelectContent>
-                {continentOptions.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">
-                    {continentsQuery.isLoading
-                      ? "Loading continents..."
-                      : "No continents available"}
-                  </div>
-                ) : (
-                  continentOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))
-                )}
+                {continentOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
+          {/* Country Name */}
           <div>
-            <Label htmlFor="countryName">
+            <Label htmlFor="name">
               Country Name <span className="text-red-500">*</span>
             </Label>
             <Input
-              id="countryName"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter country name"
-              className="input-validate w-full"
-              required
-              disabled={isDetailLoading}
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+              disabled={isLoading}
             />
           </div>
 
+          {/* Mobile Code */}
           <div>
-            <Label htmlFor="mobCode">Mobile Code</Label>
+            <Label htmlFor="mob_code">Mobile Code</Label>
             <Input
-              id="mobCode"
-              type="text"
-              value={mobCode}
-              onChange={(e) => setMobCode(e.target.value)}
-              placeholder="Enter mobile code"
-              className="w-full"
-              disabled={isDetailLoading}
+              id="mob_code"
+              value={formData.mob_code}
+              onChange={(e) => handleChange("mob_code", e.target.value)}
+              disabled={isLoading}
             />
           </div>
 
+          {/* Currency */}
           <div>
             <Label htmlFor="currency">Currency</Label>
             <Input
               id="currency"
-              type="text"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              placeholder="Enter currency"
-              className="w-full"
-              disabled={isDetailLoading}
+              value={formData.currency}
+              onChange={(e) => handleChange("currency", e.target.value)}
+              disabled={isLoading}
             />
           </div>
 
+          {/* Status */}
           <div>
-            <Label htmlFor="isActive">
+            <Label htmlFor="is_active">
               Active Status <span className="text-red-500">*</span>
             </Label>
             <Select
-              value={isActive ? "true" : "false"}
-              onValueChange={(val) => setIsActive(val === "true")}
-              disabled={isDetailLoading}
+              value={formData.is_active}
+              onValueChange={(v) => handleChange("is_active", v)}
+              disabled={isLoading}
             >
-              <SelectTrigger className="input-validate w-full" id="isActive">
+              <SelectTrigger id="is_active">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -247,9 +253,10 @@ function CountryForm() {
               </SelectContent>
             </Select>
           </div>
+
         </div>
 
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="flex justify-end gap-3">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting
               ? isEdit
@@ -259,7 +266,12 @@ function CountryForm() {
                 ? "Update"
                 : "Save"}
           </Button>
-          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
+
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => navigate(ENC_LIST_PATH)}
+          >
             Cancel
           </Button>
         </div>

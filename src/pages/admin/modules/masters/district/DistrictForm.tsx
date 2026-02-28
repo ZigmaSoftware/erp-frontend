@@ -17,14 +17,17 @@ import {
 
 import { encryptSegment } from "@/utils/routeCrypto";
 import { extractErrorMessage } from "@/utils/errorUtils";
-import type { SelectOption } from "@/types/forms";
+import type {
+  CountrySelectOption,
+  DistrictRecord,
+  StateSelectOption,
+} from "@/types/tanstack/masters";
 import {
   districtApi,
   useContinentsSelectOptions,
-  useCountriesNormalized,
-  useStatesQuery,
+  useCountriesSelectOptions,
+  useStatesSelectOptions,
 } from "@/helpers/admin";
-import type { DistrictRecord } from "@/types/tanstack/masters";
 import { masterQueryKeys } from "@/types/tanstack/masters";
 
 const encMasters = encryptSegment("masters");
@@ -32,6 +35,22 @@ const encDistricts = encryptSegment("districts");
 const ENC_LIST_PATH = `/${encMasters}/${encDistricts}`;
 
 const normalize = (value: any): string => (value ? String(value) : "");
+
+const includeSelectedOption = <Option extends { value: string }>(
+  base: Option[],
+  options: Option[],
+  selectedId: string
+): Option[] => {
+  if (!selectedId) return base;
+  if (base.some((option) => option.value === selectedId)) {
+    return base;
+  }
+  const selected = options.find((option) => option.value === selectedId);
+  return selected ? [...base, selected] : base;
+};
+
+const isOptionActive = (option: { isActive?: boolean }) =>
+  option.isActive !== false;
 
 function DistrictForm() {
   const navigate = useNavigate();
@@ -51,52 +70,50 @@ function DistrictForm() {
   // -----------------------------
 
   const continentsQuery = useContinentsSelectOptions();
-  const countriesQuery = useCountriesNormalized();
-  const statesQuery = useStatesQuery();
+  const countriesQuery = useCountriesSelectOptions();
+  const statesQuery = useStatesSelectOptions();
 
   const continentOptions = continentsQuery.selectOptions;
+  const countryOptions = countriesQuery.selectOptions;
+  const stateOptions = statesQuery.selectOptions;
 
-  const filteredCountries = useMemo<SelectOption<string>[]>(() => {
+  const continentOptionsWithSelected = useMemo(() => {
+    if (!continentsQuery.data) return continentOptions;
+    if (!continentId) return continentOptions;
+    if (continentOptions.some((option) => option.value === continentId)) {
+      return continentOptions;
+    }
+    const selected = continentsQuery.data.find(
+      (item) => String(item.unique_id) === continentId
+    );
+    if (!selected) return continentOptions;
+    return [
+      ...continentOptions,
+      { value: String(selected.unique_id), label: selected.name },
+    ];
+  }, [continentId, continentOptions, continentsQuery.data]);
+
+  const filteredCountries = useMemo<CountrySelectOption[]>(() => {
     if (!continentId) return [];
-    const base = countriesQuery.normalized
-      .filter((c) => c.isActive && c.continentId === continentId)
-      .map((c) => ({ value: c.id, label: c.name }));
+    const activeCountries = countryOptions.filter(
+      (option) => option.continentId === continentId && isOptionActive(option)
+    );
 
-    if (countryId && !base.some((option) => option.value === countryId)) {
-      const selected = countriesQuery.normalized.find(
-        (c) => c.id === countryId
-      );
-      if (selected) {
-        base.push({ value: selected.id, label: selected.name });
-      }
-    }
+    return includeSelectedOption(
+      activeCountries,
+      countryOptions,
+      countryId
+    );
+  }, [continentId, countryId, countryOptions]);
 
-    return base;
-  }, [continentId, countryId, countriesQuery.normalized]);
-
-  const filteredStates = useMemo<SelectOption<string>[]>(() => {
+  const filteredStates = useMemo<StateSelectOption[]>(() => {
     if (!countryId) return [];
-    const base = (statesQuery.data ?? [])
-      .filter((s) => s.is_active && normalize(s.country_id) === countryId)
-      .map((s) => ({
-        value: normalize(s.unique_id),
-        label: s.name,
-      }));
+    const activeStates = stateOptions.filter(
+      (state) => state.countryId === countryId && isOptionActive(state)
+    );
 
-    if (stateId && !base.some((option) => option.value === stateId)) {
-      const selected = (statesQuery.data ?? []).find(
-        (state) => normalize(state.unique_id) === stateId
-      );
-      if (selected) {
-        base.push({
-          value: normalize(selected.unique_id),
-          label: selected.name,
-        });
-      }
-    }
-
-    return base;
-  }, [countryId, stateId, statesQuery.data]);
+    return includeSelectedOption(activeStates, stateOptions, stateId);
+  }, [countryId, stateId, stateOptions]);
 
   // -----------------------------
   // Detail Query (Edit Mode)
@@ -110,12 +127,13 @@ function DistrictForm() {
 
   useEffect(() => {
     if (!detailQuery.data) return;
+    const data = detailQuery.data;
 
-    setDistrictName(detailQuery.data.name ?? "");
-    setContinentId(normalize(detailQuery.data.continent_id));
-    setCountryId(normalize(detailQuery.data.country_id));
-    setStateId(normalize(detailQuery.data.state_id));
-    setIsActive(Boolean(detailQuery.data.is_active));
+    setDistrictName(data.name ?? "");
+    setContinentId(normalize(data.continent_id));
+    setCountryId(normalize(data.country_id));
+    setStateId(normalize(data.state_id));
+    setIsActive(Boolean(data.is_active));
   }, [detailQuery.data]);
 
   useEffect(() => {
@@ -221,11 +239,19 @@ function DistrictForm() {
                 <SelectValue placeholder="Select Continent" />
               </SelectTrigger>
               <SelectContent>
-                {continentOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
+                {continentOptionsWithSelected.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {continentsQuery.isLoading
+                      ? "Loading continents..."
+                      : "No continents available"}
+                  </div>
+                ) : (
+                  continentOptionsWithSelected.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -245,11 +271,17 @@ function DistrictForm() {
                 <SelectValue placeholder="Select Country" />
               </SelectTrigger>
               <SelectContent>
-                {filteredCountries.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
+                {filteredCountries.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {continentId ? "No countries available" : "Select a continent first"}
+                  </div>
+                ) : (
+                  filteredCountries.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -266,11 +298,17 @@ function DistrictForm() {
                 <SelectValue placeholder="Select State" />
               </SelectTrigger>
               <SelectContent>
-                {filteredStates.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
+                {filteredStates.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {countryId ? "No states available" : "Select a country first"}
+                  </div>
+                ) : (
+                  filteredStates.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
