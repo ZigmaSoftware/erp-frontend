@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,33 +14,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { encryptSegment } from "@/utils/routeCrypto";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import type { SelectOption } from "@/types/forms";
-
-import { continentApi, countryApi, stateApi } from "@/helpers/admin";
-
+import {
+  stateApi,
+  useContinentsSelectOptions,
+  useCountriesNormalized,
+} from "@/helpers/admin";
+import type { StateRecord } from "@/types/tanstack/masters";
+import { masterQueryKeys } from "@/types/tanstack/masters";
 
 const encMasters = encryptSegment("masters");
 const encStates = encryptSegment("states");
 const ENC_LIST_PATH = `/${encMasters}/${encStates}`;
-
-type CountryMeta = {
-  id: string;
-  name: string;
-  continentId: string | null;
-  isActive: boolean;
-};
-
-type StateRecord = {
-  name: string;
-  label: string;
-  is_active: boolean;
-  country_id: string | number;
-  continent_id: string | number;
-};
-
-
 
 const normalizeNullableId = (
   value: string | number | null | undefined
@@ -46,7 +36,6 @@ const normalizeNullableId = (
   if (value === null || value === undefined) {
     return null;
   }
-
   return String(value);
 };
 
@@ -54,86 +43,79 @@ function StateForm() {
   const [name, setName] = useState("");
   const [label, setLabel] = useState("");
   const [isActive, setIsActive] = useState(true);
-
-  const [continentId, setContinentId] = useState<string>("");
-  const [countryId, setCountryId] = useState<string>("");
-  const [continents, setContinents] = useState<SelectOption[]>([]);
-
-  
-  const [pendingCountryId, setPendingCountryId] = useState<string>("");
-  const [allCountries, setAllCountries] = useState<CountryMeta[]>([]);
-  const [filteredCountries, setFilteredCountries] = useState<SelectOption[]>([]);
-
-  const [loading, setLoading] = useState(false);
+  const [continentId, setContinentId] = useState("");
+  const [countryId, setCountryId] = useState("");
+  const [pendingCountryId, setPendingCountryId] = useState("");
+  const [filteredCountries, setFilteredCountries] =
+    useState<SelectOption<string>[]>([]);
 
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
+  const queryClient = useQueryClient();
+
+  const continentsQuery = useContinentsSelectOptions();
+  const continentOptions = continentsQuery.selectOptions;
+
+  const countriesQuery = useCountriesNormalized();
+  const normalizedCountries = countriesQuery.normalized;
+
+  const detailQueryKey = [
+    ...masterQueryKeys.states,
+    "detail",
+    id ?? "new",
+  ] as const;
+
+  const detailQuery = useQuery<StateRecord>({
+    queryKey: detailQueryKey,
+    queryFn: () => stateApi.get(id as string),
+    enabled: isEdit,
+  });
 
   useEffect(() => {
-    const fetchContinents = async () => {
-      try {
-        const res = (await continentApi.list()) as {
-          unique_id: string | number;
-          name: string;
-          is_active: boolean;
-        }[];
-
-        const activeContinents = res
-          .filter((continent) => continent.is_active)
-          .map((continent) => ({
-            value: String(continent.unique_id),
-            label: continent.name,
-          }));
-
-
-        setContinents(activeContinents);
-      } catch (error) {
-        console.error("Error fetching continents:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Failed to fetch continents",
-          text: extractErrorMessage(error),
-        });
-      }
-    };
-
-    void fetchContinents();
-  }, []);
+    if (detailQuery.isError) {
+      Swal.fire({
+        icon: "error",
+        title: "Failed to load state",
+        text: extractErrorMessage(detailQuery.error),
+      });
+    }
+  }, [detailQuery.isError, detailQuery.error]);
 
   useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const data = (await countryApi.list()) as {
-          unique_id: string | number;
-          name: string;
-          continent_id?: string | number | null;
-          continent?: string | number | null;
-          is_active: boolean;
-        }[];
+    if (!detailQuery.data) return;
 
-        const normalized: CountryMeta[] = data.map((country) => ({
-          id: String(country.unique_id),
-          name: country.name,
-          continentId: normalizeNullableId(
-            country.continent_id ?? country.continent
-          ),
-          isActive: Boolean(country.is_active),
-        }));
+    setName(detailQuery.data.name ?? "");
+    setLabel(detailQuery.data.label ?? "");
+    setIsActive(Boolean(detailQuery.data.is_active));
 
-        setAllCountries(normalized);
-      } catch (error) {
-        console.error("Error fetching countries:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Failed to fetch countries",
-          text: extractErrorMessage(error),
-        });
-      }
-    };
+    const cId = normalizeNullableId(detailQuery.data.continent_id);
+    const countryIdValue = normalizeNullableId(detailQuery.data.country_id);
 
-    void fetchCountries();
-  }, []);
+    setContinentId(cId ?? "");
+    setCountryId(countryIdValue ?? "");
+    setPendingCountryId(countryIdValue ?? "");
+  }, [detailQuery.data]);
+
+  useEffect(() => {
+    if (continentsQuery.error) {
+      Swal.fire({
+        icon: "error",
+        title: "Failed to fetch continents",
+        text: extractErrorMessage(continentsQuery.error),
+      });
+    }
+  }, [continentsQuery.error]);
+
+  useEffect(() => {
+    if (countriesQuery.error) {
+      Swal.fire({
+        icon: "error",
+        title: "Failed to fetch countries",
+        text: extractErrorMessage(countriesQuery.error),
+      });
+    }
+  }, [countriesQuery.error]);
 
   useEffect(() => {
     if (!continentId) {
@@ -144,70 +126,90 @@ function StateForm() {
       return;
     }
 
-    const filtered = allCountries
+    const filtered = normalizedCountries
       .filter(
         (country) => country.isActive && country.continentId === continentId
       )
-      .map<SelectOption>((country) => ({
+      .map<SelectOption<string>>((country) => ({
         value: country.id,
         label: country.name,
       }));
 
-    setFilteredCountries(filtered);
-    setCountryId((prev) =>
-      filtered.some((option) => option.value === prev) ? prev : ""
-    );
-  }, [continentId, allCountries, pendingCountryId]);
-
-  // EDIT MODE → FETCH DATA
-  useEffect(() => {
-    if (!isEdit || !id) return;
-    if (allCountries.length === 0) return;
-
-    const fetchState = async () => {
-      try {
-        const data = (await stateApi.get(id)) as StateRecord;
-
-        setName(data.name ?? "");
-        setLabel(data.label ?? "");
-        setIsActive(Boolean(data.is_active));
-
-        const cId = String(data.country_id);
-        const contId = String(data.continent_id);
-
-        // Set first
-        setContinentId(contId);
-        setPendingCountryId(cId);
-
-      } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Failed to load state",
-          text: extractErrorMessage(error),
-        });
+    const withSelected = [...filtered];
+    if (countryId && !withSelected.some((option) => option.value === countryId)) {
+      const selected = normalizedCountries.find((country) => country.id === countryId);
+      if (selected) {
+        withSelected.push({ value: selected.id, label: selected.name });
       }
-    };
+    }
 
-    fetchState();
-  }, [isEdit, id, allCountries]);
+    setFilteredCountries(withSelected);
+    setCountryId((prev) => {
+      if (pendingCountryId) {
+        return prev;
+      }
+      return filtered.some((option) => option.value === prev) ? prev : "";
+    });
+  }, [continentId, normalizedCountries, pendingCountryId]);
 
-
-  // NEW IMPORTANT EFFECT → Set country AFTER filtering
   useEffect(() => {
     if (!pendingCountryId) return;
     if (filteredCountries.length === 0) return;
 
     const exists = filteredCountries.some(
-      (c) => c.value === pendingCountryId
+      (country) => country.value === pendingCountryId
     );
 
-    if (exists) setCountryId(pendingCountryId);
+    if (exists) {
+      setCountryId(pendingCountryId);
+      setPendingCountryId("");
+    }
   }, [filteredCountries, pendingCountryId]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const saveMutation = useMutation({
+    mutationFn: (payload: {
+      name: string;
+      label: string;
+      continent_id: string;
+      country_id: string;
+      is_active: boolean;
+    }) =>
+      isEdit
+        ? stateApi.update(id as string, payload)
+        : stateApi.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: masterQueryKeys.states,
+      });
+      Swal.fire({
+        icon: "success",
+        title: isEdit ? "State updated successfully!" : "State created successfully!",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      navigate(ENC_LIST_PATH);
+    },
+    onError: (error) => {
+      Swal.fire({
+        icon: "error",
+        title: "Save failed",
+        text: extractErrorMessage(error),
+      });
+    },
+  });
+
+  const isSubmitting = saveMutation.isPending;
+  const isDetailLoading = detailQuery.isFetching;
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!continentId || !countryId || !name.trim() || !label.trim()) {
+    if (
+      !continentId ||
+      !countryId ||
+      !name.trim() ||
+      !label.trim()
+    ) {
       Swal.fire({
         icon: "warning",
         title: "Missing fields",
@@ -216,85 +218,79 @@ function StateForm() {
       return;
     }
 
-    setLoading(true);
-
-    const payload = {
+    saveMutation.mutate({
       name: name.trim(),
       label: label.trim(),
-      country_id: countryId,
       continent_id: continentId,
+      country_id: countryId,
       is_active: isActive,
-    };
-    console.log(payload)
-
-    try {
-      if (isEdit && id) {
-        await stateApi.update(id, payload);
-        Swal.fire({ icon: "success", title: "State updated successfully!" });
-      } else {
-        await stateApi.create(payload);
-        Swal.fire({ icon: "success", title: "State created successfully!" });
-      }
-
-      navigate(ENC_LIST_PATH);
-    } catch (error) {
-      console.error("Failed to save state:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Failed to save",
-        text: extractErrorMessage(error),
-      });
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
     <ComponentCard title={isEdit ? "Edit State" : "Add State"}>
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
           <div>
             <Label htmlFor="continent">
-              Continent <span className="text-red-500">*</span>
+              Continent Name <span className="text-red-500">*</span>
             </Label>
             <Select
-              value={continentId}
-              onValueChange={(value) => setContinentId(value)}
+              value={continentId || undefined}
+              onValueChange={(value) => {
+                setContinentId(value);
+                setCountryId("");
+                setPendingCountryId("");
+              }}
+              disabled={isDetailLoading}
             >
               <SelectTrigger className="input-validate w-full" id="continent">
-                <SelectValue placeholder="Select Continent" />
+                <SelectValue placeholder="Select continent" />
               </SelectTrigger>
-
               <SelectContent>
-                {continents.map((ct) => (
-                  <SelectItem key={ct.value} value={ct.value}>
-                    {ct.label}
-                  </SelectItem>
-                ))}
+                {continentOptions.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {continentsQuery.isLoading
+                      ? "Loading continents..."
+                      : "No continents available"}
+                  </div>
+                ) : (
+                  continentOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
 
           <div>
             <Label htmlFor="country">
-              Country <span className="text-red-500">*</span>
+              Country Name <span className="text-red-500">*</span>
             </Label>
             <Select
-              value={countryId}
-              disabled={!continentId || filteredCountries.length === 0}
+              value={countryId || undefined}
               onValueChange={(value) => setCountryId(value)}
+              disabled={!continentId || isDetailLoading}
             >
               <SelectTrigger className="input-validate w-full" id="country">
-                <SelectValue placeholder="Select Country" />
+                <SelectValue placeholder="Select country" />
               </SelectTrigger>
-
               <SelectContent>
-                {filteredCountries.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
-                  </SelectItem>
-                ))}
+                {filteredCountries.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {continentId
+                      ? "No countries available"
+                      : "Select a continent first"}
+                  </div>
+                ) : (
+                  filteredCountries.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -305,34 +301,43 @@ function StateForm() {
             </Label>
             <Input
               id="stateName"
+              type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter state"
+              placeholder="Enter state name"
+              className="input-validate w-full"
+              required
+              disabled={isDetailLoading}
             />
           </div>
 
           <div>
             <Label htmlFor="stateLabel">
-              Label <span className="text-red-500">*</span>
+              State Label <span className="text-red-500">*</span>
             </Label>
             <Input
               id="stateLabel"
+              type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="Enter label"
+              placeholder="Enter state label"
+              className="input-validate w-full"
+              required
+              disabled={isDetailLoading}
             />
           </div>
 
           <div>
-            <Label htmlFor="stateStatus">
-              Status <span className="text-red-500">*</span>
+            <Label htmlFor="isActive">
+              Active Status <span className="text-red-500">*</span>
             </Label>
             <Select
               value={isActive ? "true" : "false"}
-              onValueChange={(v) => setIsActive(v === "true")}
+              onValueChange={(value) => setIsActive(value === "true")}
+              disabled={isDetailLoading}
             >
-              <SelectTrigger className="input-validate w-full" id="stateStatus">
-                <SelectValue placeholder="Select Status" />
+              <SelectTrigger className="input-validate w-full" id="isActive">
+                <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="true">Active</SelectItem>
@@ -343,14 +348,10 @@ function StateForm() {
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update" : "Save"}
           </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => navigate(ENC_LIST_PATH)}
-          >
+          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
             Cancel
           </Button>
         </div>
