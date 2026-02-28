@@ -1,3 +1,5 @@
+import type { SelectOption } from "@/types/forms";
+
 export * from "./keys";
 
 export type ContinentRecord = {
@@ -71,4 +73,30 @@ export type CityRecord = {
   country_name?: string;
   state_name?: string;
   district_name?: string;
+};
+
+type MasterSelectOption<Value = string> = SelectOption<Value> & {
+  isActive: boolean;
+};
+
+export type CountrySelectOption = MasterSelectOption<string> & {
+  continentId: string | null;
+};
+
+export type StateSelectOption = MasterSelectOption<string> & {
+  countryId: string | null;
+  continentId: string | null;
+};
+
+export type DistrictSelectOption = MasterSelectOption<string> & {
+  stateId: string | null;
+  countryId: string | null;
+  continentId: string | null;
+};
+
+export type CitySelectOption = MasterSelectOption<string> & {
+  districtId: string | null;
+  stateId: string | null;
+  countryId: string | null;
+  continentId: string | null;
 };

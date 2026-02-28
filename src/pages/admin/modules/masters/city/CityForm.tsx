@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -16,58 +16,40 @@ import {
 
 import { encryptSegment } from "@/utils/routeCrypto";
 import { extractErrorMessage } from "@/utils/errorUtils";
-import type { SelectOption } from "@/types/forms";
-
 import {
-  stateApi,
-  districtApi,
   cityApi,
   useContinentsSelectOptions,
-  useCountriesNormalized,
+  useCountriesSelectOptions,
+  useDistrictsSelectOptions,
+  useStatesSelectOptions,
 } from "@/helpers/admin";
+import type {
+  CityRecord,
+  CountrySelectOption,
+  DistrictSelectOption,
+  StateSelectOption,
+} from "@/types/tanstack/masters";
 
-/* ------------------------------
-    TYPES
------------------------------- */
-
-type StateMeta = {
-  id: string;
-  name: string;
-  countryId: string | null;
-  isActive: boolean;
-};
-
-type DistrictMeta = {
-  id: string;
-  name: string;
-  stateId: string | null;
-  isActive: boolean;
-};
-
-type CityRecord = {
-  name?: string;
-  is_active?: boolean;
-
-  continent_id?: string | number | null;
-  continent?: string | number | null;
-
-  country_id?: string | number | null;
-  country?: string | number | null;
-
-  state_id?: string | number | null;
-  state?: string | number | null;
-
-  district_id?: string | number | null;
-  district?: string | number | null;
-};
-
-/* ------------------------------
-    UTILITIES
------------------------------- */
 const normalizeNullable = (v: any): string | null => {
   if (v === undefined || v === null) return null;
   return String(v);
 };
+
+const includeSelectedOption = <Option extends { value: string }>(
+  base: Option[],
+  options: Option[],
+  selectedId: string
+): Option[] => {
+  if (!selectedId) return base;
+  if (base.some((option) => option.value === selectedId)) {
+    return base;
+  }
+  const selected = options.find((option) => option.value === selectedId);
+  return selected ? [...base, selected] : base;
+};
+
+const isOptionActive = (option: { isActive?: boolean }) =>
+  option.isActive !== false;
 
 /* ------------------------------
     ROUTES
@@ -81,39 +63,67 @@ const ENC_LIST_PATH = `/${encMasters}/${encCities}`;
     COMPONENT STARTS
 ========================================================== */
 export default function CityForm() {
-  /* FIELD STATES */
   const [cityName, setCityName] = useState("");
   const [continentId, setContinentId] = useState("");
   const [countryId, setCountryId] = useState("");
   const [stateId, setStateId] = useState("");
   const [districtId, setDistrictId] = useState("");
-
-  /* PENDING STATES */
-  const [pendingCountryId, setPendingCountryId] = useState("");
-  const [pendingStateId, setPendingStateId] = useState("");
-  const [pendingDistrictId, setPendingDistrictId] = useState("");
-
-  /* MASTER DATA */
-  const continentsQuery = useContinentsSelectOptions();
-  const continentOptions = continentsQuery.selectOptions;
-  const countriesQuery = useCountriesNormalized();
-  const normalizedCountries = countriesQuery.normalized;
-  const [filteredCountries, setFilteredCountries] =
-    useState<SelectOption<string>[]>([]);
-
-  const [allStates, setAllStates] = useState<StateMeta[]>([]);
-  const [filteredStates, setFilteredStates] = useState<SelectOption<string>[]>([]);
-
-  const [allDistricts, setAllDistricts] = useState<DistrictMeta[]>([]);
-  const [filteredDistricts, setFilteredDistricts] =
-    useState<SelectOption<string>[]>([]);
-
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
+
+  const continentsQuery = useContinentsSelectOptions();
+  const countriesQuery = useCountriesSelectOptions();
+  const statesQuery = useStatesSelectOptions();
+  const districtsQuery = useDistrictsSelectOptions();
+
+  const continentOptions = continentsQuery.selectOptions;
+  const countryOptions = countriesQuery.selectOptions;
+  const stateOptions = statesQuery.selectOptions;
+  const districtOptions = districtsQuery.selectOptions;
+
+  const continentOptionsWithSelected = useMemo(() => {
+    if (!continentsQuery.data) return continentOptions;
+    if (!continentId) return continentOptions;
+    if (continentOptions.some((option) => option.value === continentId)) {
+      return continentOptions;
+    }
+    const selected = continentsQuery.data.find(
+      (option) => String(option.unique_id) === continentId
+    );
+    if (!selected) return continentOptions;
+    return [
+      ...continentOptions,
+      { value: String(selected.unique_id), label: selected.name },
+    ];
+  }, [continentId, continentOptions, continentsQuery.data]);
+
+  const filteredCountries = useMemo<CountrySelectOption[]>(() => {
+    if (!continentId) return [];
+    const activeCountries = countryOptions.filter(
+      (option) => option.continentId === continentId && isOptionActive(option)
+    );
+    return includeSelectedOption(activeCountries, countryOptions, countryId);
+  }, [continentId, countryId, countryOptions]);
+
+  const filteredStates = useMemo<StateSelectOption[]>(() => {
+    if (!countryId) return [];
+    const activeStates = stateOptions.filter(
+      (option) => option.countryId === countryId && isOptionActive(option)
+    );
+    return includeSelectedOption(activeStates, stateOptions, stateId);
+  }, [countryId, stateId, stateOptions]);
+
+  const filteredDistricts = useMemo<DistrictSelectOption[]>(() => {
+    if (!stateId) return [];
+    const activeDistricts = districtOptions.filter(
+      (option) => option.stateId === stateId && isOptionActive(option)
+    );
+    return includeSelectedOption(activeDistricts, districtOptions, districtId);
+  }, [stateId, districtId, districtOptions]);
 
   useEffect(() => {
     if (continentsQuery.error) {
@@ -128,201 +138,27 @@ export default function CityForm() {
   }, [countriesQuery.error]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await stateApi.list();
-        const mapped = res.map((s: any) => ({
-          id: String(s.unique_id),
-          name: s.name,
-          countryId: normalizeNullable(s.country_id ?? s.country),
-          isActive: Boolean(s.is_active),
-        }));
-        setAllStates(mapped);
-      } catch (err) {
-        Swal.fire("Error", extractErrorMessage(err), "error");
-      }
-    })();
-  }, []);
+    if (statesQuery.error) {
+      Swal.fire("Error", extractErrorMessage(statesQuery.error), "error");
+    }
+  }, [statesQuery.error]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await districtApi.list();
-        const mapped = res.map((d: any) => ({
-          id: String(d.unique_id),
-          name: d.name,
-          stateId: normalizeNullable(d.state_id ?? d.state),
-          isActive: Boolean(d.is_active),
-        }));
-        setAllDistricts(mapped);
-      } catch (err) {
-        Swal.fire("Error", extractErrorMessage(err), "error");
-      }
-    })();
-  }, []);
-
-  /* ==========================================================
-      FILTER COUNTRIES BASED ON SELECTED CONTINENT
-  ========================================================== */
-  useEffect(() => {
-    if (!continentId) {
-      setFilteredCountries([]);
-      return;
+    if (districtsQuery.error) {
+      Swal.fire("Error", extractErrorMessage(districtsQuery.error), "error");
     }
+  }, [districtsQuery.error]);
 
-    const filt = normalizedCountries
-      .filter((c) => c.isActive && c.continentId === continentId)
-      .map((c) => ({ value: c.id, label: c.name }));
-
-    if (
-      pendingCountryId &&
-      !filt.some((o) => o.value === pendingCountryId)
-    ) {
-      const found = normalizedCountries.find((c) => c.id === pendingCountryId);
-      if (found) {
-        filt.push({ value: found.id, label: found.name });
-      }
-    }
-
-    setFilteredCountries(filt);
-  }, [continentId, normalizedCountries, pendingCountryId]);
-
-  /* ==========================================================
-      FILTER STATES BASED ON SELECTED COUNTRY
-  ========================================================== */
-  useEffect(() => {
-    if (!countryId) {
-      setFilteredStates([]);
-      return;
-    }
-
-    const filt = allStates
-      .filter((s) => s.isActive && s.countryId === countryId)
-      .map((s) => ({ value: s.id, label: s.name }));
-
-    if (
-      pendingStateId &&
-      !filt.some((o) => o.value === pendingStateId)
-    ) {
-      const found = allStates.find((s) => s.id === pendingStateId);
-      if (found) {
-        filt.push({ value: found.id, label: found.name });
-      }
-    }
-
-    setFilteredStates(filt);
-  }, [countryId, allStates, pendingStateId]);
-
-  /* ==========================================================
-      FILTER DISTRICTS BY STATE
-  ========================================================== */
-  useEffect(() => {
-    if (!stateId) {
-      setFilteredDistricts([]);
-      return;
-    }
-
-    const filt = allDistricts
-      .filter((d) => d.isActive && d.stateId === stateId)
-      .map((d) => ({ value: d.id, label: d.name }));
-
-    if (
-      pendingDistrictId &&
-      !filt.some((o) => o.value === pendingDistrictId)
-    ) {
-      const found = allDistricts.find((d) => d.id === pendingDistrictId);
-      if (found) {
-        filt.push({ value: found.id, label: found.name });
-      }
-    }
-
-    setFilteredDistricts(filt);
-  }, [stateId, allDistricts, pendingDistrictId]);
-
-  /* ==========================================================
-      APPLY PENDING COUNTRY WHEN FILTER READY
-  ========================================================== */
-  useEffect(() => {
-    if (
-      pendingCountryId &&
-      filteredCountries.some((o) => o.value === pendingCountryId)
-    ) {
-      setCountryId(pendingCountryId);
-      setPendingCountryId("");
-    }
-  }, [filteredCountries, pendingCountryId]);
-
-  /* ==========================================================
-      APPLY PENDING STATE WHEN FILTER READY
-  ========================================================== */
-  useEffect(() => {
-    if (
-      pendingStateId &&
-      filteredStates.some((o) => o.value === pendingStateId)
-    ) {
-      setStateId(pendingStateId);
-      setPendingStateId("");
-    }
-  }, [filteredStates, pendingStateId]);
-
-  /* ==========================================================
-      APPLY PENDING DISTRICT WHEN FILTER READY
-  ========================================================== */
-  useEffect(() => {
-    if (
-      pendingDistrictId &&
-      filteredDistricts.some((o) => o.value === pendingDistrictId)
-    ) {
-      setDistrictId(pendingDistrictId);
-      setPendingDistrictId("");
-    }
-  }, [filteredDistricts, pendingDistrictId]);
-
-  /* ==========================================================
-      AUTO-RESOLVE CHAINS
-  ========================================================== */
-
-  // If only pendingCountry exists → set continent
-  useEffect(() => {
-    if (!continentId && pendingCountryId) {
-      const found = normalizedCountries.find((c) => c.id === pendingCountryId);
-      if (found?.continentId) {
-        setContinentId(found.continentId);
-      }
-    }
-  }, [pendingCountryId, continentId, normalizedCountries]);
-
-  // If only pendingState exists → get country
-  useEffect(() => {
-    if (!countryId && pendingStateId) {
-      const found = allStates.find((s) => s.id === pendingStateId);
-      if (found?.countryId) {
-        setCountryId(found.countryId);
-        setPendingCountryId(found.countryId);
-      }
-    }
-  }, [pendingStateId, countryId, allStates]);
-
-  // If only pendingDistrict exists → get state
-  useEffect(() => {
-    if (!stateId && pendingDistrictId) {
-      const found = allDistricts.find((d) => d.id === pendingDistrictId);
-      if (found?.stateId) {
-        setStateId(found.stateId);
-        setPendingStateId(found.stateId);
-      }
-    }
-  }, [pendingDistrictId, stateId, allDistricts]);
-
-  /* ==========================================================
-      EDIT MODE — LOAD EXISTING CITY
-  ========================================================== */
   useEffect(() => {
     if (!isEdit || !id) return;
+
+    let isMounted = true;
 
     (async () => {
       try {
         const data: CityRecord = await cityApi.get(id);
+
+        if (!isMounted) return;
 
         setCityName(data.name ?? "");
         setIsActive(Boolean(data.is_active));
@@ -336,13 +172,16 @@ export default function CityForm() {
         setCountryId(ctr ?? "");
         setStateId(ste ?? "");
         setDistrictId(dis ?? "");
-        setPendingCountryId(ctr ?? "");
-        setPendingStateId(ste ?? "");
-        setPendingDistrictId(dis ?? "");
       } catch (err) {
-        Swal.fire("Error", extractErrorMessage(err), "error");
+        if (isMounted) {
+          Swal.fire("Error", extractErrorMessage(err), "error");
+        }
       }
     })();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id, isEdit]);
 
   /* ==========================================================
@@ -396,30 +235,27 @@ export default function CityForm() {
           <div>
             <Label>Continent *</Label>
             <Select
-              value={continentId}
+              value={continentId || undefined}
               onValueChange={(val) => {
                 setContinentId(val);
                 setCountryId("");
                 setStateId("");
                 setDistrictId("");
-
-                setPendingCountryId("");
-                setPendingStateId("");
-                setPendingDistrictId("");
               }}
+              disabled={loading || continentsQuery.isFetching}
             >
               <SelectTrigger className="input-validate w-full">
                 <SelectValue placeholder="Select Continent" />
               </SelectTrigger>
               <SelectContent>
-                {continentOptions.length === 0 ? (
+                {continentOptionsWithSelected.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
                     {continentsQuery.isLoading
                       ? "Loading continents..."
                       : "No continents available"}
                   </div>
                 ) : (
-                  continentOptions.map((option) => (
+                  continentOptionsWithSelected.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -433,16 +269,13 @@ export default function CityForm() {
           <div>
             <Label>Country *</Label>
             <Select
-              value={countryId}
+              value={countryId || undefined}
               onValueChange={(val) => {
                 setCountryId(val);
                 setStateId("");
                 setDistrictId("");
-
-                setPendingStateId("");
-                setPendingDistrictId("");
               }}
-              disabled={!continentId}
+              disabled={!continentId || loading || countriesQuery.isFetching}
             >
               <SelectTrigger className="input-validate w-full">
                 <SelectValue placeholder="Select Country" />
@@ -469,13 +302,12 @@ export default function CityForm() {
           <div>
             <Label>State *</Label>
             <Select
-              value={stateId}
+              value={stateId || undefined}
               onValueChange={(val) => {
                 setStateId(val);
                 setDistrictId("");
-                setPendingDistrictId("");
               }}
-              disabled={!countryId}
+              disabled={!countryId || loading || statesQuery.isFetching}
             >
               <SelectTrigger className="input-validate w-full">
                 <SelectValue placeholder="Select State" />
@@ -500,9 +332,9 @@ export default function CityForm() {
           <div>
             <Label>District *</Label>
             <Select
-              value={districtId}
+              value={districtId || undefined}
               onValueChange={(val) => setDistrictId(val)}
-              disabled={!stateId}
+              disabled={!stateId || loading || districtsQuery.isFetching}
             >
               <SelectTrigger className="input-validate w-full">
                 <SelectValue placeholder="Select District" />

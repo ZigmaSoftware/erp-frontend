@@ -1,11 +1,11 @@
 import { useMemo } from "react";
+import type { CountryRecord, CountrySelectOption, NormalizedCountry } from "@/types/tanstack/masters";
 import { commonMasterApi } from "@/helpers/admin/registry";
 import { enterpriseQuery } from "../enterpriseQuery";
 import { masterQueryKeys } from "@/types/tanstack/masters";
 import {
   normalizeCountryData,
 } from "@/types/tanstack/masters";
-import type { CountryRecord, NormalizedCountry } from "@/types/tanstack/masters";
 
 const queryKey = masterQueryKeys.countries;
 
@@ -27,5 +27,23 @@ export function useCountriesNormalized() {
   return {
     ...query,
     normalized,
+  } as const;
+}
+
+export function useCountriesSelectOptions() {
+  const query = useCountriesNormalized();
+
+  const selectOptions = useMemo<CountrySelectOption[]>(() => {
+    return query.normalized.map((country) => ({
+      value: country.id,
+      label: country.name,
+      isActive: country.isActive,
+      continentId: country.continentId,
+    }));
+  }, [query.normalized]);
+
+  return {
+    ...query,
+    selectOptions,
   } as const;
 }
