@@ -29,7 +29,7 @@ export function useStatesSelectOptions() {
     return query.data.map((state) => ({
       value: String(state.unique_id),
       label: state.name,
-      isActive: Boolean(state.is_active),
+      isActive: state.is_active !== false,
       countryId: normalizeNullable(state.country_id),
       continentId: normalizeNullable(state.continent_id),
     }));
