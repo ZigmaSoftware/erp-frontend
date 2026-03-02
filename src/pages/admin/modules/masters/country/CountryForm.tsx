@@ -1,7 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
@@ -21,45 +23,44 @@ import { countryApi, useContinentsSelectOptions } from "@/helpers/admin";
 import type { CountryRecord } from "@/types/tanstack/masters";
 import { masterQueryKeys } from "@/types/tanstack/masters";
 
+import {
+  countrySchema,
+  type CountryFormValues,
+} from "@/validations/masters/country.schema";
+
 /* ---------------- ROUTE ---------------- */
 
 const encMasters = encryptSegment("masters");
 const encCountries = encryptSegment("countries");
 const ENC_LIST_PATH = `/${encMasters}/${encCountries}`;
 
-/* ---------------- TYPES ---------------- */
-
-type CountryFormValues = {
-  name: string;
-  mob_code: string;
-  currency: string;
-  continent_id: string;
-  is_active: string; // store as string for Select
-};
-
-const buildInitialFormData = (): CountryFormValues => ({
-  name: "",
-  mob_code: "",
-  currency: "",
-  continent_id: "",
-  is_active: "true",
-});
-
-/* ---------------- COMPONENT ---------------- */
-
 function CountryForm() {
-  const [formData, setFormData] =
-    useState<CountryFormValues>(buildInitialFormData);
-
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
   const queryClient = useQueryClient();
 
-  /* ---------------- CONTINENTS ---------------- */
-
   const continentsQuery = useContinentsSelectOptions();
   const continentOptions = continentsQuery.selectOptions;
+
+  /* ---------------- FORM ---------------- */
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<CountryFormValues>({
+    resolver: zodResolver(countrySchema),
+    defaultValues: {
+      name: "",
+      mob_code: "",
+      currency: "",
+      continent_id: "",
+      is_active: true,
+    },
+  });
 
   /* ---------------- DETAIL QUERY ---------------- */
 
@@ -67,50 +68,26 @@ function CountryForm() {
     queryKey: [...masterQueryKeys.countries, "detail", id],
     queryFn: () => countryApi.get(id as string),
     enabled: isEdit,
-    refetchOnMount: "always",
   });
 
   /* ---------------- POPULATE EDIT DATA ---------------- */
-useEffect(() => {
-  if (!detailQuery.data) return;
-
-  const data = detailQuery.data;
-
-  setFormData({
-    name: data.name ?? "",
-    mob_code: data.mob_code ?? "",
-    currency: data.currency ?? "",
-    continent_id: String(data.continent_id ?? ""),
-    is_active: data.is_active ? "true" : "false",
-  });
-}, [detailQuery.data, detailQuery.dataUpdatedAt, continentOptions]);
-
-  /* ---------------- ERROR HANDLING ---------------- */
 
   useEffect(() => {
-    if (detailQuery.isError) {
-      Swal.fire({
-        icon: "error",
-        title: "Failed to load country",
-        text: extractErrorMessage(detailQuery.error),
-      });
-    }
-  }, [detailQuery.isError, detailQuery.error]);
+    if (!detailQuery.data) return;
 
-  useEffect(() => {
-    if (continentsQuery.error) {
-      Swal.fire({
-        icon: "error",
-        title: "Failed to load continents",
-        text: extractErrorMessage(continentsQuery.error),
-      });
-    }
-  }, [continentsQuery.error]);
+    const data = detailQuery.data;
+
+    setValue("name", data.name ?? "");
+    setValue("mob_code", data.mob_code ?? "");
+    setValue("currency", data.currency ?? "");
+    setValue("continent_id", String(data.continent_id ?? ""));
+    setValue("is_active", Boolean(data.is_active));
+  }, [detailQuery.data, setValue]);
 
   /* ---------------- MUTATION ---------------- */
 
   const saveMutation = useMutation({
-    mutationFn: (payload: any) =>
+    mutationFn: (payload: CountryFormValues) =>
       isEdit
         ? countryApi.update(id as string, payload)
         : countryApi.create(payload),
@@ -139,54 +116,40 @@ useEffect(() => {
     },
   });
 
-  /* ---------------- HANDLERS ---------------- */
-
-  const handleChange = (name: keyof CountryFormValues, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!formData.name.trim() || !formData.continent_id) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "Please fill all required fields.",
-      });
-      return;
-    }
-
-    saveMutation.mutate({
-      name: formData.name.trim(),
-      mob_code: formData.mob_code.trim(),
-      currency: formData.currency.trim(),
-      continent_id: formData.continent_id,
-      is_active: formData.is_active === "true",
-    });
-  };
-
   const isSubmitting = saveMutation.isPending;
   const isLoading = detailQuery.isFetching;
+
+  /* ---------------- SUBMIT ---------------- */
+
+  const onSubmit = (data: CountryFormValues) => {
+    saveMutation.mutate({
+      ...data,
+      name: data.name.trim(),
+      mob_code: data.mob_code?.trim(),
+      currency: data.currency?.trim(),
+    });
+  };
 
   /* ---------------- UI ---------------- */
 
   return (
     <ComponentCard title={isEdit ? "Edit Country" : "Add Country"}>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Continent */}
           <div>
-            <Label htmlFor="continent">
+            <Label>
               Continent Name <span className="text-red-500">*</span>
             </Label>
+
             <Select
-              value={formData.continent_id}
-              onValueChange={(v) => handleChange("continent_id", v)}
+              value={watch("continent_id")}
+              onValueChange={(v) => setValue("continent_id", v)}
               disabled={isLoading}
             >
-              <SelectTrigger id="continent">
+              <SelectTrigger>
                 <SelectValue placeholder="Select Continent" />
               </SelectTrigger>
               <SelectContent>
@@ -197,54 +160,53 @@ useEffect(() => {
                 ))}
               </SelectContent>
             </Select>
+
+            {errors.continent_id && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.continent_id.message}
+              </p>
+            )}
           </div>
 
           {/* Country Name */}
           <div>
-            <Label htmlFor="name">
+            <Label>
               Country Name <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              disabled={isLoading}
-            />
+            <Input {...register("name")} disabled={isLoading} />
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           {/* Mobile Code */}
           <div>
-            <Label htmlFor="mob_code">Mobile Code</Label>
-            <Input
-              id="mob_code"
-              value={formData.mob_code}
-              onChange={(e) => handleChange("mob_code", e.target.value)}
-              disabled={isLoading}
-            />
+            <Label>Mobile Code</Label>
+            <Input {...register("mob_code")} disabled={isLoading} />
           </div>
 
           {/* Currency */}
           <div>
-            <Label htmlFor="currency">Currency</Label>
-            <Input
-              id="currency"
-              value={formData.currency}
-              onChange={(e) => handleChange("currency", e.target.value)}
-              disabled={isLoading}
-            />
+            <Label>Currency</Label>
+            <Input {...register("currency")} disabled={isLoading} />
           </div>
 
           {/* Status */}
           <div>
-            <Label htmlFor="is_active">
+            <Label>
               Active Status <span className="text-red-500">*</span>
             </Label>
+
             <Select
-              value={formData.is_active}
-              onValueChange={(v) => handleChange("is_active", v)}
+              value={watch("is_active") ? "true" : "false"}
+              onValueChange={(v) =>
+                setValue("is_active", v === "true")
+              }
               disabled={isLoading}
             >
-              <SelectTrigger id="is_active">
+              <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -263,8 +225,8 @@ useEffect(() => {
                 ? "Updating..."
                 : "Saving..."
               : isEdit
-                ? "Update"
-                : "Save"}
+              ? "Update"
+              : "Save"}
           </Button>
 
           <Button
