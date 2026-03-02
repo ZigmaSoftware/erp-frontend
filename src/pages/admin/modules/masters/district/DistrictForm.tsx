@@ -42,9 +42,7 @@ const includeSelectedOption = <Option extends { value: string }>(
   selectedId: string
 ): Option[] => {
   if (!selectedId) return base;
-  if (base.some((option) => option.value === selectedId)) {
-    return base;
-  }
+  if (base.some((option) => option.value === selectedId)) return base;
   const selected = options.find((option) => option.value === selectedId);
   return selected ? [...base, selected] : base;
 };
@@ -58,12 +56,14 @@ function DistrictForm() {
   const isEdit = Boolean(id);
   const queryClient = useQueryClient();
 
-  // 🔥 Always controlled (never undefined)
   const [districtName, setDistrictName] = useState("");
   const [continentId, setContinentId] = useState("");
   const [countryId, setCountryId] = useState("");
   const [stateId, setStateId] = useState("");
   const [isActive, setIsActive] = useState(true);
+
+  // Track whether edit fields have been populated
+  const [editPopulated, setEditPopulated] = useState(!isEdit);
 
   // -----------------------------
   // Queries
@@ -77,12 +77,17 @@ function DistrictForm() {
   const countryOptions = countriesQuery.selectOptions;
   const stateOptions = statesQuery.selectOptions;
 
+  // All option lists must be ready before we populate edit values
+  const queriesReady =
+    continentsQuery.isSuccess &&
+    countriesQuery.isSuccess &&
+    statesQuery.isSuccess;
+
   const continentOptionsWithSelected = useMemo(() => {
     if (!continentsQuery.data) return continentOptions;
     if (!continentId) return continentOptions;
-    if (continentOptions.some((option) => option.value === continentId)) {
+    if (continentOptions.some((option) => option.value === continentId))
       return continentOptions;
-    }
     const selected = continentsQuery.data.find(
       (item) => String(item.unique_id) === continentId
     );
@@ -98,12 +103,7 @@ function DistrictForm() {
     const activeCountries = countryOptions.filter(
       (option) => option.continentId === continentId && isOptionActive(option)
     );
-
-    return includeSelectedOption(
-      activeCountries,
-      countryOptions,
-      countryId
-    );
+    return includeSelectedOption(activeCountries, countryOptions, countryId);
   }, [continentId, countryId, countryOptions]);
 
   const filteredStates = useMemo<StateSelectOption[]>(() => {
@@ -111,7 +111,6 @@ function DistrictForm() {
     const activeStates = stateOptions.filter(
       (state) => state.countryId === countryId && isOptionActive(state)
     );
-
     return includeSelectedOption(activeStates, stateOptions, stateId);
   }, [countryId, stateId, stateOptions]);
 
@@ -125,8 +124,13 @@ function DistrictForm() {
     enabled: isEdit,
   });
 
+  // Populate fields only after BOTH the record AND all option lists are ready.
+  // This prevents the selects from rendering with an ID value before their
+  // option lists exist — which causes them to show blank even though the
+  // value is correctly set.
   useEffect(() => {
-    if (!detailQuery.data) return;
+    if (!detailQuery.data || !queriesReady) return;
+
     const data = detailQuery.data;
 
     setDistrictName(data.name ?? "");
@@ -134,7 +138,8 @@ function DistrictForm() {
     setCountryId(normalize(data.country_id));
     setStateId(normalize(data.state_id));
     setIsActive(Boolean(data.is_active));
-  }, [detailQuery.data]);
+    setEditPopulated(true);
+  }, [detailQuery.data, queriesReady]);
 
   useEffect(() => {
     if (detailQuery.error) {
@@ -163,9 +168,7 @@ function DistrictForm() {
         : districtApi.create(payload),
 
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: masterQueryKeys.districts,
-      });
+      queryClient.invalidateQueries({ queryKey: masterQueryKeys.districts });
 
       Swal.fire({
         icon: "success",
@@ -187,7 +190,8 @@ function DistrictForm() {
   });
 
   const isSubmitting = saveMutation.isPending;
-  const isLoading = detailQuery.isFetching;
+  // Show loading state until edit data is populated (for add mode this is instant)
+  const isLoading = detailQuery.isFetching || !editPopulated;
 
   // -----------------------------
   // Submit
@@ -220,150 +224,159 @@ function DistrictForm() {
 
   return (
     <ComponentCard title={isEdit ? "Edit District" : "Add District"}>
-      <form onSubmit={handleSubmit} noValidate>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          {/* Continent */}
-          <div>
-            <Label>Continent *</Label>
-            <Select
-              value={continentId}
-              onValueChange={(val) => {
-                setContinentId(val);
-                setCountryId("");
-                setStateId("");
-              }}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Continent" />
-              </SelectTrigger>
-              <SelectContent>
-                {continentOptionsWithSelected.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">
-                    {continentsQuery.isLoading
-                      ? "Loading continents..."
-                      : "No continents available"}
-                  </div>
-                ) : (
-                  continentOptionsWithSelected.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Country */}
-          <div>
-            <Label>Country *</Label>
-            <Select
-              value={countryId}
-              onValueChange={(val) => {
-                setCountryId(val);
-                setStateId("");
-              }}
-              disabled={!continentId || isLoading}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Country" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredCountries.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">
-                    {continentId ? "No countries available" : "Select a continent first"}
-                  </div>
-                ) : (
-                  filteredCountries.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* State */}
-          <div>
-            <Label>State *</Label>
-            <Select
-              value={stateId}
-              onValueChange={(val) => setStateId(val)}
-              disabled={!countryId || isLoading}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select State" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredStates.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">
-                    {countryId ? "No states available" : "Select a country first"}
-                  </div>
-                ) : (
-                  filteredStates.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* District Name */}
-          <div>
-            <Label>District Name *</Label>
-            <Input
-              value={districtName}
-              onChange={(e) => setDistrictName(e.target.value)}
-              placeholder="Enter district name"
-              disabled={isLoading}
-            />
-          </div>
-
-          {/* Status */}
-          <div>
-            <Label>Status *</Label>
-            <Select
-              value={isActive ? "true" : "false"}
-              onValueChange={(val) => setIsActive(val === "true")}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
+      {/* Hide form until edit record + all option lists are ready */}
+      {!editPopulated ? (
+        <div className="py-10 text-center text-muted-foreground">
+          Loading...
         </div>
+      ) : (
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-        <div className="flex justify-end gap-3 mt-6">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting
-              ? isEdit
-                ? "Updating..."
-                : "Saving..."
-              : isEdit
-              ? "Update"
-              : "Save"}
-          </Button>
+            {/* Continent */}
+            <div>
+              <Label>Continent *</Label>
+              <Select
+                value={continentId}
+                onValueChange={(val) => {
+                  setContinentId(val);
+                  setCountryId("");
+                  setStateId("");
+                }}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Continent" />
+                </SelectTrigger>
+                <SelectContent>
+                  {continentOptionsWithSelected.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No continents available
+                    </div>
+                  ) : (
+                    continentOptionsWithSelected.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => navigate(ENC_LIST_PATH)}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
+            {/* Country */}
+            <div>
+              <Label>Country *</Label>
+              <Select
+                value={countryId}
+                onValueChange={(val) => {
+                  setCountryId(val);
+                  setStateId("");
+                }}
+                disabled={!continentId || isSubmitting}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Country" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredCountries.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      {continentId
+                        ? "No countries available"
+                        : "Select a continent first"}
+                    </div>
+                  ) : (
+                    filteredCountries.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* State */}
+            <div>
+              <Label>State *</Label>
+              <Select
+                value={stateId}
+                onValueChange={(val) => setStateId(val)}
+                disabled={!countryId || isSubmitting}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select State" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredStates.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      {countryId
+                        ? "No states available"
+                        : "Select a country first"}
+                    </div>
+                  ) : (
+                    filteredStates.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* District Name */}
+            <div>
+              <Label>District Name *</Label>
+              <Input
+                value={districtName}
+                onChange={(e) => setDistrictName(e.target.value)}
+                placeholder="Enter district name"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <Label>Status *</Label>
+              <Select
+                value={isActive ? "true" : "false"}
+                onValueChange={(val) => setIsActive(val === "true")}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Active</SelectItem>
+                  <SelectItem value="false">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? isEdit
+                  ? "Updating..."
+                  : "Saving..."
+                : isEdit
+                ? "Update"
+                : "Save"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => navigate(ENC_LIST_PATH)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
     </ComponentCard>
   );
 }
