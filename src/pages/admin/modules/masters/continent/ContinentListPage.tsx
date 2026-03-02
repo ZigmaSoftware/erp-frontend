@@ -45,45 +45,29 @@ export default function ContinentList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  /* ------------------------------
-     State (PrimeReact Correct Way)
-     first = starting row index
-  ------------------------------ */
-  const [lazyParams, setLazyParams] = useState({
-    first: 0,
-    rows: 5, // Match backend default if needed
-  });
+  const [page, setPage] = useState(1);   // 1-based, sent to backend
+  const [rows, setRows] = useState(5);
+  const [first, setFirst] = useState(0); // DataTable UI sync only
 
   const [globalFilter, setGlobalFilter] = useState("");
-
-  /* ------------------------------
-     Derived Page (1-based for backend)
-  ------------------------------ */
-  const currentPage =
-    Math.floor(lazyParams.first / lazyParams.rows) + 1;
 
   /* ------------------------------
      Query
   ------------------------------ */
   const query = useQuery({
-    queryKey: continentListQueryKey(
-      currentPage,
-      lazyParams.rows
-    ),
-    queryFn: async (): Promise<
-      PaginatedResponse<ContinentRecord>
-    > => {
-      return continentApi.listPaginated(
-        currentPage,
-        lazyParams.rows
-      );
-    },
+    queryKey: continentListQueryKey(page, rows),
+    queryFn: async (): Promise<PaginatedResponse<ContinentRecord>> =>
+      continentApi.listPaginated(page, rows),
     placeholderData: keepPreviousData,
   });
 
   const continents = query.data?.results ?? [];
   const totalRecords = query.data?.count ?? 0;
   const loading = query.isLoading || query.isFetching;
+
+  // Use the page number the backend actually used — eliminates any
+  // frontend state mismatch causing wrong S.No
+  const actualPage = (query.data as any)?.page ?? page;
 
   /* ------------------------------
      Mutation (Status Toggle)
@@ -97,10 +81,7 @@ export default function ContinentList() {
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: continentListQueryKey(
-          currentPage,
-          lazyParams.rows
-        ),
+        queryKey: continentListQueryKey(page, rows),
       });
     },
 
@@ -115,17 +96,19 @@ export default function ContinentList() {
      Pagination Handler
   ------------------------------ */
   const onPage = (event: DataTablePageEvent) => {
-    setLazyParams({
-      first: event.first,
-      rows: event.rows,
-    });
+    const newRows = event.rows;
+    const newPage = Math.floor(event.first / event.rows) + 1;
+    setRows(newRows);
+    setPage(newPage);
+    setFirst(event.first);
   };
 
   /* ------------------------------
-     Serial Number Column
+     Serial Number — derived from backend's actual page value
+     so it's always in sync regardless of frontend state
   ------------------------------ */
   const indexTemplate = (_: any, options: any) =>
-    lazyParams.first + options.rowIndex + 1;
+    (actualPage - 1) * rows + options.rowIndex + 1;
 
   /* ------------------------------
      Status Column
@@ -149,11 +132,7 @@ export default function ContinentList() {
   ------------------------------ */
   const actionTemplate = (row: ContinentRecord) => (
     <button
-      onClick={() =>
-        navigate(
-          ENC_EDIT_PATH(String(row.unique_id))
-        )
-      }
+      onClick={() => navigate(ENC_EDIT_PATH(String(row.unique_id)))}
       className="text-blue-600 hover:text-blue-800"
       title="Edit"
     >
@@ -165,10 +144,7 @@ export default function ContinentList() {
      Capitalize Utility
   ------------------------------ */
   const cap = (str?: string) =>
-    str
-      ? str.charAt(0).toUpperCase() +
-        str.slice(1).toLowerCase()
-      : "";
+    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
   /* ------------------------------
      Header
@@ -178,10 +154,8 @@ export default function ContinentList() {
       <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
         <i className="pi pi-search text-gray-500" />
         <InputText
-         value={globalFilter}
-          onChange={(e) =>
-            setGlobalFilter(e.target.value)
-          }
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
           placeholder="Search Continents"
           className="p-inputtext-sm !border-0 !shadow-none"
         />
@@ -196,12 +170,8 @@ export default function ContinentList() {
     <div className="p-3">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Continents
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Manage continent records
-          </p>
+          <h1 className="text-3xl font-bold text-gray-800">Continents</h1>
+          <p className="text-gray-500 text-sm">Manage continent records</p>
         </div>
 
         <Button
@@ -216,8 +186,8 @@ export default function ContinentList() {
         value={continents}
         lazy
         paginator
-        rows={lazyParams.rows}
-        first={lazyParams.first}
+        rows={rows}
+        first={first}
         rowsPerPageOptions={[5, 10, 20, 50]}
         totalRecords={totalRecords}
         onPage={onPage}
@@ -238,27 +208,19 @@ export default function ContinentList() {
           field="name"
           header="Continent Name"
           style={{ minWidth: "200px" }}
-          body={(row: ContinentRecord) =>
-            cap(row.name)
-          }
+          body={(row: ContinentRecord) => cap(row.name)}
         />
 
         <Column
           header="Status"
           body={statusTemplate}
-          style={{
-            width: "150px",
-            textAlign: "center",
-          }}
+          style={{ width: "150px", textAlign: "center" }}
         />
 
         <Column
           header="Actions"
           body={actionTemplate}
-          style={{
-            width: "120px",
-            textAlign: "center",
-          }}
+          style={{ width: "120px", textAlign: "center" }}
         />
       </DataTable>
     </div>
