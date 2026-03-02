@@ -49,7 +49,7 @@ export default function ContinentList() {
   ------------------------------ */
   const [lazyParams, setLazyParams] = useState({
     page: 1,
-    rows: 10,
+    rows: 5,
   });
 
   const [globalFilter, setGlobalFilter] = useState("");
