@@ -29,7 +29,7 @@ export function useDistrictsSelectOptions() {
     return query.data.map((district) => ({
       value: String(district.unique_id),
       label: district.name,
-      isActive: Boolean(district.is_active),
+      isActive: district.is_active !== false,
       continentId: normalizeNullable(district.continent_id),
       countryId: normalizeNullable(district.country_id),
       stateId: normalizeNullable(district.state_id),

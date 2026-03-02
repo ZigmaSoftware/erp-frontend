@@ -68,6 +68,23 @@ const includeSelectedOption = <Option extends { value: string }>(
 const isOptionActive = (option: { isActive?: boolean }) =>
   option.isActive !== false;
 
+const normalizeRelationId = (value: unknown): string => {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  if (typeof value === "object") {
+    const record = value as {
+      unique_id?: string | number;
+      id?: string | number;
+      value?: string | number;
+    };
+    const id = record.unique_id ?? record.id ?? record.value;
+    return id == null ? "" : String(id);
+  }
+  return "";
+};
+
 /* ---------------- COMPONENT ---------------- */
 
 function StateForm() {
@@ -137,8 +154,12 @@ function StateForm() {
     setFormData({
       name: data.name ?? "",
       label: data.label ?? "",
-      continent_id: String(data.continent_id ?? ""),
-      country_id: String(data.country_id ?? ""),
+      continent_id: normalizeRelationId(
+        data.continent_id ?? (data as StateRecord & { continent?: unknown }).continent
+      ),
+      country_id: normalizeRelationId(
+        data.country_id ?? (data as StateRecord & { country?: unknown }).country
+      ),
       is_active: data.is_active ? "true" : "false",
     });
   }, [detailQuery.data]);
