@@ -21,12 +21,39 @@ const encMasters = encryptSegment("masters");
 const encPlantCreation = encryptSegment("plant-creation");
 const ENC_LIST_PATH = `/${encMasters}/${encPlantCreation}`;
 
+type SelectOption = { value: string; label: string };
+
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+const toStringValue = (value: unknown): string | undefined => {
+  if (typeof value === "string" && value.trim() !== "") return value;
+  if (typeof value === "number" && !Number.isNaN(value)) return String(value);
+  return undefined;
+};
+
+const pickFirstString = (...values: unknown[]): string => {
+  for (const value of values) {
+    const normalized = toStringValue(value);
+    if (normalized !== undefined) return normalized;
+  }
+  return "";
+};
+
+const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+
+const isTruthyActive = (value: unknown): boolean =>
+  value === true || value === 1 || value === "1" || value === "true";
+
+const normalizeKey = (value: unknown): string => pickFirstString(value).trim().toLowerCase();
+
 function PlantForm() {
   const [plantName, setPlantName] = useState("");
   const [siteId, setSiteId] = useState("");
-  const [siteOptions, setSiteOptions] = useState<
-    Array<{ value: string; label: string }>
-  >([]);
+  const [siteLabelFallback, setSiteLabelFallback] = useState("");
+  const [siteOptions, setSiteOptions] = useState<SelectOption[]>([]);
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -34,32 +61,32 @@ function PlantForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
 
-  // ---------------------------
-  // Load sites
-  // ---------------------------
   useEffect(() => {
     const fetchSites = async () => {
       try {
         const res = await siteApi.list();
-        const options = (res as any[])
-          .filter((item) => item?.site_name)
+        const options = asArray(res)
+          .map(asRecord)
+          .filter((item): item is Record<string, unknown> => Boolean(item))
           .map((item) => ({
-            value: String(item.unique_id),
-            label: item.site_name,
-          }));
+            value: pickFirstString(item["unique_id"], item["id"], item["site_id"]),
+            label: pickFirstString(item["site_name"], item["name"], item["display_name"]),
+          }))
+          .filter((item) => Boolean(item.value && item.label));
 
-        setSiteOptions(options);
+        const deduped = options.filter(
+          (item, index, list) => list.findIndex((x) => x.value === item.value) === index
+        );
+
+        setSiteOptions(deduped);
       } catch (err) {
-        console.error("Failed to load sites", err);
+        console.error("Failed to load sites:", err);
       }
     };
 
     fetchSites();
   }, []);
 
-  // ---------------------------
-  // Load plant (EDIT MODE)
-  // ---------------------------
   useEffect(() => {
     if (!isEdit || !id) return;
 
@@ -68,12 +95,29 @@ function PlantForm() {
         setLoading(true);
 
         const res = await plantApi.get(id);
-        const plant = res?.data ?? res;
+        const payload = (asRecord(res)?.["data"] ?? res) as unknown;
+        const plant = asRecord(payload) ?? {};
+        const siteRecord = asRecord(plant["site_id"]);
+        const normalizedSiteId = pickFirstString(
+          plant["site_id"],
+          siteRecord?.["unique_id"],
+          siteRecord?.["id"]
+        );
+        const normalizedSiteLabel = pickFirstString(
+          plant["site_name"],
+          plant["site"],
+          siteRecord?.["site_name"],
+          siteRecord?.["name"],
+          asRecord(plant["site"])?.["site_name"],
+          asRecord(plant["site"])?.["name"]
+        );
 
-        setPlantName(plant.plant_name);
-        setSiteId(String(plant.site_id));
-        setIsActive(plant.is_active);
+        setPlantName(pickFirstString(plant["plant_name"]));
+        setSiteId(normalizedSiteId);
+        setSiteLabelFallback(normalizedSiteLabel);
+        setIsActive(isTruthyActive(plant["is_active"]));
       } catch (err) {
+        console.error("Error fetching plant:", err);
         Swal.fire("Error", "Plant not found", "error");
         navigate(ENC_LIST_PATH);
       } finally {
@@ -84,9 +128,26 @@ function PlantForm() {
     fetchPlant();
   }, [id, isEdit, navigate]);
 
-  // ---------------------------
-  // Submit (CREATE / UPDATE)
-  // ---------------------------
+  useEffect(() => {
+    const labelKey = normalizeKey(siteLabelFallback);
+
+    if (!siteId && labelKey) {
+      const matched = siteOptions.find((opt) => normalizeKey(opt.label) === labelKey);
+      if (matched) {
+        setSiteId(matched.value);
+      }
+      return;
+    }
+
+    if (!siteId || !siteLabelFallback) return;
+
+    setSiteOptions((prev) =>
+      prev.some((opt) => opt.value === siteId)
+        ? prev
+        : [...prev, { value: siteId, label: siteLabelFallback }]
+    );
+  }, [siteId, siteLabelFallback, siteOptions]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -124,6 +185,7 @@ function PlantForm() {
 
       navigate(ENC_LIST_PATH);
     } catch (err) {
+      console.error("Save failed:", err);
       Swal.fire("Error", "Save failed", "error");
     } finally {
       setLoading(false);
@@ -153,7 +215,10 @@ function PlantForm() {
             <Label htmlFor="site">
               Site <span className="text-red-500">*</span>
             </Label>
-            <Select value={siteId} onValueChange={setSiteId}>
+            <Select
+              value={siteId || undefined}
+              onValueChange={(value) => setSiteId(value ?? "")}
+            >
               <SelectTrigger id="site">
                 <SelectValue placeholder="Select site" />
               </SelectTrigger>

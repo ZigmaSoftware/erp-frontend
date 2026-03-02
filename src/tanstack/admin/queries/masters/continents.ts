@@ -21,7 +21,7 @@ export function useContinentsSelectOptions() {
     if (!query.data) return [];
 
     return query.data
-      .filter((item) => Boolean(item.is_active))
+      .filter((item) => item.is_active !== false)
       .map((item) => ({
         value: String(item.unique_id),
         label: item.name,

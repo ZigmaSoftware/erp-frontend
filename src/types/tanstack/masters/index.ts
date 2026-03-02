@@ -30,12 +30,25 @@ export const normalizeCountryData = (
 ): NormalizedCountry[] =>
   countries.map((country) => {
     const rawContinentId = country.continent_id ?? country.continent;
+    const continentId =
+      rawContinentId &&
+      typeof rawContinentId === "object" &&
+      ("unique_id" in rawContinentId || "id" in rawContinentId)
+        ? String(
+            (rawContinentId as { unique_id?: string | number; id?: string | number })
+              .unique_id ??
+              (rawContinentId as { unique_id?: string | number; id?: string | number })
+                .id
+          )
+        : rawContinentId == null
+          ? null
+          : String(rawContinentId);
 
     return {
       id: String(country.unique_id),
       name: country.name,
-      continentId: rawContinentId == null ? null : String(rawContinentId),
-      isActive: Boolean(country.is_active),
+      continentId,
+      isActive: country.is_active !== false,
     };
   });
 

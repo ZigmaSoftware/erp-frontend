@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DataTable } from "primereact/datatable";
+import type { DataTablePageEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
@@ -45,38 +46,47 @@ export default function ContinentList() {
   const queryClient = useQueryClient();
 
   /* ------------------------------
-     State
+     State (PrimeReact Correct Way)
+     first = starting row index
   ------------------------------ */
   const [lazyParams, setLazyParams] = useState({
-    page: 1,
-    rows: 10,
+    first: 0,
+    rows: 5, // Match backend default if needed
   });
 
   const [globalFilter, setGlobalFilter] = useState("");
 
   /* ------------------------------
-     Query (TanStack v5 Correct)
+     Derived Page (1-based for backend)
+  ------------------------------ */
+  const currentPage =
+    Math.floor(lazyParams.first / lazyParams.rows) + 1;
+
+  /* ------------------------------
+     Query
   ------------------------------ */
   const query = useQuery({
-    queryKey: continentListQueryKey(lazyParams.page, lazyParams.rows),
+    queryKey: continentListQueryKey(
+      currentPage,
+      lazyParams.rows
+    ),
     queryFn: async (): Promise<
       PaginatedResponse<ContinentRecord>
     > => {
       return continentApi.listPaginated(
-        lazyParams.page,
+        currentPage,
         lazyParams.rows
       );
     },
-    placeholderData: keepPreviousData, // ✅ v5 replacement
+    placeholderData: keepPreviousData,
   });
 
   const continents = query.data?.results ?? [];
-  console.log(continents);
   const totalRecords = query.data?.count ?? 0;
   const loading = query.isLoading || query.isFetching;
 
   /* ------------------------------
-     Mutation (v5 Correct)
+     Mutation (Status Toggle)
   ------------------------------ */
   const mutation = useMutation({
     mutationFn: (payload: {
@@ -88,7 +98,7 @@ export default function ContinentList() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: continentListQueryKey(
-          lazyParams.page,
+          currentPage,
           lazyParams.rows
         ),
       });
@@ -99,20 +109,26 @@ export default function ContinentList() {
     },
   });
 
-  const isUpdating = mutation.isPending; // ✅ v5 uses isPending
+  const isUpdating = mutation.isPending;
 
   /* ------------------------------
-     Pagination
+     Pagination Handler
   ------------------------------ */
-  const onPage = (event: any) => {
+  const onPage = (event: DataTablePageEvent) => {
     setLazyParams({
-      page: event.page + 1,
+      first: event.first,
       rows: event.rows,
     });
   };
 
   /* ------------------------------
-     Status Toggle
+     Serial Number Column
+  ------------------------------ */
+  const indexTemplate = (_: any, options: any) =>
+    lazyParams.first + options.rowIndex + 1;
+
+  /* ------------------------------
+     Status Column
   ------------------------------ */
   const statusTemplate = (row: ContinentRecord) => (
     <Switch
@@ -129,12 +145,14 @@ export default function ContinentList() {
   );
 
   /* ------------------------------
-     Actions
+     Actions Column
   ------------------------------ */
   const actionTemplate = (row: ContinentRecord) => (
     <button
       onClick={() =>
-        navigate(ENC_EDIT_PATH(String(row.unique_id)))
+        navigate(
+          ENC_EDIT_PATH(String(row.unique_id))
+        )
       }
       className="text-blue-600 hover:text-blue-800"
       title="Edit"
@@ -143,11 +161,9 @@ export default function ContinentList() {
     </button>
   );
 
-  const indexTemplate = (_: any, options: any) =>
-    (lazyParams.page - 1) * lazyParams.rows +
-    options.rowIndex +
-    1;
-
+  /* ------------------------------
+     Capitalize Utility
+  ------------------------------ */
   const cap = (str?: string) =>
     str
       ? str.charAt(0).toUpperCase() +
@@ -158,18 +174,18 @@ export default function ContinentList() {
      Header
   ------------------------------ */
   const header = (
-    <div className="flex justify-end">
-      <span className="p-input-icon-left">
-        <i className="pi pi-search" />
+    <div className="flex justify-end items-center">
+      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
+        <i className="pi pi-search text-gray-500" />
         <InputText
-          value={globalFilter}
+         value={globalFilter}
           onChange={(e) =>
             setGlobalFilter(e.target.value)
           }
-          placeholder="Search (UI only)"
-          className="p-inputtext-sm"
+          placeholder="Search Continents"
+          className="p-inputtext-sm !border-0 !shadow-none"
         />
-      </span>
+      </div>
     </div>
   );
 
@@ -201,11 +217,8 @@ export default function ContinentList() {
         lazy
         paginator
         rows={lazyParams.rows}
+        first={lazyParams.first}
         rowsPerPageOptions={[5, 10, 20, 50]}
-        first={
-          (lazyParams.page - 1) *
-          lazyParams.rows
-        }
         totalRecords={totalRecords}
         onPage={onPage}
         loading={loading}
