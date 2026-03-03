@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,11 @@ import {
 } from "@/helpers/admin";
 import type { CountrySelectOption, StateRecord } from "@/types/tanstack/masters";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+
+import {
+  stateSchema,
+  type StateFormValues,
+} from "@/validations/masters/state.schema";
 
 /* ---------------- ROUTE ---------------- */
 
@@ -57,11 +64,22 @@ function StateForm() {
   const isEdit = Boolean(id);
   const queryClient = useQueryClient();
 
-  const [stateName, setStateName] = useState("");
-  const [stateLabel, setStateLabel] = useState("");
-  const [continentId, setContinentId] = useState("");
-  const [countryId, setCountryId] = useState("");
-  const [isActive, setIsActive] = useState(true);
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<StateFormValues>({
+    resolver: zodResolver(stateSchema),
+    defaultValues: {
+      name: "",
+      label: "",
+      continent_id: "",
+      country_id: "",
+      is_active: true,
+    },
+  });
 
   const [editPopulated, setEditPopulated] = useState(!isEdit);
 
@@ -78,6 +96,9 @@ function StateForm() {
   const queriesReady =
     continentsQuery.isSuccess && countriesQuery.isSuccess;
 
+  const continentId = watch("continent_id");
+  const countryId = watch("country_id");
+  const isActive = watch("is_active");
   const filteredCountries = useMemo<CountrySelectOption[]>(() => {
     if (!continentId) return [];
     const active = countryOptions.filter(
@@ -100,11 +121,11 @@ function StateForm() {
     if (!detailQuery.data || !queriesReady) return;
 
     const data = detailQuery.data;
-    setStateName(data.name ?? "");
-    setStateLabel(data.label ?? "");
-    setContinentId(normalize(data.continent_id));
-    setCountryId(normalize(data.country_id));
-    setIsActive(Boolean(data.is_active));
+    setValue("name", data.name ?? "");
+    setValue("label", data.label ?? "");
+    setValue("continent_id", normalize(data.continent_id));
+    setValue("country_id", normalize(data.country_id));
+    setValue("is_active", Boolean(data.is_active));
     setEditPopulated(true);
   }, [detailQuery.data, queriesReady]);
 
@@ -123,13 +144,7 @@ function StateForm() {
   // -----------------------------
 
   const saveMutation = useMutation({
-    mutationFn: (payload: {
-      name: string;
-      label: string;
-      continent_id: string;
-      country_id: string;
-      is_active: boolean;
-    }) =>
+    mutationFn: (payload: StateFormValues) =>
       isEdit
         ? stateApi.update(id as string, payload)
         : stateApi.create(payload),
@@ -159,25 +174,11 @@ function StateForm() {
   // -----------------------------
   // Submit
   // -----------------------------
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!continentId || !countryId || !stateName.trim() || !stateLabel.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "All fields are mandatory.",
-      });
-      return;
-    }
-
+  const onSubmit = (data: StateFormValues) => {
     saveMutation.mutate({
-      name: stateName.trim(),
-      label: stateLabel.trim(),
-      continent_id: continentId,
-      country_id: countryId,
-      is_active: isActive,
+      ...data,
+      name: data.name.trim(),
+      label: data.label.trim(),
     });
   };
 
@@ -190,7 +191,7 @@ function StateForm() {
       {!editPopulated ? (
         <div className="py-10 text-center text-muted-foreground">Loading...</div>
       ) : (
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             {/* Continent */}
@@ -199,10 +200,10 @@ function StateForm() {
               <Select
                 value={continentId}
                 onValueChange={(val) => {
-                  setContinentId(val);
-                  setCountryId("");
+                  setValue("continent_id", val);
+                  setValue("country_id", "");
                 }}
-                disabled={isSubmitting}
+                disabled={!queriesReady || isSubmitting}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Continent" />
@@ -221,6 +222,11 @@ function StateForm() {
                   )}
                 </SelectContent>
               </Select>
+              {errors.continent_id && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.continent_id.message}
+                </p>
+              )}
             </div>
 
             {/* Country */}
@@ -228,8 +234,8 @@ function StateForm() {
               <Label>Country *</Label>
               <Select
                 value={countryId}
-                onValueChange={(val) => setCountryId(val)}
-                disabled={!continentId || isSubmitting}
+                onValueChange={(val) => setValue("country_id", val)}
+                disabled={!continentId || !queriesReady || isSubmitting}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Country" />
@@ -250,28 +256,39 @@ function StateForm() {
                   )}
                 </SelectContent>
               </Select>
+              {errors.country_id && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.country_id.message}
+                </p>
+              )}
             </div>
 
             {/* State Name */}
             <div>
               <Label>State Name *</Label>
               <Input
-                value={stateName}
-                onChange={(e) => setStateName(e.target.value)}
+                {...register("name")}
                 placeholder="Enter state name"
                 disabled={isSubmitting}
               />
+              {errors.name && (
+                <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+              )}
             </div>
 
             {/* State Label */}
             <div>
               <Label>State Label *</Label>
               <Input
-                value={stateLabel}
-                onChange={(e) => setStateLabel(e.target.value)}
+                {...register("label")}
                 placeholder="Enter state label"
                 disabled={isSubmitting}
               />
+              {errors.label && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.label.message}
+                </p>
+              )}
             </div>
 
             {/* Status */}
@@ -279,8 +296,8 @@ function StateForm() {
               <Label>Status *</Label>
               <Select
                 value={isActive ? "true" : "false"}
-                onValueChange={(val) => setIsActive(val === "true")}
-                disabled={isSubmitting}
+                onValueChange={(val) => setValue("is_active", val === "true")}
+                disabled={!queriesReady || isSubmitting}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Status" />
