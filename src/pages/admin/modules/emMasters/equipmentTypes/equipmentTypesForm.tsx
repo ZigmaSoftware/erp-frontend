@@ -1,175 +1,149 @@
-import { useEffect, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import { create } from "zustand";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
+import ComponentCard from "@/components/common/ComponentCard";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { equipmentTypeApi } from "@/helpers/admin";
+import type { EquipmentTypeRecord } from "@/types/tanstack/masters";
+import {
+  equipmentTypeSchema,
+  type EquipmentTypeFormValues,
+} from "@/validations/emMasters/equipment-type.schema";
 
 const { encEmMasters, encEquipmentType } = getEncryptedRoute();
-const ENC_LIST_PATH = `/${encEmMasters}/${encEquipmentType}`;
+const LIST_PATH = `/${encEmMasters}/${encEquipmentType}`;
+const equipmentTypesQueryKey = ["em-masters", "equipment-types"] as const;
 
-type EquipmentTypeFormStore = {
-  name: string;
-  description: string;
-  category: string;
-  imageFile: File | null;
-  existingImage: string;
-  isActive: boolean;
-  loading: boolean;
-  setName: (value: string) => void;
-  setDescription: (value: string) => void;
-  setCategory: (value: string) => void;
-  setImageFile: (value: File | null) => void;
-  setExistingImage: (value: string) => void;
-  setIsActive: (value: boolean) => void;
-  setLoading: (value: boolean) => void;
-  resetForm: () => void;
+const getStringValue = (...values: unknown[]) => {
+  for (const value of values) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "string" && value.trim() !== "") return value;
+    if (typeof value === "number" && !Number.isNaN(value)) return String(value);
+  }
+  return "";
 };
 
-const initialState = {
-  name: "",
-  description: "",
-  category: "",
-  imageFile: null,
-  existingImage: "",
-  isActive: true,
-  loading: false,
-};
-
-const useEquipmentTypeFormStore = create<EquipmentTypeFormStore>((set) => ({
-  ...initialState,
-  setName: (value) => set({ name: value }),
-  setDescription: (value) => set({ description: value }),
-  setCategory: (value) => set({ category: value }),
-  setImageFile: (value) => set({ imageFile: value }),
-  setExistingImage: (value) => set({ existingImage: value }),
-  setIsActive: (value) => set({ isActive: value }),
-  setLoading: (value) => set({ loading: value }),
-  resetForm: () => set(initialState),
-}));
+const deriveStatus = (value: unknown) =>
+  value === true || value === "true" || value === 1 || value === "1";
 
 export default function EquipmentTypeForm() {
-  const {
-    name,
-    description,
-    category,
-    imageFile,
-    existingImage,
-    isActive,
-    loading,
-    setName,
-    setDescription,
-    setCategory,
-    setImageFile,
-    setExistingImage,
-    setIsActive,
-    setLoading,
-    resetForm,
-  } = useEquipmentTypeFormStore();
-
   const navigate = useNavigate();
-  const { id } = useParams();
-  const equipmentTypeId = id;
-  const isEdit = Boolean(equipmentTypeId);
+  const { id } = useParams<{ id: string }>();
+  const isEdit = Boolean(id);
+  const queryClient = useQueryClient();
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<EquipmentTypeFormValues>({
+    resolver: zodResolver(equipmentTypeSchema),
+    defaultValues: {
+      name: "",
+      category: "",
+      description: "",
+      is_active: true,
+    },
+  });
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [existingImage, setExistingImage] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  const detailQuery = useQuery<EquipmentTypeRecord>({
+    queryKey: [...equipmentTypesQueryKey, "detail", id ?? "new"],
+    queryFn: () => equipmentTypeApi.get(id as string),
+    enabled: isEdit,
+  });
 
   useEffect(() => {
-    if (!isEdit) {
-      resetForm();
-    }
-  }, [isEdit, resetForm]);
+    if (!detailQuery.data) return;
+    const payload = ((detailQuery.data as any)?.data ?? detailQuery.data) as EquipmentTypeRecord;
+
+    reset({
+      name: getStringValue(payload.name, payload.equipment_type_name),
+      category: getStringValue(payload.category),
+      description: getStringValue(payload.description),
+      is_active: deriveStatus(payload.is_active),
+    });
+    setExistingImage(getStringValue(payload.image, payload.image_url));
+    setImageFile(null);
+  }, [detailQuery.data, reset]);
 
   useEffect(() => {
-    if (!isEdit) return;
+    if (detailQuery.error) {
+      Swal.fire("Error", "Failed to load equipment type", "error");
+    }
+  }, [detailQuery.error]);
 
-    const loadData = async () => {
-      try {
-        const res = await equipmentTypeApi.get(equipmentTypeId as string);
-        const data = (res as any)?.data ?? res;
-
-        setName(
-          data?.name ??
-          data?.equipment_type_name ??
-          data?.equipmenttype_name ??
-          ""
-        );
-        setDescription(data?.description ?? data?.remarks ?? "");
-        setCategory(data?.category ?? data?.category_name ?? "");
-        setExistingImage(data?.image ?? data?.image_url ?? "");
-
-        const status = data?.is_active;
-        const derivedStatus =
-          status !== undefined && status !== null
-            ? Boolean(status)
-            : typeof data?.status === "boolean"
-              ? data?.status
-              : String(data?.status ?? "").toLowerCase() === "active";
-
-        setIsActive(derivedStatus);
-      } catch {
-        Swal.fire({
-          icon: "error",
-          title: "Failed to load equipment type",
-          text: "Something went wrong!",
-        });
-      }
-    };
-
-    loadData();
-  }, [isEdit, equipmentTypeId]);
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const payload = new FormData();
-    payload.append("name", name);
-    payload.append("equipment_type_name", name);
-    payload.append("description", description);
-    payload.append("category", category);
-    payload.append("is_active", String(isActive));
-    if (imageFile) {
-      payload.append("image", imageFile);
+  useEffect(() => {
+    if (!imageFile) {
+      setPreviewUrl("");
+      return;
     }
 
-    try {
-      if (isEdit) {
-        await equipmentTypeApi.uploadUpdate(equipmentTypeId as string, payload);
-        Swal.fire({
-          icon: "success",
-          title: "Updated successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        await equipmentTypeApi.upload(payload);
-        Swal.fire({
-          icon: "success",
-          title: "Added successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      }
+    const objectUrl = URL.createObjectURL(imageFile);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [imageFile]);
 
-      navigate(ENC_LIST_PATH);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.name?.[0] ||
-        error?.response?.data?.equipment_type_name?.[0] ||
-        error?.response?.data?.category?.[0] ||
-        error?.response?.data?.image?.[0] ||
-        error?.response?.data?.detail ||
-        "Unable to save equipment type.";
-
+  const saveMutation = useMutation({
+    mutationFn: (formData: FormData) =>
+      isEdit
+        ? equipmentTypeApi.uploadUpdate(id as string, formData)
+        : equipmentTypeApi.upload(formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: equipmentTypesQueryKey });
       Swal.fire({
-        icon: "error",
-        title: "Save failed",
-        text: message,
+        icon: "success",
+        title: isEdit ? "Updated successfully!" : "Added successfully!",
+        timer: 1500,
+        showConfirmButton: false,
       });
-    } finally {
-      setLoading(false);
+      navigate(LIST_PATH);
+    },
+    onError: () => {
+      Swal.fire("Error", "Unable to save equipment type.", "error");
+    },
+  });
+
+  const isSubmitting = saveMutation.isPending;
+  const isLoading = isEdit && detailQuery.isFetching;
+
+  if (isLoading) {
+    return <div className="py-10 text-center text-muted-foreground">Loading...</div>;
+  }
+
+  const onSubmit = (values: EquipmentTypeFormValues) => {
+    const formData = new FormData();
+    formData.append("name", values.name);
+    formData.append("equipment_type_name", values.name);
+    formData.append("category", values.category);
+    formData.append("description", values.description ?? "");
+    formData.append("is_active", String(values.is_active));
+
+    if (imageFile) {
+      formData.append("image", imageFile);
     }
+
+    saveMutation.mutate(formData);
   };
 
   return (
@@ -181,49 +155,61 @@ export default function EquipmentTypeForm() {
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Equipment Type Name <span className="text-red-500">*</span>
               </label>
-
               <Input
                 type="text"
                 placeholder="Enter equipment type name"
-                value={name}
-                required
-                onChange={(e) => setName(e.target.value)}
+                {...register("name")}
+                disabled={isSubmitting}
               />
+              {errors.name && (
+                <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Category <span className="text-red-500">*</span>
               </label>
-
               <Input
                 type="text"
                 placeholder="Enter category"
-                value={category}
-                required
-                onChange={(e) => setCategory(e.target.value)}
+                {...register("category")}
+                disabled={isSubmitting}
               />
+              {errors.category && (
+                <p className="text-red-500 text-sm mt-1">{errors.category.message}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Active Status <span className="text-red-500">*</span>
               </label>
-
-              <select
-                value={isActive ? "Active" : "Inactive"}
-                onChange={(e) => setIsActive(e.target.value === "Active")}
-                className="w-full px-3 py-2 border border-green-400 rounded-sm focus:outline-none focus:ring-2 focus:ring-green-200"
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+              <Controller
+                name="is_active"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value ? "true" : "false"}
+                    onValueChange={(value) => field.onChange(value === "true")}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
             <div className="md:col-span-2">
@@ -236,11 +222,11 @@ export default function EquipmentTypeForm() {
                 onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
                 className="block w-full text-sm text-gray-700 file:mr-4 file:rounded file:border-0 file:bg-green-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-green-700"
               />
-              {(existingImage || imageFile) && (
+              {(previewUrl || existingImage) && (
                 <div className="mt-3 flex items-center gap-3">
                   <div className="text-xs text-gray-500">Preview:</div>
                   <img
-                    src={imageFile ? URL.createObjectURL(imageFile) : existingImage}
+                    src={previewUrl || existingImage}
                     alt="Equipment type"
                     className="h-16 w-16 rounded border object-cover"
                   />
@@ -253,31 +239,29 @@ export default function EquipmentTypeForm() {
                 Description
               </label>
               <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                {...register("description")}
                 placeholder="Add an optional description"
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                disabled={isSubmitting}
               />
+              {errors.description && (
+                <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
+              )}
             </div>
           </div>
 
           <div className="flex justify-end gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-green-600 text-white font-medium px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
-            >
-              {loading ? "Saving..." : "Save"}
-            </button>
-
-            <button
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save"}
+            </Button>
+            <Button
               type="button"
-              onClick={() => navigate(ENC_LIST_PATH)}
-              className="bg-red-500 text-white font-medium px-6 py-2 rounded hover:bg-red-600 transition"
+              onClick={() => navigate(LIST_PATH)}
+              variant="destructive"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </div>
