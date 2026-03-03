@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
@@ -30,6 +32,11 @@ import {
 } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
 
+import {
+  districtSchema,
+  type DistrictFormValues,
+} from "@/validations/masters/district.schema";
+
 const encMasters = encryptSegment("masters");
 const encDistricts = encryptSegment("districts");
 const ENC_LIST_PATH = `/${encMasters}/${encDistricts}`;
@@ -56,13 +63,23 @@ function DistrictForm() {
   const isEdit = Boolean(id);
   const queryClient = useQueryClient();
 
-  const [districtName, setDistrictName] = useState("");
-  const [continentId, setContinentId] = useState("");
-  const [countryId, setCountryId] = useState("");
-  const [stateId, setStateId] = useState("");
-  const [isActive, setIsActive] = useState(true);
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<DistrictFormValues>({
+    resolver: zodResolver(districtSchema),
+    defaultValues: {
+      name: "",
+      continent_id: "",
+      country_id: "",
+      state_id: "",
+      is_active: true,
+    },
+  });
 
-  // Track whether edit fields have been populated
   const [editPopulated, setEditPopulated] = useState(!isEdit);
 
   // -----------------------------
@@ -82,6 +99,11 @@ function DistrictForm() {
     continentsQuery.isSuccess &&
     countriesQuery.isSuccess &&
     statesQuery.isSuccess;
+
+  const continentId = watch("continent_id");
+  const countryId = watch("country_id");
+  const stateId = watch("state_id");
+  const isActive = watch("is_active");
 
   const continentOptionsWithSelected = useMemo(() => {
     if (!continentsQuery.data) return continentOptions;
@@ -124,22 +146,19 @@ function DistrictForm() {
     enabled: isEdit,
   });
 
-  // Populate fields only after BOTH the record AND all option lists are ready.
-  // This prevents the selects from rendering with an ID value before their
-  // option lists exist — which causes them to show blank even though the
-  // value is correctly set.
+  // Populate edits once we have both the record and the option lists
   useEffect(() => {
     if (!detailQuery.data || !queriesReady) return;
 
     const data = detailQuery.data;
 
-    setDistrictName(data.name ?? "");
-    setContinentId(normalize(data.continent_id));
-    setCountryId(normalize(data.country_id));
-    setStateId(normalize(data.state_id));
-    setIsActive(Boolean(data.is_active));
+    setValue("name", data.name ?? "");
+    setValue("continent_id", normalize(data.continent_id));
+    setValue("country_id", normalize(data.country_id));
+    setValue("state_id", normalize(data.state_id));
+    setValue("is_active", Boolean(data.is_active));
     setEditPopulated(true);
-  }, [detailQuery.data, queriesReady]);
+  }, [detailQuery.data, queriesReady, setValue]);
 
   useEffect(() => {
     if (detailQuery.error) {
@@ -156,13 +175,7 @@ function DistrictForm() {
   // -----------------------------
 
   const saveMutation = useMutation({
-    mutationFn: (payload: {
-      name: string;
-      continent_id: string;
-      country_id: string;
-      state_id: string;
-      is_active: boolean;
-    }) =>
+    mutationFn: (payload: DistrictFormValues) =>
       isEdit
         ? districtApi.update(id as string, payload)
         : districtApi.create(payload),
@@ -190,31 +203,15 @@ function DistrictForm() {
   });
 
   const isSubmitting = saveMutation.isPending;
-  // Show loading state until edit data is populated (for add mode this is instant)
-  const isLoading = detailQuery.isFetching || !editPopulated;
 
   // -----------------------------
   // Submit
   // -----------------------------
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!continentId || !countryId || !stateId || !districtName.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "All fields are mandatory.",
-      });
-      return;
-    }
-
+  const onSubmit = (data: DistrictFormValues) => {
     saveMutation.mutate({
-      name: districtName.trim(),
-      continent_id: continentId,
-      country_id: countryId,
-      state_id: stateId,
-      is_active: isActive,
+      ...data,
+      name: data.name.trim(),
     });
   };
 
@@ -230,7 +227,7 @@ function DistrictForm() {
           Loading...
         </div>
       ) : (
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             {/* Continent */}
@@ -239,11 +236,11 @@ function DistrictForm() {
               <Select
                 value={continentId}
                 onValueChange={(val) => {
-                  setContinentId(val);
-                  setCountryId("");
-                  setStateId("");
+                  setValue("continent_id", val);
+                  setValue("country_id", "");
+                  setValue("state_id", "");
                 }}
-                disabled={isSubmitting}
+                disabled={!queriesReady || isSubmitting}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Continent" />
@@ -262,6 +259,11 @@ function DistrictForm() {
                   )}
                 </SelectContent>
               </Select>
+              {errors.continent_id && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.continent_id.message}
+                </p>
+              )}
             </div>
 
             {/* Country */}
@@ -270,10 +272,10 @@ function DistrictForm() {
               <Select
                 value={countryId}
                 onValueChange={(val) => {
-                  setCountryId(val);
-                  setStateId("");
+                  setValue("country_id", val);
+                  setValue("state_id", "");
                 }}
-                disabled={!continentId || isSubmitting}
+                disabled={!continentId || !queriesReady || isSubmitting}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Country" />
@@ -294,6 +296,11 @@ function DistrictForm() {
                   )}
                 </SelectContent>
               </Select>
+              {errors.country_id && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.country_id.message}
+                </p>
+              )}
             </div>
 
             {/* State */}
@@ -301,8 +308,8 @@ function DistrictForm() {
               <Label>State *</Label>
               <Select
                 value={stateId}
-                onValueChange={(val) => setStateId(val)}
-                disabled={!countryId || isSubmitting}
+                onValueChange={(val) => setValue("state_id", val)}
+                disabled={!countryId || !queriesReady || isSubmitting}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select State" />
@@ -323,17 +330,26 @@ function DistrictForm() {
                   )}
                 </SelectContent>
               </Select>
+              {errors.state_id && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.state_id.message}
+                </p>
+              )}
             </div>
 
             {/* District Name */}
             <div>
               <Label>District Name *</Label>
               <Input
-                value={districtName}
-                onChange={(e) => setDistrictName(e.target.value)}
+                {...register("name")}
                 placeholder="Enter district name"
-                disabled={isSubmitting}
+                disabled={!queriesReady || isSubmitting}
               />
+              {errors.name && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.name.message}
+                </p>
+              )}
             </div>
 
             {/* Status */}
@@ -341,8 +357,8 @@ function DistrictForm() {
               <Label>Status *</Label>
               <Select
                 value={isActive ? "true" : "false"}
-                onValueChange={(val) => setIsActive(val === "true")}
-                disabled={isSubmitting}
+                onValueChange={(val) => setValue("is_active", val === "true")}
+                disabled={!queriesReady || isSubmitting}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Status" />

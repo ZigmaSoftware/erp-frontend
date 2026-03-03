@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import ComponentCard from "@/components/common/ComponentCard";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -14,248 +17,210 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { encryptSegment } from "@/utils/routeCrypto";
-import { plantApi, siteApi } from "@/helpers/admin";
+import { getEncryptedRoute } from "@/utils/routeCache";
+import { plantApi } from "@/helpers/admin";
+import type { PlantRecord } from "@/types/tanstack/masters";
+import { masterQueryKeys } from "@/types/tanstack/masters";
+import { useSitesSelectOptions } from "@/tanstack/admin";
+import { plantSchema, type PlantFormValues } from "@/validations/masters/plant.schema";
 
-const encMasters = encryptSegment("masters");
-const encPlantCreation = encryptSegment("plant-creation");
-const ENC_LIST_PATH = `/${encMasters}/${encPlantCreation}`;
+const { encMasters, encPlantCreation } = getEncryptedRoute();
+const LIST_PATH = `/${encMasters}/${encPlantCreation}`;
 
-type SelectOption = { value: string; label: string };
-
-const asRecord = (value: unknown): Record<string, unknown> | undefined =>
-  value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-
-const toStringValue = (value: unknown): string | undefined => {
-  if (typeof value === "string" && value.trim() !== "") return value;
-  if (typeof value === "number" && !Number.isNaN(value)) return String(value);
-  return undefined;
+const includeSelectedOption = <Option extends { value: string }>(
+  base: Option[],
+  options: Option[],
+  selectedId: string
+): Option[] => {
+  if (!selectedId) return base;
+  if (base.some((o) => o.value === selectedId)) return base;
+  const selected = options.find((option) => option.value === selectedId);
+  return selected ? [...base, selected] : base;
 };
 
-const pickFirstString = (...values: unknown[]): string => {
-  for (const value of values) {
-    const normalized = toStringValue(value);
-    if (normalized !== undefined) return normalized;
+const isOptionActive = (option: { isActive?: boolean }) =>
+  option.isActive !== false;
+
+const pickSiteId = (value: unknown) => {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (record["unique_id"] != null) return String(record["unique_id"]);
+    if (record["id"] != null) return String(record["id"]);
   }
   return "";
 };
 
-const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+const deriveStatus = (value: unknown) =>
+  value === true || value === "true" || value === 1 || value === "1";
 
-const isTruthyActive = (value: unknown): boolean =>
-  value === true || value === 1 || value === "1" || value === "true";
-
-const normalizeKey = (value: unknown): string => pickFirstString(value).trim().toLowerCase();
-
-function PlantForm() {
-  const [plantName, setPlantName] = useState("");
-  const [siteId, setSiteId] = useState("");
-  const [siteLabelFallback, setSiteLabelFallback] = useState("");
-  const [siteOptions, setSiteOptions] = useState<SelectOption[]>([]);
-  const [isActive, setIsActive] = useState(true);
-  const [loading, setLoading] = useState(false);
-
+export default function PlantForm() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
+  const queryClient = useQueryClient();
+
+  const sitesQuery = useSitesSelectOptions();
+  const siteOptions = sitesQuery.selectOptions ?? [];
+
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<PlantFormValues>({
+    resolver: zodResolver(plantSchema),
+    defaultValues: {
+      plant_name: "",
+      site_id: "",
+      is_active: true,
+    },
+  });
+
+  const siteId = watch("site_id");
+
+  const filteredSites = useMemo(() => {
+    const activeSites = siteOptions.filter(isOptionActive);
+    return includeSelectedOption(activeSites, siteOptions, siteId);
+  }, [siteId, siteOptions]);
+
+  const detailQuery = useQuery<PlantRecord>({
+    queryKey: [...masterQueryKeys.plants, "detail", id ?? "new"],
+    queryFn: () => plantApi.get(id as string),
+    enabled: isEdit,
+  });
 
   useEffect(() => {
-    const fetchSites = async () => {
-      try {
-        const res = await siteApi.list();
-        const options = asArray(res)
-          .map(asRecord)
-          .filter((item): item is Record<string, unknown> => Boolean(item))
-          .map((item) => ({
-            value: pickFirstString(item["unique_id"], item["id"], item["site_id"]),
-            label: pickFirstString(item["site_name"], item["name"], item["display_name"]),
-          }))
-          .filter((item) => Boolean(item.value && item.label));
+    if (!detailQuery.data) return;
+    const plant = detailQuery.data;
 
-        const deduped = options.filter(
-          (item, index, list) => list.findIndex((x) => x.value === item.value) === index
-        );
-
-        setSiteOptions(deduped);
-      } catch (err) {
-        console.error("Failed to load sites:", err);
-      }
-    };
-
-    fetchSites();
-  }, []);
+    reset({
+      plant_name: plant.plant_name ?? "",
+      site_id: pickSiteId(plant.site_id),
+      is_active: deriveStatus(plant.is_active),
+    });
+  }, [detailQuery.data, reset]);
 
   useEffect(() => {
-    if (!isEdit || !id) return;
-
-    const fetchPlant = async () => {
-      try {
-        setLoading(true);
-
-        const res = await plantApi.get(id);
-        const payload = (asRecord(res)?.["data"] ?? res) as unknown;
-        const plant = asRecord(payload) ?? {};
-        const siteRecord = asRecord(plant["site_id"]);
-        const normalizedSiteId = pickFirstString(
-          plant["site_id"],
-          siteRecord?.["unique_id"],
-          siteRecord?.["id"]
-        );
-        const normalizedSiteLabel = pickFirstString(
-          plant["site_name"],
-          plant["site"],
-          siteRecord?.["site_name"],
-          siteRecord?.["name"],
-          asRecord(plant["site"])?.["site_name"],
-          asRecord(plant["site"])?.["name"]
-        );
-
-        setPlantName(pickFirstString(plant["plant_name"]));
-        setSiteId(normalizedSiteId);
-        setSiteLabelFallback(normalizedSiteLabel);
-        setIsActive(isTruthyActive(plant["is_active"]));
-      } catch (err) {
-        console.error("Error fetching plant:", err);
-        Swal.fire("Error", "Plant not found", "error");
-        navigate(ENC_LIST_PATH);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPlant();
-  }, [id, isEdit, navigate]);
-
-  useEffect(() => {
-    const labelKey = normalizeKey(siteLabelFallback);
-
-    if (!siteId && labelKey) {
-      const matched = siteOptions.find((opt) => normalizeKey(opt.label) === labelKey);
-      if (matched) {
-        setSiteId(matched.value);
-      }
-      return;
+    if (detailQuery.error) {
+      Swal.fire("Error", "Failed to load plant", "error");
     }
+  }, [detailQuery.error]);
 
-    if (!siteId || !siteLabelFallback) return;
-
-    setSiteOptions((prev) =>
-      prev.some((opt) => opt.value === siteId)
-        ? prev
-        : [...prev, { value: siteId, label: siteLabelFallback }]
-    );
-  }, [siteId, siteLabelFallback, siteOptions]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!plantName || !siteId) {
-      Swal.fire("Warning", "All fields are required", "warning");
-      return;
-    }
-
-    const payload = {
-      plant_name: plantName,
-      site_id: siteId,
-      is_active: isActive,
-    };
-
-    try {
-      setLoading(true);
-
-      if (isEdit && id) {
-        await plantApi.update(id, payload);
-        Swal.fire({
-          icon: "success",
-          title: "Updated successfully",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        await plantApi.create(payload);
-        Swal.fire({
-          icon: "success",
-          title: "Added successfully",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      }
-
-      navigate(ENC_LIST_PATH);
-    } catch (err) {
-      console.error("Save failed:", err);
+  const saveMutation = useMutation({
+    mutationFn: (payload: PlantFormValues) =>
+      isEdit ? plantApi.update(id as string, payload) : plantApi.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterQueryKeys.plants });
+      Swal.fire({
+        icon: "success",
+        title: isEdit ? "Updated successfully" : "Added successfully",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      navigate(LIST_PATH);
+    },
+    onError: () => {
       Swal.fire("Error", "Save failed", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
+
+  const isSubmitting = saveMutation.isPending;
+  const isLoading = isEdit && detailQuery.isFetching;
+
+  if (isLoading) {
+    return <div className="py-10 text-center text-muted-foreground">Loading...</div>;
+  }
 
   return (
     <ComponentCard title={isEdit ? "Edit Plant" : "Add Plant"}>
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit((values) => saveMutation.mutate(values))} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Plant Name */}
           <div>
             <Label htmlFor="plantName">
               Plant Name <span className="text-red-500">*</span>
             </Label>
             <Input
               id="plantName"
-              value={plantName}
-              onChange={(e) => setPlantName(e.target.value)}
+              {...register("plant_name")}
               placeholder="Enter plant name"
-              required
+              disabled={isSubmitting}
             />
+            {errors.plant_name && (
+              <p className="text-red-500 text-sm mt-1">{errors.plant_name.message}</p>
+            )}
           </div>
 
-          {/* Site */}
           <div>
             <Label htmlFor="site">
               Site <span className="text-red-500">*</span>
             </Label>
-            <Select
-              value={siteId || undefined}
-              onValueChange={(value) => setSiteId(value ?? "")}
-            >
-              <SelectTrigger id="site">
-                <SelectValue placeholder="Select site" />
-              </SelectTrigger>
-              <SelectContent>
-                {siteOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="site_id"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={field.onChange}
+                  disabled={isSubmitting || sitesQuery.isFetching}
+                >
+                  <SelectTrigger id="site">
+                    <SelectValue placeholder="Select site" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredSites.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">
+                        No sites available
+                      </div>
+                    ) : (
+                      filteredSites.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.site_id && (
+              <p className="text-red-500 text-sm mt-1">{errors.site_id.message}</p>
+            )}
           </div>
 
-          {/* Status */}
           <div>
             <Label>
               Active Status <span className="text-red-500">*</span>
             </Label>
-            <Select
-              value={isActive ? "true" : "false"}
-              onValueChange={(val) => setIsActive(val === "true")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="is_active"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ? "true" : "false"}
+                  onValueChange={(value) => field.onChange(value === "true")}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="flex justify-end gap-3 mt-6">
-          <Button type="submit" disabled={loading}>
-            {loading
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting
               ? isEdit
                 ? "Updating..."
                 : "Saving..."
@@ -263,12 +228,7 @@ function PlantForm() {
               ? "Update"
               : "Save"}
           </Button>
-
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => navigate(ENC_LIST_PATH)}
-          >
+          <Button variant="destructive" type="button" onClick={() => navigate(LIST_PATH)}>
             Cancel
           </Button>
         </div>
@@ -276,5 +236,3 @@ function PlantForm() {
     </ComponentCard>
   );
 }
-
-export default PlantForm;
