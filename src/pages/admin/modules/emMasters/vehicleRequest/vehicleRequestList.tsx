@@ -14,9 +14,10 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
-import { vehicleRequestApi, siteApi, userCreationApi } from "@/helpers/admin";
+import { vehicleRequestApi, userCreationApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import { useSitesQuery, useVehicleRequestsQuery } from "@/tanstack/admin";
 
 type RequestItem = Record<string, unknown>;
 
@@ -35,8 +36,6 @@ type VehicleRequestRecord = {
 type TableFilters = {
   global: { value: string | null; matchMode: FilterMatchMode };
 };
-
-const vehicleRequestListQueryKey = [...masterQueryKeys.vehicleRequests, "list"] as const;
 
 const normalizeRequest = (
   payload: Record<string, unknown>,
@@ -155,53 +154,49 @@ function VehicleRequestList() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encEmMasters}/${encVehicleRequest}/${id}/edit`;
 
-  const query = useQuery({
-    queryKey: vehicleRequestListQueryKey,
-    queryFn: async (): Promise<VehicleRequestRecord[]> => {
-      const [sites, users, requests] = await Promise.all([
-        siteApi.list(),
-        userCreationApi.list(),
-        vehicleRequestApi.list(),
-      ]);
-
-      const siteMap = new Map<string, string>();
-      (sites ?? [])
-        .map(asRecord)
-        .filter((item): item is Record<string, unknown> => Boolean(item))
-        .forEach((item) => {
-          const id = pickFirstString(item["unique_id"], item["id"]);
-          const label = pickFirstString(
-            item["site_name"],
-            item["name"],
-            item["siteName"],
-            item["display_name"]
-          );
-          if (id && label) siteMap.set(id, label);
-        });
-
-      const staffMap = new Map<string, string>();
-      (users ?? [])
-        .map(asRecord)
-        .filter((maybeUser): maybeUser is Record<string, unknown> => {
-          if (!maybeUser) return false;
-          return Boolean(maybeUser["is_staff"]);
-        })
-        .forEach((user) => {
-          const id = pickFirstString(user["unique_id"], user["id"], user["user_id"]);
-          const label = pickFirstString(
-            user["first_name"],
-            user["last_name"],
-            user["username"],
-            user["email"]
-          );
-          if (id && label) staffMap.set(id, label);
-        });
-
-      return requests
-        .map((item) => normalizeRequest(asRecord(item) ?? {}, siteMap, staffMap))
-        .filter((item) => item.unique_id);
-    },
+  const requestsQuery = useVehicleRequestsQuery();
+  const sitesQuery = useSitesQuery();
+  const staffQuery = useQuery({
+    queryKey: ["admin", "user-creations", "staff-list"],
+    queryFn: () => userCreationApi.list(),
   });
+
+  const siteMap = new Map<string, string>();
+  (sitesQuery.data ?? [])
+    .map(asRecord)
+    .filter((item): item is Record<string, unknown> => Boolean(item))
+    .forEach((item) => {
+      const id = pickFirstString(item["unique_id"], item["id"]);
+      const label = pickFirstString(
+        item["site_name"],
+        item["name"],
+        item["siteName"],
+        item["display_name"]
+      );
+      if (id && label) siteMap.set(id, label);
+    });
+
+  const staffMap = new Map<string, string>();
+  (staffQuery.data ?? [])
+    .map(asRecord)
+    .filter((maybeUser): maybeUser is Record<string, unknown> => {
+      if (!maybeUser) return false;
+      return Boolean(maybeUser["is_staff"]);
+    })
+    .forEach((user) => {
+      const id = pickFirstString(user["unique_id"], user["id"], user["user_id"]);
+      const label = pickFirstString(
+        user["first_name"],
+        user["last_name"],
+        user["username"],
+        user["email"]
+      );
+      if (id && label) staffMap.set(id, label);
+    });
+
+  const normalizedRequests = (requestsQuery.data ?? [])
+    .map((item) => normalizeRequest(asRecord(item) ?? {}, siteMap, staffMap))
+    .filter((item) => item.unique_id);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => vehicleRequestApi.remove(id),
@@ -272,8 +267,15 @@ function VehicleRequestList() {
     </div>
   );
 
-  const requests = query.data ?? [];
-  const loading = query.isLoading || query.isFetching;
+  const requests = normalizedRequests;
+  const loading =
+    requestsQuery.isLoading ||
+    requestsQuery.isFetching ||
+    requestsQuery.isRefetching ||
+    sitesQuery.isLoading ||
+    sitesQuery.isFetching ||
+    staffQuery.isLoading ||
+    staffQuery.isFetching;
 
   return (
     <div className="px-3 py-3">

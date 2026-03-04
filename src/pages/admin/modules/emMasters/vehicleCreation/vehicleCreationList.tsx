@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { vehicleCreationApi } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useVehicleCreationsQuery } from "@/tanstack/admin";
 
 type VehicleCreationRow = {
   unique_id: string;
@@ -127,17 +128,12 @@ export default function VehicleCreationList() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encEmMasters}/${encVehicleCreation}/${id}/edit`;
 
-  const query = useQuery({
-    queryKey: vehicleCreationListQueryKey,
-    queryFn: async (): Promise<VehicleCreationRow[]> => {
-      const response = await vehicleCreationApi.list();
-      return response
-        .map((item) => asRecord(item))
-        .filter((item): item is Record<string, unknown> => Boolean(item))
-        .map((item) => normalizeRow(item))
-        .filter((item) => item.unique_id);
-    },
-  });
+  const query = useVehicleCreationsQuery();
+  const normalizedRows = (query.data ?? [])
+    .map((item) => asRecord(item))
+    .filter((item): item is Record<string, unknown> => Boolean(item))
+    .map((item) => normalizeRow(item))
+    .filter((item) => item.unique_id);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
@@ -241,7 +237,7 @@ export default function VehicleCreationList() {
     </div>
   );
 
-  const rows = query.data ?? [];
+  const rows = normalizedRows;
   const loading = query.isLoading || query.isFetching;
 
   return (

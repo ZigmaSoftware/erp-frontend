@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -14,6 +14,7 @@ import { PencilIcon } from "@/icons";
 import { contractorApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import { useContractorsQuery } from "@/tanstack/admin";
 
 type RawContractor = {
   id?: string | number;
@@ -90,15 +91,10 @@ export default function ContractorList() {
   const ENC_NEW = `/${encEmMasters}/${encContractor}/new`;
   const ENC_EDIT = (id: string) => `/${encEmMasters}/${encContractor}/${id}/edit`;
 
-  const query = useQuery({
-    queryKey: contractorListQueryKey,
-    queryFn: async (): Promise<Contractor[]> => {
-      const response = await contractorApi.list();
-      return response
-        .map((item) => normalizeContractor(item as RawContractor))
-        .filter((item): item is Contractor => item !== null);
-    },
-  });
+  const query = useContractorsQuery();
+  const normalizedData = (query.data ?? [])
+    .map((item) => normalizeContractor(item as RawContractor))
+    .filter((item): item is Contractor => item !== null);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
@@ -177,7 +173,7 @@ export default function ContractorList() {
     }));
   };
 
-  const data = query.data ?? [];
+  const data = normalizedData;
   const loading = query.isLoading || query.isFetching;
 
   return (

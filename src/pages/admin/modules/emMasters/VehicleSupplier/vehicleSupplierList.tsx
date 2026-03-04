@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -18,6 +18,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 import { vehicleSupplierApi } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import { useVehicleSuppliersQuery } from "@/tanstack/admin";
 
 type VehicleSupplier = {
   unique_id: string;
@@ -92,15 +93,10 @@ export default function VehicleSupplierList() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encEmMasters}/${encVehicleSupplier}/${id}/edit`;
 
-  const query = useQuery({
-    queryKey: vehicleSupplierListQueryKey,
-    queryFn: async (): Promise<VehicleSupplier[]> => {
-      const response = await vehicleSupplierApi.list();
-      return response
-        .map((item) => normalizeSupplier(item as RawVehicleSupplier))
-        .filter((item): item is VehicleSupplier => item !== null);
-    },
-  });
+  const query = useVehicleSuppliersQuery();
+  const suppliers = (query.data ?? [])
+    .map((item) => normalizeSupplier(item as RawVehicleSupplier))
+    .filter((item): item is VehicleSupplier => item !== null);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
@@ -176,7 +172,6 @@ export default function VehicleSupplierList() {
     setGlobalFilterValue(value);
   };
 
-  const suppliers = query.data ?? [];
   const loading = query.isLoading || query.isFetching;
 
   const header = (

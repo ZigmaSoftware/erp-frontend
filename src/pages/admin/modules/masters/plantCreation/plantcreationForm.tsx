@@ -22,39 +22,16 @@ import { plantApi } from "@/helpers/admin";
 import type { PlantRecord } from "@/types/tanstack/masters";
 import { masterQueryKeys } from "@/types/tanstack/masters";
 import { useSitesSelectOptions } from "@/tanstack/admin";
+import {
+  deriveStatus,
+  includeSelectedOption,
+  isOptionActive,
+  pickSiteId,
+} from "@/utils/formHelpers";
 import { plantSchema, type PlantFormValues } from "@/validations/masters/plant.schema";
 
 const { encMasters, encPlantCreation } = getEncryptedRoute();
 const LIST_PATH = `/${encMasters}/${encPlantCreation}`;
-
-const includeSelectedOption = <Option extends { value: string }>(
-  base: Option[],
-  options: Option[],
-  selectedId: string
-): Option[] => {
-  if (!selectedId) return base;
-  if (base.some((o) => o.value === selectedId)) return base;
-  const selected = options.find((option) => option.value === selectedId);
-  return selected ? [...base, selected] : base;
-};
-
-const isOptionActive = (option: { isActive?: boolean }) =>
-  option.isActive !== false;
-
-const pickSiteId = (value: unknown) => {
-  if (value == null) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "number") return String(value);
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    if (record["unique_id"] != null) return String(record["unique_id"]);
-    if (record["id"] != null) return String(record["id"]);
-  }
-  return "";
-};
-
-const deriveStatus = (value: unknown) =>
-  value === true || value === "true" || value === 1 || value === "1";
 
 export default function PlantForm() {
   const navigate = useNavigate();

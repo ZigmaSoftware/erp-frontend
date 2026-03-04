@@ -21,6 +21,10 @@ import {
 import { vehicleSupplierApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import { vehicleSupplierSchema } from "@/validations/emMasters/vehicle-supplier.schema";
+import { extractErrorMessage } from "@/utils/errorUtils";
+import { toBoolean } from "@/utils/formHelpers";
+import type { VehicleSupplierDetail } from "@/types/emMasters/forms";
 
 const GST_TYPE_OPTIONS = [
   { label: "Yes", value: "yes" },
@@ -37,55 +41,8 @@ const TRANSPORT_TYPE_OPTIONS = [
 const { encEmMasters, encVehicleSupplier } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encEmMasters}/${encVehicleSupplier}`;
 
-type VehicleSupplierDetail = {
-  supplier_name?: string;
-  proprietor_name?: string;
-  mobile_no?: string;
-  email?: string;
-  gst_type?: string;
-  gst_no?: string;
-  pan_no?: string;
-  transport_medium?: string;
-  address?: string;
-  bank_details?: string;
-  image?: string;
-  is_active?: boolean | string | number | null;
-};
-
 const vehicleSupplierDetailQueryKey = (id: string | undefined) =>
   [...masterQueryKeys.vehicleSuppliers, "detail", id ?? "new"] as const;
-
-const toBoolean = (
-  value: boolean | string | number | null | undefined
-): boolean => {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value === 1;
-  if (typeof value === "string") {
-    return ["true", "1", "yes", "active"].includes(value.toLowerCase());
-  }
-  return false;
-};
-
-const extractErrorMessage = (error: unknown): string => {
-  const maybeError = error as {
-    response?: { data?: Record<string, unknown> | string };
-  };
-  const data = maybeError.response?.data;
-  if (typeof data === "string") return data;
-
-  if (data && typeof data === "object") {
-    const typedData = data as Record<string, unknown>;
-    const detail = typedData.detail;
-    if (typeof detail === "string") return detail;
-
-    return Object.values(typedData)
-      .flatMap((value) => (Array.isArray(value) ? value : [value]))
-      .map((value) => String(value))
-      .join(", ");
-  }
-
-  return "Something went wrong";
-};
 
 export default function VehicleSupplierForm() {
   const navigate = useNavigate();
@@ -163,27 +120,39 @@ export default function VehicleSupplierForm() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!supplierName || !proprietorName || !mobileNo || !address) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "Please fill all required fields before submitting.",
-      });
+    const normalizedGstType = gstType || "no";
+
+    const validation = vehicleSupplierSchema.safeParse({
+      supplier_name: supplierName.trim(),
+      proprietor_name: proprietorName.trim(),
+      mobile_no: mobileNo.trim(),
+      email: email.trim(),
+      gst_type: normalizedGstType,
+      gst_no: gstNo.trim(),
+      pan_no: panNo.trim(),
+      transport_medium: transportMedium,
+      address: address.trim(),
+      bank_details: bankDetails.trim(),
+      is_active: isActive,
+    });
+
+    if (!validation.success) {
+      Swal.fire("Validation error", validation.error.issues[0]?.message ?? "Please review the form.", "error");
       return;
     }
 
     const payload = new FormData();
-    payload.append("supplier_name", supplierName.trim());
-    payload.append("proprietor_name", proprietorName.trim());
-    payload.append("mobile_no", mobileNo.trim());
-    payload.append("email", email.trim());
-    payload.append("gst_type", gstType);
-    payload.append("gst_no", gstNo.trim());
-    payload.append("pan_no", panNo.trim());
-    payload.append("transport_medium", transportMedium);
-    payload.append("address", address.trim());
-    payload.append("bank_details", bankDetails.trim());
-    payload.append("is_active", String(isActive));
+    payload.append("supplier_name", validation.data.supplier_name);
+    payload.append("proprietor_name", validation.data.proprietor_name);
+    payload.append("mobile_no", validation.data.mobile_no);
+    payload.append("email", validation.data.email);
+    payload.append("gst_type", validation.data.gst_type);
+    payload.append("gst_no", validation.data.gst_type === "yes" ? validation.data.gst_no : "");
+    payload.append("pan_no", validation.data.pan_no);
+    payload.append("transport_medium", validation.data.transport_medium);
+    payload.append("address", validation.data.address);
+    payload.append("bank_details", validation.data.bank_details);
+    payload.append("is_active", String(validation.data.is_active));
 
     if (imageFile) payload.append("image", imageFile);
 

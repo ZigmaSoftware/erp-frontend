@@ -24,6 +24,7 @@ import {
   vehicleSupplierApi,
 } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { vehicleCreationSchema } from "@/validations/emMasters/vehicle-creation.schema";
 
 type SelectOption = {
   value: string;
@@ -690,88 +691,88 @@ export default function VehicleCreationForm() {
     if (!hasModel) setEquipmentModelId("");
   }, [equipmentModelId, equipmentTypeId, filteredEquipmentModels]);
 
-  const validate = () => {
-    if (!vehicleCode.trim()) return "Vehicle code is required.";
-    if (!vehicleRegNo.trim()) return "Vehicle registration number is required.";
-    if (!requestId) return "Request is required.";
-    if (!siteId) return "Site is required.";
-    const resolvedTypeId = resolveCanonicalFromAliases(
-      relationMaps.typeAliasToCanonical,
-      equipmentTypeId,
-    );
-    const resolvedModelId = resolveCanonicalOrSelf(
-      relationMaps.modelAliasToCanonical,
-      equipmentModelId,
-    );
-    const finalTypeId = resolvedTypeId || equipmentTypeId;
-    if (!finalTypeId) return "Equipment type is required.";
-    if (!resolvedModelId) return "Equipment model is required.";
-    const resolvedModelTypeId = relationMaps.modelToTypeCanonical[resolvedModelId];
-    if (resolvedModelTypeId && resolvedModelTypeId !== finalTypeId) {
-      return "Selected equipment model does not belong to the chosen equipment type.";
-    }
-    if (!permitExpiry || !fcExpiry || !insuranceExpiry || !roadTaxExpiry) {
-      return "All expiry dates are required.";
-    }
-    if (hireType === "HIRE" && !contractorId && !supplierId) {
-      return "Select contractor or supplier for hire type HIRE.";
-    }
-    return "";
-  };
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const validationMessage = validate();
-    if (validationMessage) {
-      Swal.fire("Validation error", validationMessage, "error");
-      return;
-    }
-
-    const resolvedTypeId = resolveCanonicalOrSelf(
-      relationMaps.typeAliasToCanonical,
-      equipmentTypeId,
-    );
-    const resolvedModelId = resolveCanonicalOrSelf(
-      relationMaps.modelAliasToCanonical,
-      equipmentModelId,
-    );
-    const resolvedModelTypeId = resolvedModelId
-      ? relationMaps.modelToTypeCanonical[resolvedModelId]
-      : "";
-    if (!resolvedTypeId || !resolvedModelId) {
-      Swal.fire("Validation error", "Equipment type and model are required.", "error");
-      return;
-    }
-    if (resolvedModelTypeId && resolvedTypeId !== resolvedModelTypeId) {
-      setEquipmentModelId("");
-      Swal.fire(
-        "Validation error",
-        "Selected equipment model does not belong to the chosen equipment type.",
-        "error",
-      );
-      return;
-    }
-
-    const payload = {
+    const validation = vehicleCreationSchema.safeParse({
       vehicle_code: vehicleCode.trim(),
       vehicle_reg_no: vehicleRegNo.trim(),
       hire_type: hireType,
-      contractor_id: contractorId || null,
-      supplier_id: supplierId || null,
+      contractor_id: contractorId,
+      supplier_id: supplierId,
       request_id: requestId,
       site_id: siteId,
-      equipment_type_id: resolvedTypeId,
-      equipment_model_id: resolvedModelId,
+      equipment_type_id: equipmentTypeId,
+      equipment_model_id: equipmentModelId,
       permit_expiry: permitExpiry,
       fc_expiry: fcExpiry,
       insurance_expiry: insuranceExpiry,
       road_tax_expiry: roadTaxExpiry,
       rental_basis: rentalBasis,
-      target_hours: targetHours ? Number(targetHours) : null,
-      plant_entry_date: plantEntryDate || null,
-      rc_invoice_date: rcInvoiceDate || null,
+      target_hours: targetHours,
+      plant_entry_date: plantEntryDate,
+      rc_invoice_date: rcInvoiceDate,
       is_active: isActive,
+    });
+
+    if (!validation.success) {
+      Swal.fire(
+        "Validation error",
+        validation.error.issues[0]?.message ?? "Please review the form.",
+        "error"
+      );
+      return;
+    }
+
+    const resolvedTypeId = resolveCanonicalFromAliases(
+      relationMaps.typeAliasToCanonical,
+      validation.data.equipment_type_id
+    );
+    const resolvedModelId = resolveCanonicalOrSelf(
+      relationMaps.modelAliasToCanonical,
+      validation.data.equipment_model_id
+    );
+    const finalTypeId = resolvedTypeId || validation.data.equipment_type_id;
+    if (!finalTypeId || !resolvedModelId) {
+      Swal.fire("Validation error", "Equipment type and model are required.", "error");
+      return;
+    }
+
+    const resolvedModelTypeId = relationMaps.modelToTypeCanonical[resolvedModelId];
+    if (resolvedModelTypeId && resolvedModelTypeId !== finalTypeId) {
+      setEquipmentModelId("");
+      Swal.fire(
+        "Validation error",
+        "Selected equipment model does not belong to the chosen equipment type.",
+        "error"
+      );
+      return;
+    }
+
+    if (validation.data.hire_type === "HIRE" && !validation.data.contractor_id && !validation.data.supplier_id) {
+      Swal.fire("Validation error", "Select contractor or supplier for hire type HIRE.", "error");
+      return;
+    }
+
+    const payload = {
+      vehicle_code: validation.data.vehicle_code,
+      vehicle_reg_no: validation.data.vehicle_reg_no,
+      hire_type: validation.data.hire_type,
+      contractor_id: validation.data.contractor_id || null,
+      supplier_id: validation.data.supplier_id || null,
+      request_id: validation.data.request_id,
+      site_id: validation.data.site_id,
+      equipment_type_id: finalTypeId,
+      equipment_model_id: resolvedModelId,
+      permit_expiry: validation.data.permit_expiry,
+      fc_expiry: validation.data.fc_expiry,
+      insurance_expiry: validation.data.insurance_expiry,
+      road_tax_expiry: validation.data.road_tax_expiry,
+      rental_basis: validation.data.rental_basis,
+      target_hours: validation.data.target_hours ? Number(validation.data.target_hours) : null,
+      plant_entry_date: validation.data.plant_entry_date || null,
+      rc_invoice_date: validation.data.rc_invoice_date || null,
+      is_active: validation.data.is_active,
     };
 
     setSubmitting(true);

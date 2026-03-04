@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -16,6 +17,8 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 import { equipmentTypeApi } from "@/helpers/admin";
+import { masterQueryKeys } from "@/types/tanstack/masters";
+import { useEquipmentTypesQuery } from "@/tanstack/admin";
 
 type EquipmentType = {
   unique_id: string;
@@ -27,9 +30,6 @@ type EquipmentType = {
 };
 
 export default function EquipmentTypeList() {
-  const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -42,6 +42,9 @@ export default function EquipmentTypeList() {
   const ENC_NEW_PATH = `/${encEmMasters}/${encEquipmentType}/new`;
   const ENC_EDIT_PATH = (unique_id: string) =>
     `/${encEmMasters}/${encEquipmentType}/${unique_id}/edit`;
+
+  const queryClient = useQueryClient();
+  const query = useEquipmentTypesQuery();
 
   const normalizeEquipmentType = (item: any): EquipmentType => {
     const statusFromIsActive = item?.is_active;
@@ -67,31 +70,11 @@ export default function EquipmentTypeList() {
     };
   };
 
-  const fetchEquipmentTypes = async () => {
-    setLoading(true);
+  const normalizedRecords = (query.data ?? [])
+    .map(normalizeEquipmentType)
+    .filter((item): item is EquipmentType => Boolean(item.unique_id));
 
-    try {
-      const res = await equipmentTypeApi.list();
-      const payload: any = res;
-      const raw = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.data)
-          ? payload.data
-          : payload?.data?.results ?? [];
-
-      setEquipmentTypes(
-        raw
-          .map(normalizeEquipmentType)
-          .filter((item: EquipmentType) => item.unique_id)
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchEquipmentTypes();
-  }, []);
+  const loading = query.isLoading || query.isFetching || query.isRefetching;
 
   const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
@@ -115,7 +98,7 @@ export default function EquipmentTypeList() {
       showConfirmButton: false,
     });
 
-    fetchEquipmentTypes();
+    queryClient.invalidateQueries({ queryKey: masterQueryKeys.equipmentTypes });
   };
 
   const onGlobalFilterChange = (e: any) => {
@@ -161,7 +144,7 @@ export default function EquipmentTypeList() {
         is_active: value,
       });
 
-      fetchEquipmentTypes();
+      queryClient.invalidateQueries({ queryKey: masterQueryKeys.equipmentTypes });
     };
 
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
@@ -203,7 +186,7 @@ export default function EquipmentTypeList() {
       </div>
 
       <DataTable
-        value={equipmentTypes}
+        value={normalizedRecords}
         paginator
         rows={10}
         loading={loading}
