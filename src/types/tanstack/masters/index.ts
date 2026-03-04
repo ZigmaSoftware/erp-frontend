@@ -195,3 +195,99 @@ export type EquipmentTypeRecord = {
   image_url?: string;
   is_active?: boolean;
 };
+
+export type EquipmentTypeSelectOption = SelectOption<string> & {
+  isActive: boolean;
+};
+
+export type MachineryHireRecord = {
+  unique_id: string | number;
+  site_id?: string | number | null;
+  site_name?: string;
+  equipment_type_id?: string | number | null;
+  equipment_type_name?: string;
+  equipment_model_id?: string | number | null;
+  equipment_model_name?: string;
+  vehicle_id?: string | number | null;
+  vehicle_code?: string;
+  date?: string;
+  diesel_status?: string;
+  hire_rate?: string | number;
+  unit?: string;
+  is_active?: boolean | string | number | null;
+  is_deleted?: boolean | string | number | null;
+};
+
+export type ContractorRecord = {
+  unique_id: string | number;
+  id?: string | number;
+  contractor_name?: string;
+  contact_person?: string;
+  mobile_no?: string;
+  gst_type?: string;
+  gst_no?: string;
+  pan_no?: string;
+  is_active?: boolean | string | number | null;
+};
+
+export type ContractorSelectOption = MasterSelectOption<string>;
+
+export type EquipmentModelRecord = {
+  unique_id: string | number;
+  id?: string | number;
+  equipment_type_id?: string | number | null;
+  equipment_type_name?: string;
+  manufacturer?: string;
+  model_name?: string;
+  description?: string;
+  is_active?: boolean | string | number | null;
+};
+
+export type EquipmentModelSelectOption = MasterSelectOption<string>;
+
+export type VehicleSupplierRecord = {
+  unique_id: string | number;
+  id?: string | number;
+  supplier_name?: string;
+  proprietor_name?: string;
+  mobile_no?: string;
+  gst_type?: string;
+  transport_medium?: string;
+  image?: string;
+  is_active?: boolean | string | number | null;
+};
+
+export type VehicleSupplierSelectOption = MasterSelectOption<string>;
+
+export type VehicleCreationRecord = {
+  unique_id: string | number;
+  id?: string | number;
+  vehicle_code?: string;
+  vehicle_reg_no?: string;
+  hire_type?: string;
+  rental_basis?: string;
+  request_no?: string;
+  site_name?: string;
+  equipment_type_name?: string;
+  equipment_model_name?: string;
+  contractor_name?: string;
+  supplier_name?: string;
+  is_active?: boolean | string | number | null;
+};
+
+export type VehicleCreationSelectOption = MasterSelectOption<string>;
+
+export type VehicleRequestRecord = {
+  unique_id: string | number;
+  id?: string | number;
+  description?: string;
+  request_status?: string;
+  site_id?: string | number | null;
+  site?: string | number | null;
+  staff_id?: string | number | null;
+  staff?: string | number | null;
+  items?: unknown[];
+  created_at?: string;
+};
+
+export type VehicleRequestSelectOption = MasterSelectOption<string>;

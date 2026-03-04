@@ -23,62 +23,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { contractorApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { masterQueryKeys } from "@/types/tanstack/masters";
-
-const GST_REGEX =
-  /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-
-type ContractorDetail = {
-  contractor_name?: string;
-  contact_person?: string;
-  mobile_no?: string;
-  email?: string;
-  gst_type?: string;
-  gst_no?: string;
-  pan_no?: string;
-  opening_balance?: string | number;
-  address?: string;
-  bank_details?: string;
-  is_active?: boolean | string | number | null;
-};
+import { contractorSchema } from "@/validations/emMasters/contractor.schema";
+import { extractErrorMessage } from "@/utils/errorUtils";
+import { toBoolean } from "@/utils/formHelpers";
+import type { ContractorDetail } from "@/types/emMasters/forms";
 
 const contractorDetailQueryKey = (id: string | undefined) =>
   [...masterQueryKeys.contractors, "detail", id ?? "new"] as const;
 
 const normalizeGstType = (value: string | undefined): "yes" | "no" =>
   String(value ?? "").toLowerCase() === "yes" ? "yes" : "no";
-
-const toBoolean = (
-  value: boolean | string | number | null | undefined
-): boolean => {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value === 1;
-  if (typeof value === "string") {
-    return ["true", "1", "yes", "active"].includes(value.toLowerCase());
-  }
-  return false;
-};
-
-const extractErrorMessage = (error: unknown): string => {
-  const maybeResponse = error as {
-    response?: { data?: Record<string, unknown> | string };
-  };
-
-  const responseData = maybeResponse.response?.data;
-  if (typeof responseData === "string") return responseData;
-
-  if (responseData && typeof responseData === "object") {
-    const typedData = responseData as Record<string, unknown>;
-    const message = Object.values(typedData)
-      .flatMap((value) => (Array.isArray(value) ? value : [value]))
-      .map((value) => String(value))
-      .join("\n");
-
-    return message || "Save failed";
-  }
-
-  return "Save failed";
-};
 
 export default function ContractorForm() {
   const [contractorName, setContractorName] = useState("");
@@ -173,28 +127,33 @@ export default function ContractorForm() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (gstType === "yes" && !GST_REGEX.test(gstNo)) {
-      Swal.fire("Invalid GST Number", "", "error");
-      return;
-    }
+    const normalizedGstType = gstType || "no";
 
-    if (panNo && !PAN_REGEX.test(panNo)) {
-      Swal.fire("Invalid PAN Number", "", "error");
-      return;
-    }
-
-    saveMutation.mutate({
+    const validation = contractorSchema.safeParse({
       contractor_name: contractorName.trim(),
       contact_person: contactPerson.trim(),
       mobile_no: mobileNo.trim(),
       email: email.trim(),
-      gst_type: gstType,
-      gst_no: gstType === "yes" ? gstNo.trim() : null,
-      pan_no: panNo.trim() || null,
-      opening_balance: openingBalance,
+      gst_type: normalizedGstType,
+      gst_no: gstNo.trim(),
+      pan_no: panNo.trim(),
+      opening_balance: openingBalance.trim(),
       address: address.trim(),
-      bank_details: bankDetails.trim() || null,
+      bank_details: bankDetails.trim(),
       is_active: isActive,
+    });
+
+    if (!validation.success) {
+      Swal.fire("Validation error", validation.error.issues[0]?.message ?? "Please review the form.", "error");
+      return;
+    }
+
+    saveMutation.mutate({
+      ...validation.data,
+      gst_no: validation.data.gst_type === "yes" ? validation.data.gst_no : null,
+      pan_no: validation.data.pan_no || null,
+      bank_details: validation.data.bank_details || null,
+      opening_balance: validation.data.opening_balance || "",
     });
   };
 

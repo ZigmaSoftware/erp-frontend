@@ -23,6 +23,13 @@ import {
   useStatesSelectOptions,
 } from "@/tanstack/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import {
+  includeSelectedOption,
+  isOptionActive,
+  normalizeStatusLabel,
+  resolveOptionValue,
+  toNumberValue,
+} from "@/utils/formHelpers";
 import { masterQueryKeys, type SiteRecord } from "@/types/tanstack/masters";
 import { siteSchema, type SiteFormValues } from "@/validations/masters/site.schema";
 
@@ -55,35 +62,6 @@ const buildInitialFileValues = (): FileValues =>
     acc[key] = null;
     return acc;
   }, {} as FileValues);
-
-const resolveOptionValue = (
-  value: string | undefined,
-  options: Array<{ value: string }>
-) => {
-  if (!value) return "";
-  const direct = options.find((opt) => opt.value === value);
-  if (direct) return direct.value;
-  return value;
-};
-
-const normalizeStatusLabel = (value: string | undefined) =>
-  value?.toLowerCase() === "active" ? "Active" : "Inactive";
-
-const toNumberValue = (value: string) => (value === "" ? undefined : Number(value));
-
-const isOptionActive = (option: { isActive?: boolean }) =>
-  option.isActive !== false;
-
-const includeSelectedOption = <Option extends { value: string }>(
-  base: Option[],
-  options: Option[],
-  selectedId: string
-): Option[] => {
-  if (!selectedId) return base;
-  if (base.some((o) => o.value === selectedId)) return base;
-  const selected = options.find((o) => o.value === selectedId);
-  return selected ? [...base, selected] : base;
-};
 
 const sections: SectionConfig[] = [
   {

@@ -26,6 +26,11 @@ import {
   useDistrictsSelectOptions,
   useStatesSelectOptions,
 } from "@/helpers/admin";
+import {
+  includeSelectedOption,
+  isOptionActive,
+  normalizeNullable,
+} from "@/utils/formHelpers";
 
 import type {
   CityRecord,
@@ -47,22 +52,6 @@ const encCities = encryptSegment("cities");
 const ENC_LIST_PATH = `/${encMasters}/${encCities}`;
 
 /* ---------------- HELPERS ---------------- */
-
-const normalize = (value: any): string => (value ? String(value) : "");
-
-const includeSelectedOption = <Option extends { value: string }>(
-  base: Option[],
-  options: Option[],
-  selectedId: string
-): Option[] => {
-  if (!selectedId) return base;
-  if (base.some((option) => option.value === selectedId)) return base;
-  const selected = options.find((option) => option.value === selectedId);
-  return selected ? [...base, selected] : base;
-};
-
-const isOptionActive = (option: { isActive?: boolean }) =>
-  option.isActive !== false;
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -168,10 +157,10 @@ export default function CityForm() {
 
     const data = detailQuery.data;
     setValue("name", data.name ?? "");
-    setValue("continent_id", normalize(data.continent_id));
-    setValue("country_id", normalize(data.country_id));
-    setValue("state_id", normalize(data.state_id));
-    setValue("district_id", normalize(data.district_id));
+    setValue("continent_id", normalizeNullable(data.continent_id));
+    setValue("country_id", normalizeNullable(data.country_id));
+    setValue("state_id", normalizeNullable(data.state_id));
+    setValue("district_id", normalizeNullable(data.district_id));
     setValue("is_active", Boolean(data.is_active));
     setEditLoaded(true);
   }, [detailQuery.data, queriesReady, setValue]);

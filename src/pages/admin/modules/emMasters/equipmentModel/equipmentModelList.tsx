@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { equipmentModelApi } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import { useEquipmentModelsQuery } from "@/tanstack/admin";
 
 type RawEquipmentTypeRef = {
   name?: string;
@@ -95,15 +96,10 @@ export default function EquipmentModelList() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encEmMasters}/${encEquipmentModel}/${id}/edit`;
 
-  const query = useQuery({
-    queryKey: equipmentModelListQueryKey,
-    queryFn: async (): Promise<EquipmentModel[]> => {
-      const response = await equipmentModelApi.list();
-      return response
-        .map((item) => normalizeEquipmentModel(item as RawEquipmentModel))
-        .filter((item): item is EquipmentModel => item !== null);
-    },
-  });
+  const query = useEquipmentModelsQuery();
+  const normalizedModels = (query.data ?? [])
+    .map((item) => normalizeEquipmentModel(item as RawEquipmentModel))
+    .filter((item): item is EquipmentModel => item !== null);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
@@ -182,7 +178,7 @@ export default function EquipmentModelList() {
     }));
   };
 
-  const models = query.data ?? [];
+  const models = normalizedModels;
   const loading = query.isLoading || query.isFetching;
 
   return (

@@ -22,6 +22,7 @@ import {
   equipmentModelApi,
   vehicleCreationApi,
 } from "@/helpers/admin";
+import { machineryHireSchema } from "@/validations/emMasters/machinery-hire.schema";
 
 const { encEmMasters, encMachineryHire } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encEmMasters}/${encMachineryHire}`;
@@ -140,12 +141,7 @@ export default function MachineryHireForm() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!siteId || !equipmentTypeId || !equipmentModelId || !vehicleId) {
-      Swal.fire("Warning", "Please fill all required fields", "warning");
-      return;
-    }
-
-    const payload = {
+    const validation = machineryHireSchema.safeParse({
       site_id: siteId,
       equipment_type_id: equipmentTypeId,
       equipment_model_id: equipmentModelId,
@@ -155,6 +151,19 @@ export default function MachineryHireForm() {
       hire_rate: hireRate,
       unit,
       is_active: isActive,
+    });
+
+    if (!validation.success) {
+      Swal.fire(
+        "Validation error",
+        validation.error.issues[0]?.message ?? "Please review the form.",
+        "error"
+      );
+      return;
+    }
+
+    const payload = {
+      ...validation.data,
       is_deleted: false,
     };
 

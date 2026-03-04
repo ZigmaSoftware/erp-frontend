@@ -31,6 +31,11 @@ import {
   stateSchema,
   type StateFormValues,
 } from "@/validations/masters/state.schema";
+import {
+  includeSelectedOption,
+  isOptionActive,
+  normalizeNullable,
+} from "@/utils/formHelpers";
 
 /* ---------------- ROUTE ---------------- */
 
@@ -39,22 +44,6 @@ const encStates = encryptSegment("states");
 const ENC_LIST_PATH = `/${encMasters}/${encStates}`;
 
 /* ---------------- HELPERS ---------------- */
-
-const normalize = (value: any): string => (value ? String(value) : "");
-
-const includeSelectedOption = <Option extends { value: string }>(
-  base: Option[],
-  options: Option[],
-  selectedId: string
-): Option[] => {
-  if (!selectedId) return base;
-  if (base.some((o) => o.value === selectedId)) return base;
-  const selected = options.find((o) => o.value === selectedId);
-  return selected ? [...base, selected] : base;
-};
-
-const isOptionActive = (option: { isActive?: boolean }) =>
-  option.isActive !== false;
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -123,8 +112,8 @@ function StateForm() {
     const data = detailQuery.data;
     setValue("name", data.name ?? "");
     setValue("label", data.label ?? "");
-    setValue("continent_id", normalize(data.continent_id));
-    setValue("country_id", normalize(data.country_id));
+    setValue("continent_id", normalizeNullable(data.continent_id));
+    setValue("country_id", normalizeNullable(data.country_id));
     setValue("is_active", Boolean(data.is_active));
     setEditPopulated(true);
   }, [detailQuery.data, queriesReady]);

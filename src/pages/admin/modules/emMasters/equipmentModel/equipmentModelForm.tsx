@@ -21,6 +21,10 @@ import {
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { equipmentModelApi, equipmentTypeApi } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import { equipmentModelSchema } from "@/validations/emMasters/equipment-model.schema";
+import { extractErrorMessage } from "@/utils/errorUtils";
+import { normalizeRelationId, toBoolean } from "@/utils/formHelpers";
+import type { EquipmentModelDetail } from "@/types/emMasters/forms";
 
 const { encEmMasters, encEquipmentModel } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encEmMasters}/${encEquipmentModel}`;
@@ -40,24 +44,6 @@ type RawEquipmentType = {
   status?: boolean | string | number | null;
 };
 
-type EquipmentTypeRef =
-  | string
-  | number
-  | {
-      unique_id?: string | number;
-      id?: string | number;
-    }
-  | null
-  | undefined;
-
-type EquipmentModelDetail = {
-  equipment_type?: EquipmentTypeRef;
-  manufacturer?: string;
-  model_name?: string;
-  description?: string;
-  is_active?: boolean | string | number | null;
-};
-
 const equipmentTypeListQueryKey = [
   ...masterQueryKeys.equipmentTypes,
   "list",
@@ -65,17 +51,6 @@ const equipmentTypeListQueryKey = [
 
 const equipmentModelDetailQueryKey = (id: string | undefined) =>
   [...masterQueryKeys.equipmentModels, "detail", id ?? "new"] as const;
-
-const toBoolean = (
-  value: boolean | string | number | null | undefined
-): boolean => {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value === 1;
-  if (typeof value === "string") {
-    return ["true", "1", "yes", "active"].includes(value.toLowerCase());
-  }
-  return false;
-};
 
 const normalizeEquipmentType = (item: RawEquipmentType): EquipmentType | null => {
   const id = item.unique_id ?? item.id;
@@ -86,45 +61,6 @@ const normalizeEquipmentType = (item: RawEquipmentType): EquipmentType | null =>
     name: item.name ?? item.equipment_type_name ?? "",
     is_active: toBoolean(item.is_active ?? item.status),
   };
-};
-
-const normalizeRelationId = (value: EquipmentTypeRef): string => {
-  if (value == null) return "";
-  if (typeof value === "object") {
-    const id = value.unique_id ?? value.id;
-    return id == null ? "" : String(id);
-  }
-  return String(value);
-};
-
-const extractErrorMessage = (error: unknown): string => {
-  const maybeResponse = error as {
-    response?: { data?: Record<string, unknown> | string };
-  };
-
-  const responseData = maybeResponse.response?.data;
-
-  if (typeof responseData === "string") return responseData;
-
-  if (responseData && typeof responseData === "object") {
-    const typedData = responseData as Record<string, unknown>;
-    const preferred =
-      typedData.model_name ??
-      typedData.equipment_type ??
-      typedData.detail;
-
-    if (Array.isArray(preferred)) {
-      return preferred.map((value) => String(value)).join(", ");
-    }
-    if (preferred) return String(preferred);
-
-    return Object.values(typedData)
-      .flatMap((value) => (Array.isArray(value) ? value : [value]))
-      .map((value) => String(value))
-      .join(", ");
-  }
-
-  return "Unable to save equipment model";
 };
 
 export default function EquipmentModelForm() {
@@ -223,22 +159,24 @@ export default function EquipmentModelForm() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!equipmentType || !manufacturer.trim() || !modelName.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing fields",
-        text: "Please fill all required fields.",
-      });
-      return;
-    }
-
-    saveMutation.mutate({
+    const validation = equipmentModelSchema.safeParse({
       equipment_type: equipmentType,
       manufacturer: manufacturer.trim(),
       model_name: modelName.trim(),
       description: description.trim(),
       is_active: isActive,
     });
+
+    if (!validation.success) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation error",
+        text: validation.error.issues[0]?.message ?? "Please check the form fields.",
+      });
+      return;
+    }
+
+    saveMutation.mutate(validation.data);
   };
 
   const equipmentTypes = equipmentTypesQuery.data ?? [];
