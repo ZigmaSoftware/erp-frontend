@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +20,7 @@ import {
 
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { equipmentModelApi, equipmentTypeApi } from "@/helpers/admin";
+import { masterQueryKeys } from "@/types/tanstack/masters";
 
 const { encEmMasters, encEquipmentModel } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encEmMasters}/${encEquipmentModel}`;
@@ -22,95 +28,179 @@ const ENC_LIST_PATH = `/${encEmMasters}/${encEquipmentModel}`;
 type EquipmentType = {
   unique_id: string;
   name: string;
+  is_active: boolean;
+};
+
+type RawEquipmentType = {
+  unique_id?: string | number;
+  id?: string | number;
+  name?: string;
+  equipment_type_name?: string;
+  is_active?: boolean | string | number | null;
+  status?: boolean | string | number | null;
+};
+
+type EquipmentTypeRef =
+  | string
+  | number
+  | {
+      unique_id?: string | number;
+      id?: string | number;
+    }
+  | null
+  | undefined;
+
+type EquipmentModelDetail = {
+  equipment_type?: EquipmentTypeRef;
+  manufacturer?: string;
+  model_name?: string;
+  description?: string;
+  is_active?: boolean | string | number | null;
+};
+
+const equipmentTypeListQueryKey = [
+  ...masterQueryKeys.equipmentTypes,
+  "list",
+] as const;
+
+const equipmentModelDetailQueryKey = (id: string | undefined) =>
+  [...masterQueryKeys.equipmentModels, "detail", id ?? "new"] as const;
+
+const toBoolean = (
+  value: boolean | string | number | null | undefined
+): boolean => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "active"].includes(value.toLowerCase());
+  }
+  return false;
+};
+
+const normalizeEquipmentType = (item: RawEquipmentType): EquipmentType | null => {
+  const id = item.unique_id ?? item.id;
+  if (id == null) return null;
+
+  return {
+    unique_id: String(id),
+    name: item.name ?? item.equipment_type_name ?? "",
+    is_active: toBoolean(item.is_active ?? item.status),
+  };
+};
+
+const normalizeRelationId = (value: EquipmentTypeRef): string => {
+  if (value == null) return "";
+  if (typeof value === "object") {
+    const id = value.unique_id ?? value.id;
+    return id == null ? "" : String(id);
+  }
+  return String(value);
+};
+
+const extractErrorMessage = (error: unknown): string => {
+  const maybeResponse = error as {
+    response?: { data?: Record<string, unknown> | string };
+  };
+
+  const responseData = maybeResponse.response?.data;
+
+  if (typeof responseData === "string") return responseData;
+
+  if (responseData && typeof responseData === "object") {
+    const typedData = responseData as Record<string, unknown>;
+    const preferred =
+      typedData.model_name ??
+      typedData.equipment_type ??
+      typedData.detail;
+
+    if (Array.isArray(preferred)) {
+      return preferred.map((value) => String(value)).join(", ");
+    }
+    if (preferred) return String(preferred);
+
+    return Object.values(typedData)
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .map((value) => String(value))
+      .join(", ");
+  }
+
+  return "Unable to save equipment model";
 };
 
 export default function EquipmentModelForm() {
-  const [equipmentType, setEquipmentType] = useState<string>("");
-  const [manufacturer, setManufacturer] = useState<string>("");
-  const [modelName, setModelName] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
-  const [isActive, setIsActive] = useState<boolean>(true);
-  const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [equipmentType, setEquipmentType] = useState("");
+  const [manufacturer, setManufacturer] = useState("");
+  const [modelName, setModelName] = useState("");
+  const [description, setDescription] = useState("");
+  const [isActive, setIsActive] = useState(true);
 
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
+  const queryClient = useQueryClient();
 
-  /* ---------------- FETCH EQUIPMENT TYPES ---------------- */
+  const equipmentTypesQuery = useQuery({
+    queryKey: equipmentTypeListQueryKey,
+    queryFn: async (): Promise<EquipmentType[]> => {
+      const response = await equipmentTypeApi.list();
+      return response
+        .map((item) => normalizeEquipmentType(item as RawEquipmentType))
+        .filter((item): item is EquipmentType => item !== null);
+    },
+  });
+
+  const detailQuery = useQuery({
+    queryKey: equipmentModelDetailQueryKey(id),
+    queryFn: () => equipmentModelApi.get(id as string),
+    enabled: isEdit,
+  });
+
   useEffect(() => {
-    const fetchEquipmentTypes = async () => {
-      try {
-        const res: any = await equipmentTypeApi.list();
+    if (!detailQuery.data) return;
 
-        const raw: EquipmentType[] =
-          Array.isArray(res)
-            ? res
-            : Array.isArray(res?.data)
-            ? res.data
-            : res?.data?.results ?? [];
+    const data = detailQuery.data as EquipmentModelDetail;
+    setEquipmentType(normalizeRelationId(data.equipment_type));
+    setManufacturer(data.manufacturer ?? "");
+    setModelName(data.model_name ?? "");
+    setDescription(data.description ?? "");
+    setIsActive(toBoolean(data.is_active));
+  }, [detailQuery.data]);
 
-        setEquipmentTypes(raw);
-      } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Failed to load equipment types",
-        });
-      }
-    };
-
-    fetchEquipmentTypes();
-  }, []);
-
-  /* ---------------- LOAD MODEL (EDIT MODE) ---------------- */
   useEffect(() => {
-    if (!isEdit) return;
+    if (!equipmentTypesQuery.error) return;
 
-    const fetchModel = async () => {
-      try {
-        const res: any = await equipmentModelApi.get(id as string);
-        const data = res?.data ?? res;
+    Swal.fire({
+      icon: "error",
+      title: "Failed to load equipment types",
+      text: extractErrorMessage(equipmentTypesQuery.error),
+    });
+  }, [equipmentTypesQuery.error]);
 
-        setEquipmentType(
-          typeof data.equipment_type === "string"
-            ? data.equipment_type
-            : data.equipment_type?.unique_id ?? ""
-        );
+  useEffect(() => {
+    if (!detailQuery.error) return;
 
-        setManufacturer(data.manufacturer ?? "");
-        setModelName(data.model_name ?? "");
-        setDescription(data.description ?? "");
-        setIsActive(Boolean(data.is_active));
-      } catch {
-        Swal.fire({
-          icon: "error",
-          title: "Failed to load equipment model",
-        });
-      }
-    };
+    Swal.fire({
+      icon: "error",
+      title: "Failed to load equipment model",
+      text: extractErrorMessage(detailQuery.error),
+    });
+  }, [detailQuery.error]);
 
-    fetchModel();
-  }, [id, isEdit]);
-
-  /* ---------------- SUBMIT ---------------- */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const payload = {
-      equipment_type: equipmentType,
-      manufacturer,
-      model_name: modelName,
-      description,
-      is_active: isActive,
-    };
-
-    try {
-      if (isEdit) {
-        await equipmentModelApi.update(id as string, payload);
-      } else {
-        await equipmentModelApi.create(payload);
-      }
+  const saveMutation = useMutation({
+    mutationFn: (payload: {
+      equipment_type: string;
+      manufacturer: string;
+      model_name: string;
+      description: string;
+      is_active: boolean;
+    }) =>
+      isEdit
+        ? equipmentModelApi.update(id as string, payload)
+        : equipmentModelApi.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: masterQueryKeys.equipmentModels,
+      });
 
       Swal.fire({
         icon: "success",
@@ -120,24 +210,42 @@ export default function EquipmentModelForm() {
       });
 
       navigate(ENC_LIST_PATH);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.model_name?.[0] ||
-        error?.response?.data?.equipment_type?.[0] ||
-        error?.response?.data?.detail ||
-        "Unable to save equipment model";
-
+    },
+    onError: (error) => {
       Swal.fire({
         icon: "error",
         title: "Save failed",
-        text: message,
+        text: extractErrorMessage(error),
       });
-    } finally {
-      setLoading(false);
+    },
+  });
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!equipmentType || !manufacturer.trim() || !modelName.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Missing fields",
+        text: "Please fill all required fields.",
+      });
+      return;
     }
+
+    saveMutation.mutate({
+      equipment_type: equipmentType,
+      manufacturer: manufacturer.trim(),
+      model_name: modelName.trim(),
+      description: description.trim(),
+      is_active: isActive,
+    });
   };
 
-  /* ---------------- UI ---------------- */
+  const equipmentTypes = equipmentTypesQuery.data ?? [];
+  const isSubmitting = saveMutation.isPending;
+  const isFetchingDetail = detailQuery.isFetching;
+  const isFormDisabled = isSubmitting || isFetchingDetail;
+
   return (
     <div className="p-8">
       <div className="mx-auto bg-white rounded-xl border shadow-sm">
@@ -147,31 +255,30 @@ export default function EquipmentModelForm() {
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6" noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Equipment Type */}
             <div>
               <Label>
                 Equipment Type <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={equipmentType || undefined}
-                onValueChange={(val) => setEquipmentType(val)}
+                onValueChange={(value) => setEquipmentType(value)}
+                disabled={equipmentTypesQuery.isFetching || isFormDisabled}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select equipment type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {equipmentTypes.map((et) => (
-                    <SelectItem key={et.unique_id} value={et.unique_id}>
-                      {et.name}
+                  {equipmentTypes.map((type) => (
+                    <SelectItem key={type.unique_id} value={type.unique_id}>
+                      {type.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Manufacturer */}
             <div>
               <Label>
                 Manufacturer <span className="text-red-500">*</span>
@@ -181,10 +288,10 @@ export default function EquipmentModelForm() {
                 required
                 placeholder="Enter manufacturer"
                 onChange={(e) => setManufacturer(e.target.value)}
+                disabled={isFormDisabled}
               />
             </div>
 
-            {/* Model Name */}
             <div>
               <Label>
                 Model Name <span className="text-red-500">*</span>
@@ -194,15 +301,16 @@ export default function EquipmentModelForm() {
                 required
                 placeholder="Enter model name"
                 onChange={(e) => setModelName(e.target.value)}
+                disabled={isFormDisabled}
               />
             </div>
 
-            {/* Active Status */}
             <div>
               <Label>Active Status</Label>
               <Select
                 value={isActive ? "true" : "false"}
-                onValueChange={(val) => setIsActive(val === "true")}
+                onValueChange={(value) => setIsActive(value === "true")}
+                disabled={isFormDisabled}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select status" />
@@ -214,7 +322,6 @@ export default function EquipmentModelForm() {
               </Select>
             </div>
 
-            {/* Description */}
             <div className="md:col-span-2">
               <Label>Description</Label>
               <textarea
@@ -222,15 +329,25 @@ export default function EquipmentModelForm() {
                 value={description}
                 placeholder="Optional description"
                 onChange={(e) => setDescription(e.target.value)}
+                disabled={isFormDisabled}
                 className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-200"
               />
             </div>
           </div>
 
-          {/* Buttons */}
           <div className="flex justify-end gap-3">
-            <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={loading}>
-              {loading ? "Saving..." : "Save"}
+            <Button
+              type="submit"
+              className="bg-green-600 hover:bg-green-700"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? isEdit
+                  ? "Updating..."
+                  : "Saving..."
+                : isEdit
+                ? "Update"
+                : "Save"}
             </Button>
 
             <Button

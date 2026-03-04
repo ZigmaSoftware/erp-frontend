@@ -28,6 +28,16 @@ export type PaginatedResponse<T> = {
   [key: string]: unknown;
 };
 
+const isPaginatedResponse = <T>(
+  value: unknown
+): value is PaginatedResponse<T> =>
+  Boolean(
+    value &&
+      typeof value === "object" &&
+      "results" in (value as Record<string, unknown>) &&
+      Array.isArray((value as { results?: unknown }).results)
+  );
+
 export type CrudHelpers<T = any> = {
   list: (config?: AxiosRequestConfig) => Promise<T[]>;
 
@@ -87,13 +97,45 @@ export const createCrudHelpers = <T = any>(
         config
       );
 
-      if (
-        data &&
-        typeof data === "object" &&
-        "results" in data &&
-        Array.isArray(data.results)
-      ) {
-        return data.results;
+      if (isPaginatedResponse<T>(data)) {
+        const mergedResults = [...data.results];
+        const totalCount =
+          typeof data.count === "number" ? data.count : mergedResults.length;
+        const pageSize =
+          mergedResults.length > 0 ? mergedResults.length : 20;
+        let offset = mergedResults.length;
+        let safetyCounter = 0;
+
+        while (offset < totalCount && safetyCounter < 500) {
+          const nextResponse = await api.get<T[] | PaginatedResponse<T>>(
+            resource,
+            {
+              ...config,
+              params: {
+                ...config?.params,
+                limit: pageSize,
+                offset,
+              },
+            }
+          );
+          const nextData = nextResponse.data;
+
+          if (isPaginatedResponse<T>(nextData)) {
+            if (!nextData.results.length) break;
+            mergedResults.push(...nextData.results);
+            offset += nextData.results.length;
+          } else if (Array.isArray(nextData)) {
+            if (!nextData.length) break;
+            mergedResults.push(...nextData);
+            offset += nextData.length;
+          } else {
+            break;
+          }
+
+          safetyCounter += 1;
+        }
+
+        return mergedResults;
       }
 
       return data as T[];

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -16,6 +17,7 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 import { vehicleSupplierApi } from "@/helpers/admin";
+import { masterQueryKeys } from "@/types/tanstack/masters";
 
 type VehicleSupplier = {
   unique_id: string;
@@ -28,56 +30,104 @@ type VehicleSupplier = {
   is_active: boolean;
 };
 
-export default function VehicleSupplierList() {
-  const [suppliers, setSuppliers] = useState<VehicleSupplier[]>([]);
-  const [loading, setLoading] = useState(true);
+type VehicleSupplierFilters = {
+  global: { value: string | null; matchMode: FilterMatchMode };
+  supplier_name: { value: string | null; matchMode: FilterMatchMode };
+};
 
+type RawVehicleSupplier = {
+  unique_id?: string | number;
+  id?: string | number;
+  supplier_name?: string;
+  proprietor_name?: string;
+  mobile_no?: string;
+  gst_type?: string;
+  transport_medium?: string;
+  image?: string;
+  is_active?: boolean | string | number | null;
+};
+
+const vehicleSupplierListQueryKey = [
+  ...masterQueryKeys.vehicleSuppliers,
+  "list",
+] as const;
+
+const toBoolean = (value: RawVehicleSupplier["is_active"]): boolean => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "active"].includes(value.toLowerCase());
+  }
+  return false;
+};
+
+const normalizeSupplier = (item: RawVehicleSupplier): VehicleSupplier | null => {
+  const id = item.unique_id ?? item.id;
+  if (id == null) return null;
+
+  return {
+    unique_id: String(id),
+    supplier_name: item.supplier_name ?? "",
+    proprietor_name: item.proprietor_name ?? "",
+    mobile_no: item.mobile_no ?? "",
+    gst_type: item.gst_type ?? "",
+    transport_medium: item.transport_medium ?? "",
+    image: item.image ?? "",
+    is_active: toBoolean(item.is_active),
+  };
+};
+
+export default function VehicleSupplierList() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<VehicleSupplierFilters>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     supplier_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { encEmMasters, encVehicleSupplier } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encEmMasters}/${encVehicleSupplier}/new`;
   const ENC_EDIT_PATH = (id: string) =>
     `/${encEmMasters}/${encVehicleSupplier}/${id}/edit`;
 
-  const normalizeSupplier = (item: any): VehicleSupplier => ({
-    unique_id: String(item?.unique_id ?? item?.id ?? ""),
-    supplier_name: item?.supplier_name ?? "",
-    proprietor_name: item?.proprietor_name ?? "",
-    mobile_no: item?.mobile_no ?? "",
-    gst_type: item?.gst_type ?? "",
-    transport_medium: item?.transport_medium ?? "",
-    image: item?.image ?? "",
-    is_active: Boolean(item?.is_active),
+  const query = useQuery({
+    queryKey: vehicleSupplierListQueryKey,
+    queryFn: async (): Promise<VehicleSupplier[]> => {
+      const response = await vehicleSupplierApi.list();
+      return response
+        .map((item) => normalizeSupplier(item as RawVehicleSupplier))
+        .filter((item): item is VehicleSupplier => item !== null);
+    },
   });
 
-  const fetchSuppliers = async () => {
-    setLoading(true);
-    try {
-      const res = await vehicleSupplierApi.list();
-      console.log(res);
-      const raw = Array.isArray(res)
-        ? res
-        : Array.isArray(res)
-        ? res
-        : res??[];
+  const statusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      vehicleSupplierApi.update(id, { is_active }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterQueryKeys.vehicleSuppliers });
+    },
+    onError: () => {
+      Swal.fire("Error", "Status update failed", "error");
+    },
+  });
 
-      setSuppliers(
-        raw.map(normalizeSupplier).filter((i) => i.unique_id)
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => vehicleSupplierApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterQueryKeys.vehicleSuppliers });
+      Swal.fire({
+        icon: "success",
+        title: "Deleted successfully!",
+        timer: 1200,
+        showConfirmButton: false,
+      });
+    },
+    onError: () => {
+      Swal.fire("Error", "Delete failed", "error");
+    },
+  });
 
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
@@ -90,29 +140,21 @@ export default function VehicleSupplierList() {
     });
 
     if (!confirm.isConfirmed) return;
-
-    await vehicleSupplierApi.remove(id);
-
-    Swal.fire({
-      icon: "success",
-      title: "Deleted successfully!",
-      timer: 1200,
-      showConfirmButton: false,
-    });
-
-    fetchSuppliers();
+    await deleteMutation.mutateAsync(id);
   };
 
-  const statusTemplate = (row: VehicleSupplier) => {
-    const updateStatus = async (value: boolean) => {
-      await vehicleSupplierApi.update(row.unique_id, {
-        is_active: value,
-      });
-      fetchSuppliers();
-    };
-
-    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
-  };
+  const statusTemplate = (row: VehicleSupplier) => (
+    <Switch
+      checked={row.is_active}
+      onCheckedChange={(checked) =>
+        statusMutation.mutate({
+          id: row.unique_id,
+          is_active: checked,
+        })
+      }
+      disabled={statusMutation.isPending || deleteMutation.isPending}
+    />
+  );
 
   const actionTemplate = (row: VehicleSupplier) => (
     <div className="flex gap-2 justify-center">
@@ -125,11 +167,17 @@ export default function VehicleSupplierList() {
     </div>
   );
 
-  const onGlobalFilterChange = (e: any) => {
+  const onGlobalFilterChange = (e: { target: { value: string } }) => {
     const value = e.target.value;
-    setFilters({ ...filters, global: { value, matchMode: FilterMatchMode.CONTAINS } });
+    setFilters((prev) => ({
+      ...prev,
+      global: { value, matchMode: FilterMatchMode.CONTAINS },
+    }));
     setGlobalFilterValue(value);
   };
+
+  const suppliers = query.data ?? [];
+  const loading = query.isLoading || query.isFetching;
 
   const header = (
     <div className="flex justify-end">
