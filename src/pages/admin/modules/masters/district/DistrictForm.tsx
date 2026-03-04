@@ -31,6 +31,11 @@ import {
   useStatesSelectOptions,
 } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import {
+  includeSelectedOption,
+  isOptionActive,
+  normalizeNullable,
+} from "@/utils/formHelpers";
 
 import {
   districtSchema,
@@ -40,22 +45,6 @@ import {
 const encMasters = encryptSegment("masters");
 const encDistricts = encryptSegment("districts");
 const ENC_LIST_PATH = `/${encMasters}/${encDistricts}`;
-
-const normalize = (value: any): string => (value ? String(value) : "");
-
-const includeSelectedOption = <Option extends { value: string }>(
-  base: Option[],
-  options: Option[],
-  selectedId: string
-): Option[] => {
-  if (!selectedId) return base;
-  if (base.some((option) => option.value === selectedId)) return base;
-  const selected = options.find((option) => option.value === selectedId);
-  return selected ? [...base, selected] : base;
-};
-
-const isOptionActive = (option: { isActive?: boolean }) =>
-  option.isActive !== false;
 
 function DistrictForm() {
   const navigate = useNavigate();
@@ -153,9 +142,9 @@ function DistrictForm() {
     const data = detailQuery.data;
 
     setValue("name", data.name ?? "");
-    setValue("continent_id", normalize(data.continent_id));
-    setValue("country_id", normalize(data.country_id));
-    setValue("state_id", normalize(data.state_id));
+    setValue("continent_id", normalizeNullable(data.continent_id));
+    setValue("country_id", normalizeNullable(data.country_id));
+    setValue("state_id", normalizeNullable(data.state_id));
     setValue("is_active", Boolean(data.is_active));
     setEditPopulated(true);
   }, [detailQuery.data, queriesReady, setValue]);

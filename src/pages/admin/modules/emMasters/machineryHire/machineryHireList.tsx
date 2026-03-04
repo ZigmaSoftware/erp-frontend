@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -12,10 +13,13 @@ import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
-import { PencilIcon, TrashBinIcon } from "@/icons";
+import { PencilIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 import { machineryHireApi } from "@/helpers/admin";
+import { masterQueryKeys } from "@/types/tanstack/masters";
+import type { MachineryHireRecord } from "@/types/tanstack/masters";
+import { useMachineryHiresQuery } from "@/tanstack/admin";
 
 export type VehicleRecord = {
   id: number;
@@ -43,9 +47,65 @@ export type VehicleRecord = {
   is_deleted: boolean;
 };
 
+const toBoolean = (
+  value: boolean | string | number | null | undefined
+): boolean => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "active"].includes(value.toLowerCase());
+  }
+  return false;
+};
+
+const toStringValue = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : trimmed;
+  }
+  if (typeof value === "number" && !Number.isNaN(value)) {
+    return String(value);
+  }
+  return undefined;
+};
+
+const pickFirstString = (...values: unknown[]): string => {
+  for (const value of values) {
+    const candidate = toStringValue(value);
+    if (candidate !== undefined) return candidate;
+  }
+  return "";
+};
+
+const normalizeMachineryHireRecord = (
+  item: MachineryHireRecord
+): VehicleRecord | null => {
+  const uniqueId = pickFirstString(item.unique_id, (item as Record<string, unknown>)["id"]);
+  if (!uniqueId) return null;
+
+  const numericId = Number((item as Record<string, unknown>)["id"] ?? item.unique_id);
+
+  return {
+    id: Number.isNaN(numericId) ? 0 : numericId,
+    unique_id: uniqueId,
+    site_id: pickFirstString(item.site_id),
+    site_name: pickFirstString(item.site_name),
+    equipment_type_id: pickFirstString(item.equipment_type_id),
+    equipment_type_name: pickFirstString(item.equipment_type_name),
+    equipment_model_id: pickFirstString(item.equipment_model_id),
+    equipment_model_name: pickFirstString(item.equipment_model_name),
+    vehicle_id: pickFirstString(item.vehicle_id),
+    vehicle_code: pickFirstString(item.vehicle_code),
+    date: pickFirstString(item.date),
+    diesel_status: pickFirstString(item.diesel_status),
+    hire_rate: pickFirstString(item.hire_rate),
+    unit: pickFirstString(item.unit),
+    is_active: toBoolean(item.is_active),
+    is_deleted: toBoolean(item.is_deleted),
+  };
+};
+
 export default function MachineryHireList() {
-  const [records, setRecords] = useState<VehicleRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -57,27 +117,20 @@ export default function MachineryHireList() {
   const ENC_NEW_PATH = `/${encEmMasters}/${encMachineryHire}/new`;
   const ENC_EDIT_PATH = (id: string) =>
     `/${encEmMasters}/${encMachineryHire}/${id}/edit`;
+  const queryClient = useQueryClient();
+  const query = useMachineryHiresQuery();
 
-  const fetchRecords = async () => {
-    setLoading(true);
-    try {
-      const res = await machineryHireApi.list();
-      console.log(res);
-      const raw = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : (Array.isArray((res as any)?.data?.results) ? (res as any).data.results : []));
-      console.log("raw", raw);
+  const normalizedRecords = (query.data ?? [])
+    .map(normalizeMachineryHireRecord)
+    .filter((item): item is VehicleRecord => Boolean(item && item.unique_id));
 
-      setRecords(raw.filter((item: VehicleRecord) => item.unique_id));
-    } catch (error) {
-      console.error(error);
-      Swal.fire("Error", "Failed to load machinery hire records", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = query.isLoading || query.isFetching || query.isRefetching;
 
   useEffect(() => {
-    fetchRecords();
-  }, []);
+    if (!query.error) return;
+
+    Swal.fire("Error", "Failed to load machinery hire records", "error");
+  }, [query.error]);
 
   const handleDelete = async (unique_id: string) => {
     const confirm = await Swal.fire({
@@ -99,7 +152,7 @@ export default function MachineryHireList() {
       showConfirmButton: false,
     });
 
-    fetchRecords();
+    queryClient.invalidateQueries({ queryKey: masterQueryKeys.machineryHires });
   };
 
   const onGlobalFilterChange = (e: any) => {
@@ -119,12 +172,10 @@ export default function MachineryHireList() {
         is_active: value,
       });
 
-      fetchRecords();
+      queryClient.invalidateQueries({ queryKey: masterQueryKeys.machineryHires });
     };
 
-    return (
-      <Switch checked={row.is_active} onCheckedChange={updateStatus} />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   const actionTemplate = (row: VehicleRecord) => (
@@ -173,7 +224,7 @@ export default function MachineryHireList() {
       </div>
 
       <DataTable
-        value={records}
+        value={normalizedRecords}
         paginator
         rows={10}
         loading={loading}

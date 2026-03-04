@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -8,10 +9,27 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 
-import { PencilIcon, TrashBinIcon } from "@/icons";
+import { PencilIcon } from "@/icons";
 import { Switch } from "@/components/ui/switch";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { equipmentModelApi } from "@/helpers/admin";
+import { masterQueryKeys } from "@/types/tanstack/masters";
+import { useEquipmentModelsQuery } from "@/tanstack/admin";
+
+type RawEquipmentTypeRef = {
+  name?: string;
+};
+
+type RawEquipmentModel = {
+  unique_id?: string | number;
+  id?: string | number;
+  equipment_type_name?: string;
+  equipment_type?: string | number | RawEquipmentTypeRef | null;
+  manufacturer?: string;
+  model_name?: string;
+  description?: string;
+  is_active?: boolean | string | number | null;
+};
 
 type EquipmentModel = {
   unique_id: string;
@@ -22,50 +40,97 @@ type EquipmentModel = {
   is_active: boolean;
 };
 
-export default function EquipmentModelList() {
-  const [models, setModels] = useState<EquipmentModel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
+type EquipmentModelFilters = {
+  global: { value: string | null; matchMode: FilterMatchMode };
+  model_name: { value: string | null; matchMode: FilterMatchMode };
+};
 
-  const [filters, setFilters] = useState({
+const equipmentModelListQueryKey = [
+  ...masterQueryKeys.equipmentModels,
+  "list",
+] as const;
+
+const toBoolean = (value: RawEquipmentModel["is_active"]): boolean => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "active"].includes(value.toLowerCase());
+  }
+  return false;
+};
+
+const normalizeEquipmentModel = (
+  item: RawEquipmentModel
+): EquipmentModel | null => {
+  const id = item.unique_id ?? item.id;
+  if (id == null) return null;
+
+  const equipmentType =
+    item.equipment_type_name ??
+    (typeof item.equipment_type === "object" && item.equipment_type
+      ? item.equipment_type.name ?? ""
+      : "");
+
+  return {
+    unique_id: String(id),
+    equipment_type: equipmentType,
+    manufacturer: item.manufacturer ?? "",
+    model_name: item.model_name ?? "",
+    description: item.description ?? "",
+    is_active: toBoolean(item.is_active),
+  };
+};
+
+export default function EquipmentModelList() {
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
+  const [filters, setFilters] = useState<EquipmentModelFilters>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     model_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { encEmMasters, encEquipmentModel } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encEmMasters}/${encEquipmentModel}/new`;
   const ENC_EDIT_PATH = (id: string) =>
     `/${encEmMasters}/${encEquipmentModel}/${id}/edit`;
 
-  const fetchModels = async () => {
-    setLoading(true);
-    try {
-      const res = await equipmentModelApi.list();
-      const raw = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : (Array.isArray((res as any)?.data?.results) ? (res as any).data.results : []));
-      console.log("raw", raw);
-      setModels(
-        raw.map((item: any) => ({
-          unique_id: item.unique_id,
-          equipment_type: item?.equipment_type_name ?? item?.equipment_type?.name ?? "",
-          manufacturer: item.manufacturer,
-          model_name: item.model_name,
-          description: item.description,
-          is_active: Boolean(item.is_active),
-        }))
-      
-      );
-      
-    } finally {
-      setLoading(false);
-    }
-  };
-    console.log("models", models);
+  const query = useEquipmentModelsQuery();
+  const normalizedModels = (query.data ?? [])
+    .map((item) => normalizeEquipmentModel(item as RawEquipmentModel))
+    .filter((item): item is EquipmentModel => item !== null);
 
-  useEffect(() => {
-    fetchModels();
-  }, []);
+  const statusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      equipmentModelApi.update(id, { is_active }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: masterQueryKeys.equipmentModels,
+      });
+    },
+    onError: () => {
+      Swal.fire("Error", "Status update failed", "error");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => equipmentModelApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: masterQueryKeys.equipmentModels,
+      });
+      Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        timer: 1200,
+        showConfirmButton: false,
+      });
+    },
+    onError: () => {
+      Swal.fire("Error", "Delete failed", "error");
+    },
+  });
 
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
@@ -77,29 +142,21 @@ export default function EquipmentModelList() {
     });
 
     if (!confirm.isConfirmed) return;
-
-    await equipmentModelApi.remove(id);
-
-    Swal.fire({
-      icon: "success",
-      title: "Deleted!",
-      timer: 1200,
-      showConfirmButton: false,
-    });
-
-    fetchModels();
+    await deleteMutation.mutateAsync(id);
   };
 
-  const statusTemplate = (row: EquipmentModel) => {
-    const toggleStatus = async (value: boolean) => {
-      await equipmentModelApi.update(row.unique_id, {
-        is_active: value,
-      });
-      fetchModels();
-    };
-
-    return <Switch checked={row.is_active} onCheckedChange={toggleStatus} />;
-  };
+  const statusTemplate = (row: EquipmentModel) => (
+    <Switch
+      checked={row.is_active}
+      onCheckedChange={(checked) =>
+        statusMutation.mutate({
+          id: row.unique_id,
+          is_active: checked,
+        })
+      }
+      disabled={statusMutation.isPending || deleteMutation.isPending}
+    />
+  );
 
   const actionTemplate = (row: EquipmentModel) => (
     <div className="flex gap-2 justify-center">
@@ -112,13 +169,17 @@ export default function EquipmentModelList() {
     </div>
   );
 
-  const onGlobalFilterChange = (e: any) => {
-    setGlobalFilterValue(e.target.value);
-    setFilters({
-      ...filters,
-      global: { value: e.target.value, matchMode: FilterMatchMode.CONTAINS },
-    });
+  const onGlobalFilterChange = (e: { target: { value: string } }) => {
+    const value = e.target.value;
+    setGlobalFilterValue(value);
+    setFilters((prev) => ({
+      ...prev,
+      global: { value, matchMode: FilterMatchMode.CONTAINS },
+    }));
   };
+
+  const models = normalizedModels;
+  const loading = query.isLoading || query.isFetching;
 
   return (
     <div className="px-3 py-3">
@@ -142,11 +203,7 @@ export default function EquipmentModelList() {
         paginator
         rows={10}
         filters={filters}
-        globalFilterFields={[
-          "model_name",
-          "manufacturer",
-          "equipment_type",
-        ]}
+        globalFilterFields={["model_name", "manufacturer", "equipment_type"]}
         header={
           <div className="flex justify-end">
             <InputText

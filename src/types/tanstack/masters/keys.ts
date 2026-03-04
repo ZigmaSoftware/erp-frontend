@@ -6,4 +6,12 @@ export const masterQueryKeys = {
   cities: ["masters", "cities"] as const,
   sites: ["masters", "sites"] as const,
   plants: ["masters", "plants"] as const,
+  users: ["admin", "users"] as const,
+  equipmentTypes: ["em-masters", "equipment-types"] as const,
+  equipmentModels: ["em-masters", "equipment-models"] as const,
+  contractors: ["em-masters", "contractors"] as const,
+  vehicleSuppliers: ["em-masters", "vehicle-suppliers"] as const,
+  vehicleRequests: ["em-masters", "vehicle-requests"] as const,
+  vehicleCreations: ["em-masters", "vehicle-creations"] as const,
+  machineryHires: ["em-masters", "machinery-hires"] as const,
 } as const;

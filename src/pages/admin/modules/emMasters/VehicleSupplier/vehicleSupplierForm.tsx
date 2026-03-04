@@ -1,6 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +20,12 @@ import {
 } from "@/components/ui/select";
 import { vehicleSupplierApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { masterQueryKeys } from "@/types/tanstack/masters";
+import { vehicleSupplierSchema } from "@/validations/emMasters/vehicle-supplier.schema";
+import { extractErrorMessage } from "@/utils/errorUtils";
+import { toBoolean } from "@/utils/formHelpers";
+import type { VehicleSupplierDetail } from "@/types/emMasters/forms";
 
-/* =======================
-   DROPDOWN OPTIONS
-======================= */
 const GST_TYPE_OPTIONS = [
   { label: "Yes", value: "yes" },
   { label: "No", value: "no" },
@@ -30,20 +38,18 @@ const TRANSPORT_TYPE_OPTIONS = [
   { label: "Others", value: "others" },
 ];
 
-/* =======================
-   ROUTES
-======================= */
 const { encEmMasters, encVehicleSupplier } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encEmMasters}/${encVehicleSupplier}`;
 
+const vehicleSupplierDetailQueryKey = (id: string | undefined) =>
+  [...masterQueryKeys.vehicleSuppliers, "detail", id ?? "new"] as const;
+
 export default function VehicleSupplierForm() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = useParams();
   const isEdit = Boolean(id);
 
-  /* =======================
-     STATE
-  ======================= */
   const [supplierName, setSupplierName] = useState("");
   const [proprietorName, setProprietorName] = useState("");
   const [mobileNo, setMobileNo] = useState("");
@@ -57,110 +63,109 @@ export default function VehicleSupplierForm() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [existingImage, setExistingImage] = useState("");
   const [isActive, setIsActive] = useState(true);
-  const [loading, setLoading] = useState(false);
 
-  /* =======================
-     LOAD DATA FOR EDIT
-  ======================== */
+  const detailQuery = useQuery({
+    queryKey: vehicleSupplierDetailQueryKey(id),
+    queryFn: () => vehicleSupplierApi.get(id as string),
+    enabled: isEdit,
+  });
+
   useEffect(() => {
-    if (!isEdit) return;
+    if (!detailQuery.data) return;
 
-    const loadData = async () => {
-      try {
-        const res = await vehicleSupplierApi.get(id as string);
-        const data = (res as any)?.data ?? res;
+    const data = detailQuery.data as VehicleSupplierDetail;
+    setSupplierName(data.supplier_name ?? "");
+    setProprietorName(data.proprietor_name ?? "");
+    setMobileNo(data.mobile_no ?? "");
+    setEmail(data.email ?? "");
+    setGstType(data.gst_type ?? "");
+    setGstNo(data.gst_no ?? "");
+    setPanNo(data.pan_no ?? "");
+    setTransportMedium(data.transport_medium ?? "");
+    setAddress(data.address ?? "");
+    setBankDetails(data.bank_details ?? "");
+    setExistingImage(data.image ?? "");
+    setIsActive(toBoolean(data.is_active));
+  }, [detailQuery.data]);
 
-        setSupplierName(data?.supplier_name ?? "");
-        setProprietorName(data?.proprietor_name ?? "");
-        setMobileNo(data?.mobile_no ?? "");
-        setEmail(data?.email ?? "");
-        setGstType(data?.gst_type ?? "");
-        setGstNo(data?.gst_no ?? "");
-        setPanNo(data?.pan_no ?? "");
-        setTransportMedium(data?.transport_medium ?? "");
-        setAddress(data?.address ?? "");
-        setBankDetails(data?.bank_details ?? "");
-        setExistingImage(data?.image ?? "");
-        setIsActive(Boolean(data?.is_active));
-      } catch (err) {
-        Swal.fire("Error", "Failed to load vehicle supplier", "error");
-      }
-    };
+  useEffect(() => {
+    if (!detailQuery.error) return;
+    Swal.fire("Error", "Failed to load vehicle supplier", "error");
+  }, [detailQuery.error]);
 
-    loadData();
-  }, [id, isEdit]);
-
-  /* =======================
-     HANDLE SUBMIT
-  ======================== */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Basic validation
-    if (!supplierName || !proprietorName || !mobileNo || !address) {
+  const saveMutation = useMutation({
+    mutationFn: (payload: FormData) =>
+      isEdit
+        ? vehicleSupplierApi.uploadUpdate(id as string, payload)
+        : vehicleSupplierApi.upload(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterQueryKeys.vehicleSuppliers });
       Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "Please fill all required fields before submitting.",
+        icon: "success",
+        title: isEdit ? "Updated successfully!" : "Added successfully!",
+        timer: 1500,
+        showConfirmButton: false,
       });
-      return;
-    }
-
-    setLoading(true);
-    const payload = new FormData();
-    payload.append("supplier_name", supplierName);
-    payload.append("proprietor_name", proprietorName);
-    payload.append("mobile_no", mobileNo);
-    payload.append("email", email);
-    payload.append("gst_type", gstType);
-    payload.append("gst_no", gstNo);
-    payload.append("pan_no", panNo);
-    payload.append("transport_medium", transportMedium);
-    payload.append("address", address);
-    payload.append("bank_details", bankDetails);
-    payload.append("is_active", String(isActive));
-
-    if (imageFile) payload.append("image", imageFile);
-
-    try {
-      if (isEdit) {
-        await vehicleSupplierApi.uploadUpdate(id as string, payload);
-        Swal.fire({
-          icon: "success",
-          title: "Updated successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        await vehicleSupplierApi.upload(payload);
-        Swal.fire({
-          icon: "success",
-          title: "Added successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      }
-
       navigate(ENC_LIST_PATH);
-    } catch (err: any) {
+    },
+    onError: (error) => {
       Swal.fire({
         icon: "error",
         title: "Save failed",
-        text: err?.response?.data?.detail ?? "Something went wrong",
+        text: extractErrorMessage(error),
       });
-    } finally {
-      setLoading(false);
+    },
+  });
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const normalizedGstType = gstType || "no";
+
+    const validation = vehicleSupplierSchema.safeParse({
+      supplier_name: supplierName.trim(),
+      proprietor_name: proprietorName.trim(),
+      mobile_no: mobileNo.trim(),
+      email: email.trim(),
+      gst_type: normalizedGstType,
+      gst_no: gstNo.trim(),
+      pan_no: panNo.trim(),
+      transport_medium: transportMedium,
+      address: address.trim(),
+      bank_details: bankDetails.trim(),
+      is_active: isActive,
+    });
+
+    if (!validation.success) {
+      Swal.fire("Validation error", validation.error.issues[0]?.message ?? "Please review the form.", "error");
+      return;
     }
+
+    const payload = new FormData();
+    payload.append("supplier_name", validation.data.supplier_name);
+    payload.append("proprietor_name", validation.data.proprietor_name);
+    payload.append("mobile_no", validation.data.mobile_no);
+    payload.append("email", validation.data.email);
+    payload.append("gst_type", validation.data.gst_type);
+    payload.append("gst_no", validation.data.gst_type === "yes" ? validation.data.gst_no : "");
+    payload.append("pan_no", validation.data.pan_no);
+    payload.append("transport_medium", validation.data.transport_medium);
+    payload.append("address", validation.data.address);
+    payload.append("bank_details", validation.data.bank_details);
+    payload.append("is_active", String(validation.data.is_active));
+
+    if (imageFile) payload.append("image", imageFile);
+
+    saveMutation.mutate(payload);
   };
 
-  /* =======================
-     RENDER FORM
-  ======================== */
+  const isSubmitting = saveMutation.isPending;
+  const isFormDisabled = isSubmitting || detailQuery.isFetching;
+
   return (
     <ComponentCard title={isEdit ? "Edit Vehicle Supplier" : "Add Vehicle Supplier"}>
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Supplier Name */}
           <div>
             <Label htmlFor="supplierName">Supplier Name <span className="text-red-500">*</span></Label>
             <Input
@@ -168,10 +173,10 @@ export default function VehicleSupplierForm() {
               value={supplierName}
               onChange={(e) => setSupplierName(e.target.value)}
               required
+              disabled={isFormDisabled}
             />
           </div>
 
-          {/* Proprietor Name */}
           <div>
             <Label htmlFor="proprietorName">Proprietor Name <span className="text-red-500">*</span></Label>
             <Input
@@ -179,10 +184,10 @@ export default function VehicleSupplierForm() {
               value={proprietorName}
               onChange={(e) => setProprietorName(e.target.value)}
               required
+              disabled={isFormDisabled}
             />
           </div>
 
-          {/* Mobile No */}
           <div>
             <Label htmlFor="mobileNo">Mobile No <span className="text-red-500">*</span></Label>
             <Input
@@ -190,10 +195,10 @@ export default function VehicleSupplierForm() {
               value={mobileNo}
               onChange={(e) => setMobileNo(e.target.value)}
               required
+              disabled={isFormDisabled}
             />
           </div>
 
-          {/* Email */}
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
@@ -201,13 +206,13 @@ export default function VehicleSupplierForm() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isFormDisabled}
             />
           </div>
 
-          {/* GST Type */}
           <div>
             <Label htmlFor="gstType">GST Type</Label>
-            <Select value={gstType} onValueChange={setGstType}>
+            <Select value={gstType} onValueChange={setGstType} disabled={isFormDisabled}>
               <SelectTrigger id="gstType" className="w-full">
                 <SelectValue placeholder="Select GST Type" />
               </SelectTrigger>
@@ -221,22 +226,33 @@ export default function VehicleSupplierForm() {
             </Select>
           </div>
 
-          {/* GST No */}
           <div>
             <Label htmlFor="gstNo">GST No</Label>
-            <Input id="gstNo" value={gstNo} onChange={(e) => setGstNo(e.target.value)} />
+            <Input
+              id="gstNo"
+              value={gstNo}
+              onChange={(e) => setGstNo(e.target.value)}
+              disabled={isFormDisabled}
+            />
           </div>
 
-          {/* PAN No */}
           <div>
             <Label htmlFor="panNo">PAN No</Label>
-            <Input id="panNo" value={panNo} onChange={(e) => setPanNo(e.target.value)} />
+            <Input
+              id="panNo"
+              value={panNo}
+              onChange={(e) => setPanNo(e.target.value)}
+              disabled={isFormDisabled}
+            />
           </div>
 
-          {/* Transport Medium */}
           <div>
             <Label htmlFor="transportMedium">Transport Medium</Label>
-            <Select value={transportMedium} onValueChange={setTransportMedium}>
+            <Select
+              value={transportMedium}
+              onValueChange={setTransportMedium}
+              disabled={isFormDisabled}
+            >
               <SelectTrigger id="transportMedium" className="w-full">
                 <SelectValue placeholder="Select Transport Medium" />
               </SelectTrigger>
@@ -250,7 +266,6 @@ export default function VehicleSupplierForm() {
             </Select>
           </div>
 
-          {/* Address */}
           <div className="md:col-span-2">
             <Label htmlFor="address">Address <span className="text-red-500">*</span></Label>
             <textarea
@@ -260,10 +275,10 @@ export default function VehicleSupplierForm() {
               onChange={(e) => setAddress(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border rounded-sm"
+              disabled={isFormDisabled}
             />
           </div>
 
-          {/* Bank Details */}
           <div className="md:col-span-2">
             <Label htmlFor="bankDetails">Bank Details</Label>
             <textarea
@@ -272,22 +287,22 @@ export default function VehicleSupplierForm() {
               onChange={(e) => setBankDetails(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border rounded-sm"
+              disabled={isFormDisabled}
             />
           </div>
 
-          {/* Image Upload */}
           <div className="md:col-span-2">
             <Label htmlFor="imageFile">Image</Label>
 
             <div className="border-2 w-64 rounded-lg">
-                  <input
-                    id="imageFile"
-                    type="file"
-                    accept="image/*"
-                    className="ml-5"
-                    onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-                  />
-
+              <input
+                id="imageFile"
+                type="file"
+                accept="image/*"
+                className="ml-5"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                disabled={isFormDisabled}
+              />
             </div>
 
             {(existingImage || imageFile) && (
@@ -298,10 +313,13 @@ export default function VehicleSupplierForm() {
             )}
           </div>
 
-          {/* Status */}
           <div>
             <Label htmlFor="status">Status</Label>
-            <Select value={isActive ? "true" : "false"} onValueChange={(val) => setIsActive(val === "true")}>
+            <Select
+              value={isActive ? "true" : "false"}
+              onValueChange={(val) => setIsActive(val === "true")}
+              disabled={isFormDisabled}
+            >
               <SelectTrigger id="status" className="w-full">
                 <SelectValue placeholder="Select Status" />
               </SelectTrigger>
@@ -313,10 +331,9 @@ export default function VehicleSupplierForm() {
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="flex justify-end gap-3">
-          <Button type="submit" disabled={loading}>
-            {loading ? (isEdit ? "Updating..." : "Saving...") : (isEdit ? "Update" : "Save")}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (isEdit ? "Updating..." : "Saving...") : (isEdit ? "Update" : "Save")}
           </Button>
           <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
             Cancel
