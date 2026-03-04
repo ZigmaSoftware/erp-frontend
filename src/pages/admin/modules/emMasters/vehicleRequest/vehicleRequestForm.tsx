@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
@@ -15,8 +20,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TrashBinIcon } from "@/icons";
-import { equipmentModelApi, siteApi, userCreationApi, vehicleRequestApi } from "@/helpers/admin";
+import {
+  equipmentModelApi,
+  siteApi,
+  userCreationApi,
+  vehicleRequestApi,
+} from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { masterQueryKeys } from "@/types/tanstack/masters";
 
 type SelectOption = {
   value: string;
@@ -31,6 +42,12 @@ type ItemRow = {
   purpose?: string;
 };
 
+type LookupsPayload = {
+  equipmentModels: SelectOption[];
+  siteOptions: SelectOption[];
+  staffOptions: SelectOption[];
+};
+
 const STATUS_OPTIONS: SelectOption[] = [
   { value: "draft", label: "Draft" },
   { value: "requested", label: "Requested" },
@@ -39,11 +56,24 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: "rejected", label: "Rejected" },
 ];
 
+const UNIT_OPTIONS: SelectOption[] = [
+  { value: "nos", label: "nos" },
+  { value: "hrs", label: "hrs" },
+  { value: "days", label: "days" },
+];
+
+const vehicleRequestLookupsQueryKey = [
+  ...masterQueryKeys.vehicleRequests,
+  "lookups",
+] as const;
+
+const vehicleRequestDetailQueryKey = (id: string | undefined) =>
+  [...masterQueryKeys.vehicleRequests, "detail", id ?? "new"] as const;
+
 const createRowId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
-
   return `item-${Date.now()}-${Math.round(Math.random() * 1_000_000)}`;
 };
 
@@ -62,28 +92,20 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined =>
     : undefined;
 
 const toStringValue = (value: unknown): string | undefined => {
-  if (typeof value === "string" && value.trim() !== "") {
-    return value;
-  }
-  if (typeof value === "number" && !Number.isNaN(value)) {
-    return String(value);
-  }
+  if (typeof value === "string" && value.trim() !== "") return value;
+  if (typeof value === "number" && !Number.isNaN(value)) return String(value);
   return undefined;
 };
 
 const pickFirstString = (...values: unknown[]): string => {
   for (const value of values) {
     const normalized = toStringValue(value);
-    if (normalized !== undefined) {
-      return normalized;
-    }
+    if (normalized !== undefined) return normalized;
   }
   return "";
 };
 
-const asArray = (value: unknown): unknown[] => {
-  return Array.isArray(value) ? value : [];
-};
+const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (typeof error === "object" && error !== null) {
@@ -91,9 +113,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
     const response = asRecord(errorRecord["response"]);
     const data = asRecord(response?.["data"]);
     const detailMessage = pickFirstString(data?.["detail"], data?.["message"]);
-    if (detailMessage) {
-      return detailMessage;
-    }
+    if (detailMessage) return detailMessage;
   }
   return fallback;
 };
@@ -108,14 +128,9 @@ const normalizeItemRow = (item: Record<string, unknown>): ItemRow => {
     modelRecord?.["id"]
   );
 
-  const qtyValue =
-    item["qty"] ??
-    item["quantity"] ??
-    item["qty_requested"];
+  const qtyValue = item["qty"] ?? item["quantity"] ?? item["qty_requested"];
   const qty =
-    typeof qtyValue === "number"
-      ? String(qtyValue)
-      : toStringValue(qtyValue) ?? "";
+    typeof qtyValue === "number" ? String(qtyValue) : toStringValue(qtyValue) ?? "";
 
   return {
     id: pickFirstString(item["unique_id"], item["id"]) || createRowId(),
@@ -130,8 +145,8 @@ const toSelectOptions = (
   list: unknown[],
   getId: (item: Record<string, unknown>) => string,
   getLabel: (item: Record<string, unknown>) => string
-): SelectOption[] => {
-  return list
+): SelectOption[] =>
+  list
     .map(asRecord)
     .filter((item): item is Record<string, unknown> => Boolean(item))
     .map((item) => {
@@ -140,14 +155,11 @@ const toSelectOptions = (
       if (!value || !label) return null;
       return { value, label };
     })
-    .filter(Boolean) as SelectOption[];
-};
+    .filter((item): item is SelectOption => Boolean(item));
 
 const resolveModelLabel = (model: Record<string, unknown>) => {
   const name = pickFirstString(model["model_name"], model["name"]);
-  if (name) {
-    return name;
-  }
+  if (name) return name;
 
   const fallback = `${pickFirstString(model["manufacturer"])} ${pickFirstString(
     model["model_name"],
@@ -164,21 +176,13 @@ const resolveStaffLabel = (staff: Record<string, unknown>) => {
   const firstName = pickFirstString(staff["first_name"]);
   const lastName = pickFirstString(staff["last_name"]);
 
-  if (firstName || lastName) {
-    return `${firstName} ${lastName}`.trim();
-  }
-
+  if (firstName || lastName) return `${firstName} ${lastName}`.trim();
   return pickFirstString(staff["username"], staff["email"]);
 };
 
-const UNIT_OPTIONS: SelectOption[] = [
-  { value: "nos", label: "nos" },
-  { value: "hrs", label: "hrs" },
-  { value: "days", label: "days" },
-];
-
 export default function VehicleRequestForm() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
 
@@ -191,135 +195,131 @@ export default function VehicleRequestForm() {
   const [requestStatus, setRequestStatus] = useState(STATUS_OPTIONS[0].value);
   const [items, setItems] = useState<ItemRow[]>([createItemRow()]);
 
-  const [equipmentModels, setEquipmentModels] = useState<SelectOption[]>([]);
-  const [siteOptions, setSiteOptions] = useState<SelectOption[]>([]);
-  const [staffOptions, setStaffOptions] = useState<SelectOption[]>([]);
-
-  const [lookupLoading, setLookupLoading] = useState(true);
-  const [recordLoading, setRecordLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const isBusy = lookupLoading || (isEdit && recordLoading);
-
-  const loadLookups = useCallback(async () => {
-    setLookupLoading(true);
-    try {
-      const [models, sites, users] = (await Promise.all([
+  const lookupsQuery = useQuery({
+    queryKey: vehicleRequestLookupsQueryKey,
+    queryFn: async (): Promise<LookupsPayload> => {
+      const [models, sites, users] = await Promise.all([
         equipmentModelApi.list(),
-
         siteApi.list(),
         userCreationApi.list(),
-      ])) as [unknown[], unknown[], unknown[]];
+      ]);
 
-      setEquipmentModels(
-        toSelectOptions(
-          Array.isArray(models) ? models : [],
-          (item) =>
-            pickFirstString(item["unique_id"], item["id"], item["model_id"], item["model"]),
-          (item) => resolveModelLabel(item)
-        )
-      );
-      console.log(models, sites, users);
-
-      setSiteOptions(
-        toSelectOptions(
-          Array.isArray(sites) ? sites : [],
-          (item) =>
-            pickFirstString(item["unique_id"], item["id"], item["site_id"]),
-          (item) => resolveSiteLabel(item)
-        )
+      const equipmentModels = toSelectOptions(
+        models,
+        (item) => pickFirstString(item["unique_id"], item["id"], item["model_id"], item["model"]),
+        (item) => resolveModelLabel(item)
       );
 
-      const staffList = (Array.isArray(users) ? users : [])
+      const siteOptions = toSelectOptions(
+        sites,
+        (item) => pickFirstString(item["unique_id"], item["id"], item["site_id"]),
+        (item) => resolveSiteLabel(item)
+      );
+
+      const staffList = users
         .map(asRecord)
         .filter((maybeUser): maybeUser is Record<string, unknown> => {
           if (!maybeUser) return false;
           return Boolean(maybeUser["is_staff"]);
         });
 
-      setStaffOptions(
-        toSelectOptions(
-          staffList,
-          (item) =>
-            pickFirstString(item["unique_id"], item["id"], item["user_id"]),
-          (item) => resolveStaffLabel(item)
-        )
+      const staffOptions = toSelectOptions(
+        staffList,
+        (item) => pickFirstString(item["unique_id"], item["id"], item["user_id"]),
+        (item) => resolveStaffLabel(item)
       );
-    } catch (error) {
-      console.error(error);
-      Swal.fire("Error", "Unable to load lookup data", "error");
-    } finally {
-      setLookupLoading(false);
-    }
-  }, []);
+
+      return { equipmentModels, siteOptions, staffOptions };
+    },
+  });
+
+  const detailQuery = useQuery({
+    queryKey: vehicleRequestDetailQueryKey(id),
+    queryFn: () => vehicleRequestApi.get(id as string),
+    enabled: isEdit,
+  });
 
   useEffect(() => {
-    loadLookups();
-  }, [loadLookups]);
+    if (!lookupsQuery.error) return;
+    Swal.fire("Error", "Unable to load lookup data", "error");
+  }, [lookupsQuery.error]);
 
   useEffect(() => {
-    if (!isEdit || !id) return;
+    if (!detailQuery.error) return;
+    Swal.fire("Error", "Unable to load vehicle request", "error");
+  }, [detailQuery.error]);
 
-    const loadRequest = async () => {
-      setRecordLoading(true);
-      try {
-      const response = await vehicleRequestApi.get(id);
-      const payload = (response?.data ?? response) as Record<string, unknown>;
+  useEffect(() => {
+    if (!detailQuery.data) return;
+    const payload = detailQuery.data as Record<string, unknown>;
 
-      setDescription(pickFirstString(payload["description"]));
-      setSiteId(
-        pickFirstString(
-          payload["site"],
-          payload["site_id"],
-          asRecord(payload["site"])?.["unique_id"],
-          asRecord(payload["site"])?.["id"]
-        )
-      );
-      setStaffId(
-        pickFirstString(
-          payload["staff"],
-          payload["staff_id"],
-          asRecord(payload["staff"])?.["unique_id"],
-          asRecord(payload["staff"])?.["id"]
-        )
-      );
-      setRequestStatus(
-        pickFirstString(payload["request_status"], payload["status"]) ||
-          STATUS_OPTIONS[0].value
-      );
-
-      const rawItems =
-        asArray(payload["items"]).length > 0
-          ? asArray(payload["items"])
-          : asArray(payload["request_items"]).length > 0
-            ? asArray(payload["request_items"])
-            : asArray(payload["items_data"]);
-
-      setItems(
-        rawItems.length > 0
-          ? rawItems.map((item) => normalizeItemRow(asRecord(item) ?? {}))
-          : [createItemRow()]
-      );
-      } catch (error) {
-        console.error(error);
-        Swal.fire("Error", "Unable to load vehicle request", "error");
-      } finally {
-        setRecordLoading(false);
-      }
-    };
-
-    loadRequest();
-  }, [id, isEdit]);
-
-  const updateItem = (
-    id: string,
-    field: keyof Omit<ItemRow, "id">,
-    value: string
-  ) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
+    setDescription(pickFirstString(payload["description"]));
+    setSiteId(
+      pickFirstString(
+        payload["site"],
+        payload["site_id"],
+        asRecord(payload["site"])?.["unique_id"],
+        asRecord(payload["site"])?.["id"]
       )
+    );
+    setStaffId(
+      pickFirstString(
+        payload["staff"],
+        payload["staff_id"],
+        asRecord(payload["staff"])?.["unique_id"],
+        asRecord(payload["staff"])?.["id"]
+      )
+    );
+    setRequestStatus(
+      pickFirstString(payload["request_status"], payload["status"]) || STATUS_OPTIONS[0].value
+    );
+
+    const rawItems =
+      asArray(payload["items"]).length > 0
+        ? asArray(payload["items"])
+        : asArray(payload["request_items"]).length > 0
+        ? asArray(payload["request_items"])
+        : asArray(payload["items_data"]);
+
+    setItems(
+      rawItems.length > 0
+        ? rawItems.map((item) => normalizeItemRow(asRecord(item) ?? {}))
+        : [createItemRow()]
+    );
+  }, [detailQuery.data]);
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: {
+      description: string;
+      site_id: string;
+      request_status: string;
+      items: Array<{
+        equipment_model_id?: string;
+        qty: number;
+        unit: string;
+        purpose: string;
+      }>;
+    }) =>
+      isEdit && id ? vehicleRequestApi.update(id, payload) : vehicleRequestApi.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterQueryKeys.vehicleRequests });
+      Swal.fire({
+        icon: "success",
+        title: isEdit ? "Vehicle request updated" : "Vehicle request created",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      navigate(ENC_LIST_PATH);
+    },
+    onError: (error: unknown) => {
+      const message = getErrorMessage(error, "Unable to save vehicle request");
+      Swal.fire("Error", message, "error");
+    },
+  });
+
+  const updateItem = (id: string, field: keyof Omit<ItemRow, "id">, value: string) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
     );
   };
 
@@ -356,7 +356,7 @@ export default function VehicleRequestForm() {
     return true;
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!validate()) return;
 
@@ -374,42 +374,22 @@ export default function VehicleRequestForm() {
         })),
     };
 
-    setSubmitting(true);
-    try {
-      if (isEdit && id) {
-        console.log(payload);
-        await vehicleRequestApi.update(id, payload);
-        Swal.fire({
-          icon: "success",
-          title: "Vehicle request updated",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        await vehicleRequestApi.create(payload);
-        Swal.fire({
-          icon: "success",
-          title: "Vehicle request created",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      }
-
-      navigate(ENC_LIST_PATH);
-    } catch (error: unknown) {
-      console.error(error);
-      const message = getErrorMessage(error, "Unable to save vehicle request");
-      Swal.fire("Error", message, "error");
-    } finally {
-      setSubmitting(false);
-    }
+    saveMutation.mutate(payload);
   };
+
+  const lookups = lookupsQuery.data ?? {
+    equipmentModels: [] as SelectOption[],
+    siteOptions: [] as SelectOption[],
+    staffOptions: [] as SelectOption[],
+  };
+  const submitting = saveMutation.isPending;
+  const isBusy = lookupsQuery.isLoading || (isEdit && detailQuery.isFetching);
 
   if (isBusy) {
     return (
       <div className="p-3">
         <ComponentCard title={isEdit ? "Edit Vehicle Request" : "New Vehicle Request"}>
-          <p className="text-sm text-gray-500">Loading request data…</p>
+          <p className="text-sm text-gray-500">Loading request data...</p>
         </ComponentCard>
       </div>
     );
@@ -427,12 +407,13 @@ export default function VehicleRequestForm() {
               <Select
                 value={siteId || undefined}
                 onValueChange={(value) => setSiteId(value ?? "")}
+                disabled={submitting}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select site" />
                 </SelectTrigger>
                 <SelectContent>
-                  {siteOptions.map((option) => (
+                  {lookups.siteOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -441,12 +422,12 @@ export default function VehicleRequestForm() {
               </Select>
             </div>
 
-
             <div>
               <Label>Status</Label>
               <Select
                 value={requestStatus}
                 onValueChange={(value) => setRequestStatus(value ?? STATUS_OPTIONS[0].value)}
+                disabled={submitting}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select status" />
@@ -468,6 +449,7 @@ export default function VehicleRequestForm() {
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Add context for this request"
+              disabled={submitting}
             />
           </div>
 
@@ -483,15 +465,14 @@ export default function VehicleRequestForm() {
                   </Label>
                   <Select
                     value={item.equipment_model || undefined}
-                    onValueChange={(value) =>
-                      updateItem(item.id, "equipment_model", value ?? "")
-                    }
+                    onValueChange={(value) => updateItem(item.id, "equipment_model", value ?? "")}
+                    disabled={submitting}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select model" />
                     </SelectTrigger>
                     <SelectContent>
-                      {equipmentModels.map((option) => (
+                      {lookups.equipmentModels.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -506,9 +487,8 @@ export default function VehicleRequestForm() {
                     type="number"
                     min={1}
                     value={item.qty ?? ""}
-                    onChange={(event) =>
-                      updateItem(item.id, "qty", event.target.value)
-                    }
+                    onChange={(event) => updateItem(item.id, "qty", event.target.value)}
+                    disabled={submitting}
                   />
                 </div>
 
@@ -516,9 +496,8 @@ export default function VehicleRequestForm() {
                   <Label>Unit</Label>
                   <Select
                     value={item.unit || undefined}
-                    onValueChange={(value) =>
-                      updateItem(item.id, "unit", value ?? "")
-                    }
+                    onValueChange={(value) => updateItem(item.id, "unit", value ?? "")}
+                    disabled={submitting}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select unit" />
@@ -532,13 +511,13 @@ export default function VehicleRequestForm() {
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
                   <Label>Purpose</Label>
                   <Input
                     value={item.purpose ?? ""}
-                    onChange={(event) =>
-                      updateItem(item.id, "purpose", event.target.value)
-                    }
+                    onChange={(event) => updateItem(item.id, "purpose", event.target.value)}
+                    disabled={submitting}
                   />
                 </div>
 
@@ -548,6 +527,7 @@ export default function VehicleRequestForm() {
                     title="Remove item"
                     className="text-red-600 hover:text-red-800"
                     onClick={() => removeItem(item.id)}
+                    disabled={submitting}
                   >
                     <TrashBinIcon className="size-5" />
                   </button>
@@ -556,12 +536,7 @@ export default function VehicleRequestForm() {
             ))}
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addItem}
-            disabled={submitting}
-          >
+          <Button type="button" variant="outline" onClick={addItem} disabled={submitting}>
             + Add item
           </Button>
 

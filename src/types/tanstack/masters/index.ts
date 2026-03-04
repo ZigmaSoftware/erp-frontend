@@ -79,9 +79,13 @@ export type CityRecord = {
   name: string;
   is_active: boolean;
   continent_id?: string | number | null;
+  continent?: string | number | null;
   country_id?: string | number | null;
+  country?: string | number | null;
   state_id?: string | number | null;
+  state?: string | number | null;
   district_id?: string | number | null;
+  district?: string | number | null;
   continent_name?: string;
   country_name?: string;
   state_name?: string;
