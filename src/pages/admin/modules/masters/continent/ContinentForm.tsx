@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import ComponentCard from "@/components/common/ComponentCard";
@@ -12,15 +12,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 import { continentApi } from "@/helpers/admin";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+
+import {
+  continentSchema,
+  type ContinentFormValues,
+} from "@/validations/masters/continent.schema";
 
 /* -----------------------------------------
    Routes
@@ -30,77 +39,56 @@ const encContinents = encryptSegment("continents");
 const ENC_LIST_PATH = `/${encMasters}/${encContinents}`;
 
 function ContinentForm() {
-  const [name, setName] = useState("");
-  const [isActive, setIsActive] = useState(true);
-
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
   const queryClient = useQueryClient();
 
-  const detailQueryKey = [
-    ...masterQueryKeys.continents,
-    "detail",
-    id ?? "new",
-  ] as const;
-
   /* -----------------------------------------
-     Error Formatter
+     React Hook Form + Zod
   ----------------------------------------- */
-  const formatErrorMessage = (error: any) => {
-    const data = error?.response?.data;
-
-    if (typeof data === "string") return data;
-
-    if (typeof data === "object" && data !== null) {
-      return Object.entries(data)
-        .map(
-          ([key, val]) =>
-            `${key}: ${(val as string[]).join(", ")}`
-        )
-        .join("\n");
-    }
-
-    return "Something went wrong while saving.";
-  };
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<ContinentFormValues>({
+    resolver: zodResolver(continentSchema),
+    defaultValues: {
+      name: "",
+      is_active: true,
+    },
+  });
 
   /* -----------------------------------------
-     Detail Query (v5 Correct)
+     Detail Query (Edit Mode)
   ----------------------------------------- */
   const detailQuery = useQuery({
-    queryKey: detailQueryKey,
+    queryKey: [
+      ...masterQueryKeys.continents,
+      "detail",
+      id ?? "new",
+    ],
     queryFn: () => continentApi.get(id as string),
     enabled: isEdit,
   });
 
   /* -----------------------------------------
-     Handle Query Side Effects
+     Populate form in Edit mode
   ----------------------------------------- */
   useEffect(() => {
     if (detailQuery.data) {
-      setName(detailQuery.data.name);
-      setIsActive(detailQuery.data.is_active);
+      setValue("name", detailQuery.data.name);
+      setValue("is_active", detailQuery.data.is_active);
     }
-  }, [detailQuery.data]);
-
-  useEffect(() => {
-    if (detailQuery.isError) {
-      Swal.fire({
-        icon: "error",
-        title: "Failed to load continent",
-        text: formatErrorMessage(detailQuery.error),
-      });
-    }
-  }, [detailQuery.isError, detailQuery.error]);
+  }, [detailQuery.data, setValue]);
 
   /* -----------------------------------------
-     Save Mutation (v5 Correct)
+     Save Mutation
   ----------------------------------------- */
   const saveMutation = useMutation({
-    mutationFn: (payload: {
-      name: string;
-      is_active: boolean;
-    }) =>
+    mutationFn: (payload: ContinentFormValues) =>
       isEdit
         ? continentApi.update(id as string, payload)
         : continentApi.create(payload),
@@ -123,34 +111,37 @@ function ContinentForm() {
     },
 
     onError: (error: any) => {
+      const data = error?.response?.data;
+
+      let message = "Something went wrong while saving.";
+
+      if (typeof data === "string") message = data;
+      else if (typeof data === "object" && data !== null) {
+        message = Object.entries(data)
+          .map(
+            ([key, val]) =>
+              `${key}: ${(val as string[]).join(", ")}`
+          )
+          .join("\n");
+      }
+
       Swal.fire({
         icon: "error",
         title: "Save failed",
-        text: formatErrorMessage(error),
+        text: message,
       });
     },
   });
 
-  const isSubmitting = saveMutation.isPending; // ✅ v5 fix
+  const isSubmitting = saveMutation.isPending;
 
   /* -----------------------------------------
-     Submit Handler
+     Submit Handler (Zod validated)
   ----------------------------------------- */
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!name.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "Please fill all required fields.",
-      });
-      return;
-    }
-
+  const onSubmit = (data: ContinentFormValues) => {
     saveMutation.mutate({
-      name: name.trim(),
-      is_active: isActive,
+      name: data.name.trim(),
+      is_active: data.is_active,
     });
   };
 
@@ -161,7 +152,7 @@ function ContinentForm() {
     <ComponentCard
       title={isEdit ? "Edit Continent" : "Add Continent"}
     >
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Continent Name */}
@@ -170,15 +161,20 @@ function ContinentForm() {
               Continent Name{" "}
               <span className="text-red-500">*</span>
             </Label>
+
             <Input
               id="continentName"
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register("name")}
               placeholder="Enter continent name"
-              required
               disabled={detailQuery.isFetching}
             />
+
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           {/* Active Status */}
@@ -187,10 +183,11 @@ function ContinentForm() {
               Active Status{" "}
               <span className="text-red-500">*</span>
             </Label>
+
             <Select
-              value={isActive ? "true" : "false"}
+              value={watch("is_active") ? "true" : "false"}
               onValueChange={(val) =>
-                setIsActive(val === "true")
+                setValue("is_active", val === "true")
               }
               disabled={detailQuery.isFetching}
             >
@@ -210,6 +207,12 @@ function ContinentForm() {
                 </SelectItem>
               </SelectContent>
             </Select>
+
+            {errors.is_active && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.is_active.message}
+              </p>
+            )}
           </div>
         </div>
 

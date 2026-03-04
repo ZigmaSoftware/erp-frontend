@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DataTable } from "primereact/datatable";
+import type { DataTablePageEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
@@ -44,39 +45,32 @@ export default function ContinentList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  /* ------------------------------
-     State
-  ------------------------------ */
-  const [lazyParams, setLazyParams] = useState({
-    page: 1,
-    rows: 5,
-  });
+  const [page, setPage] = useState(1);   // 1-based, sent to backend
+  const [rows, setRows] = useState(5);
+  const [first, setFirst] = useState(0); // DataTable UI sync only
 
   const [globalFilter, setGlobalFilter] = useState("");
 
   /* ------------------------------
-     Query (TanStack v5 Correct)
+     Query
   ------------------------------ */
   const query = useQuery({
-    queryKey: continentListQueryKey(lazyParams.page, lazyParams.rows),
-    queryFn: async (): Promise<
-      PaginatedResponse<ContinentRecord>
-    > => {
-      return continentApi.listPaginated(
-        lazyParams.page,
-        lazyParams.rows
-      );
-    },
-    placeholderData: keepPreviousData, // ✅ v5 replacement
+    queryKey: continentListQueryKey(page, rows),
+    queryFn: async (): Promise<PaginatedResponse<ContinentRecord>> =>
+      continentApi.listPaginated(page, rows),
+    placeholderData: keepPreviousData,
   });
 
   const continents = query.data?.results ?? [];
-  console.log(continents);
   const totalRecords = query.data?.count ?? 0;
   const loading = query.isLoading || query.isFetching;
 
+  // Use the page number the backend actually used — eliminates any
+  // frontend state mismatch causing wrong S.No
+  const actualPage = (query.data as any)?.page ?? page;
+
   /* ------------------------------
-     Mutation (v5 Correct)
+     Mutation (Status Toggle)
   ------------------------------ */
   const mutation = useMutation({
     mutationFn: (payload: {
@@ -87,10 +81,7 @@ export default function ContinentList() {
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: continentListQueryKey(
-          lazyParams.page,
-          lazyParams.rows
-        ),
+        queryKey: continentListQueryKey(page, rows),
       });
     },
 
@@ -99,20 +90,28 @@ export default function ContinentList() {
     },
   });
 
-  const isUpdating = mutation.isPending; // ✅ v5 uses isPending
+  const isUpdating = mutation.isPending;
 
   /* ------------------------------
-     Pagination
+     Pagination Handler
   ------------------------------ */
-  const onPage = (event: any) => {
-    setLazyParams({
-      page: event.page + 1,
-      rows: event.rows,
-    });
+  const onPage = (event: DataTablePageEvent) => {
+    const newRows = event.rows;
+    const newPage = Math.floor(event.first / event.rows) + 1;
+    setRows(newRows);
+    setPage(newPage);
+    setFirst(event.first);
   };
 
   /* ------------------------------
-     Status Toggle
+     Serial Number — derived from backend's actual page value
+     so it's always in sync regardless of frontend state
+  ------------------------------ */
+  const indexTemplate = (_: any, options: any) =>
+    (actualPage - 1) * rows + options.rowIndex + 1;
+
+  /* ------------------------------
+     Status Column
   ------------------------------ */
   const statusTemplate = (row: ContinentRecord) => (
     <Switch
@@ -129,13 +128,11 @@ export default function ContinentList() {
   );
 
   /* ------------------------------
-     Actions
+     Actions Column
   ------------------------------ */
   const actionTemplate = (row: ContinentRecord) => (
     <button
-      onClick={() =>
-        navigate(ENC_EDIT_PATH(String(row.unique_id)))
-      }
+      onClick={() => navigate(ENC_EDIT_PATH(String(row.unique_id)))}
       className="text-blue-600 hover:text-blue-800"
       title="Edit"
     >
@@ -143,33 +140,26 @@ export default function ContinentList() {
     </button>
   );
 
-  const indexTemplate = (_: any, options: any) =>
-    (lazyParams.page - 1) * lazyParams.rows +
-    options.rowIndex +
-    1;
-
+  /* ------------------------------
+     Capitalize Utility
+  ------------------------------ */
   const cap = (str?: string) =>
-    str
-      ? str.charAt(0).toUpperCase() +
-        str.slice(1).toLowerCase()
-      : "";
+    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
   /* ------------------------------
      Header
   ------------------------------ */
   const header = (
-    <div className="flex justify-end">
-      <span className="p-input-icon-left">
-        <i className="pi pi-search" />
+    <div className="flex justify-end items-center">
+      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
+        <i className="pi pi-search text-gray-500" />
         <InputText
           value={globalFilter}
-          onChange={(e) =>
-            setGlobalFilter(e.target.value)
-          }
-          placeholder="Search (UI only)"
-          className="p-inputtext-sm"
+          onChange={(e) => setGlobalFilter(e.target.value)}
+          placeholder="Search Continents"
+          className="p-inputtext-sm !border-0 !shadow-none"
         />
-      </span>
+      </div>
     </div>
   );
 
@@ -180,12 +170,8 @@ export default function ContinentList() {
     <div className="p-3">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Continents
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Manage continent records
-          </p>
+          <h1 className="text-3xl font-bold text-gray-800">Continents</h1>
+          <p className="text-gray-500 text-sm">Manage continent records</p>
         </div>
 
         <Button
@@ -200,12 +186,9 @@ export default function ContinentList() {
         value={continents}
         lazy
         paginator
-        rows={lazyParams.rows}
+        rows={rows}
+        first={first}
         rowsPerPageOptions={[5, 10, 20, 50]}
-        first={
-          (lazyParams.page - 1) *
-          lazyParams.rows
-        }
         totalRecords={totalRecords}
         onPage={onPage}
         loading={loading}
@@ -225,27 +208,19 @@ export default function ContinentList() {
           field="name"
           header="Continent Name"
           style={{ minWidth: "200px" }}
-          body={(row: ContinentRecord) =>
-            cap(row.name)
-          }
+          body={(row: ContinentRecord) => cap(row.name)}
         />
 
         <Column
           header="Status"
           body={statusTemplate}
-          style={{
-            width: "150px",
-            textAlign: "center",
-          }}
+          style={{ width: "150px", textAlign: "center" }}
         />
 
         <Column
           header="Actions"
           body={actionTemplate}
-          style={{
-            width: "120px",
-            textAlign: "center",
-          }}
+          style={{ width: "120px", textAlign: "center" }}
         />
       </DataTable>
     </div>

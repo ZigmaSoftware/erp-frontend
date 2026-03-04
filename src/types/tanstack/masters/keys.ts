@@ -5,6 +5,8 @@ export const masterQueryKeys = {
   districts: ["masters", "districts"] as const,
   cities: ["masters", "cities"] as const,
   sites: ["masters", "sites"] as const,
+  plants: ["masters", "plants"] as const,
+  sites: ["masters", "sites"] as const,
   users: ["admin", "users"] as const,
   equipmentTypes: ["em-masters", "equipment-types"] as const,
   equipmentModels: ["em-masters", "equipment-models"] as const,

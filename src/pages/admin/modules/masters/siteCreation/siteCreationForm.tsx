@@ -1,6 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,14 +16,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { districtApi, siteApi, stateApi } from "@/helpers/admin";
+
+import { siteApi } from "@/helpers/admin";
+import {
+  useDistrictsSelectOptions,
+  useStatesSelectOptions,
+} from "@/tanstack/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { masterQueryKeys, type SiteRecord } from "@/types/tanstack/masters";
+import { siteSchema, type SiteFormValues } from "@/validations/masters/site.schema";
+
+const { encMasters, encSiteCreation } = getEncryptedRoute();
+const LIST_PATH = `/${encMasters}/${encSiteCreation}`;
 
 /* ---------------- TYPES ---------------- */
 
 type FieldConfig = {
   label: string;
-  name: string;
+  name: keyof SiteFormValues | "verification_document" | "document_view";
   type?: string;
   placeholder?: string;
   as?: "textarea" | "select";
@@ -33,41 +46,44 @@ type SectionConfig = {
   fields: FieldConfig[];
 };
 
-type FormValues = Record<string, string>;
-type FileValues = Record<string, File | null>;
+const fileFieldNames = ["verification_document", "document_view"] as const;
+type FileFieldName = (typeof fileFieldNames)[number];
+type FileValues = Record<FileFieldName, File | null>;
 
-/* ---------------- CONFIG ---------------- */
-
-const fileFieldNames = new Set(["verification_document", "document_view"]);
-
-const mapLocationOptions = (items: any[]) =>
-  (items ?? [])
-    .filter((item) => item?.name && item.is_active !== false)
-    .map((item) => ({
-      value: String(item.unique_id ?? item.id ?? item.name),
-      label: item.name,
-    }));
-
-const normalizeStatusLabel = (value: string) =>
-  value?.toLowerCase() === "active" ? "Active" : "Inactive";
+const buildInitialFileValues = (): FileValues =>
+  fileFieldNames.reduce((acc, key) => {
+    acc[key] = null;
+    return acc;
+  }, {} as FileValues);
 
 const resolveOptionValue = (
-  value: string,
-  options: Array<{ value: string; label: string }>
+  value: string | undefined,
+  options: Array<{ value: string }>
 ) => {
   if (!value) return "";
   const direct = options.find((opt) => opt.value === value);
   if (direct) return direct.value;
-  const byLabel = options.find((opt) => opt.label === value);
-  return byLabel ? byLabel.value : value;
+  return value;
 };
 
-const coerceString = (value: unknown) =>
-  value === null || value === undefined ? "" : String(value);
+const normalizeStatusLabel = (value: string | undefined) =>
+  value?.toLowerCase() === "active" ? "Active" : "Inactive";
 
-const toNumberValue = (value: string) => (value === "" ? "" : Number(value));
+const toNumberValue = (value: string) => (value === "" ? undefined : Number(value));
 
-/* ---------------- SECTIONS ---------------- */
+const isOptionActive = (option: { isActive?: boolean }) =>
+  option.isActive !== false;
+
+const includeSelectedOption = <Option extends { value: string }>(
+  base: Option[],
+  options: Option[],
+  selectedId: string
+): Option[] => {
+  if (!selectedId) return base;
+  if (base.some((o) => o.value === selectedId)) return base;
+  const selected = options.find((o) => o.value === selectedId);
+  return selected ? [...base, selected] : base;
+};
 
 const sections: SectionConfig[] = [
   {
@@ -301,298 +317,351 @@ const sections: SectionConfig[] = [
   },
 ];
 
-/* ---------------- HELPERS ---------------- */
-
-const buildInitialFormData = () =>
-  sections.reduce<FormValues>((acc, section) => {
-    section.fields.forEach((field) => {
-      acc[field.name] = "";
-    });
-    return acc;
-  }, {});
-
-const buildInitialFileValues = () =>
-  Array.from(fileFieldNames).reduce<FileValues>((acc, key) => {
-    acc[key] = null;
-    return acc;
-  }, {});
-
-/* ---------------- FIELD RENDER ---------------- */
-
-const renderField = (
-  field: FieldConfig,
-  value: string,
-  onChange: (name: string, value: string) => void,
-  onFileChange: (name: string, file: File | null) => void,
-  options?: Array<{ value: string; label: string }>
-) => {
-  const safeValue = value ?? "";
-
-  if (field.as === "textarea") {
-    return (
-      <Textarea
-        id={field.name}
-        value={safeValue}
-        placeholder={field.placeholder}
-        onChange={(e) => onChange(field.name, e.target.value)}
-      />
-    );
-  }
-
-  if (field.as === "select") {
-    return (
-      <Select
-        value={safeValue}
-        onValueChange={(v) => onChange(field.name, v)}
-      >
-        <SelectTrigger id={field.name}>
-          <SelectValue placeholder="Select" />
-        </SelectTrigger>
-        <SelectContent>
-          {(options || field.options || []).map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  if (field.type === "file") {
-    return (
-      <Input
-        id={field.name}
-        type="file"
-        onChange={(e) =>
-          onFileChange(field.name, e.target.files?.[0] || null)
-        }
-      />
-    );
-  }
-
-  return (
-    <Input
-      id={field.name}
-      type={field.type || "text"}
-      value={safeValue}
-      placeholder={field.placeholder}
-      step={field.step}
-      onChange={(e) => onChange(field.name, e.target.value)}
-    />
-  );
-};
-
 /* ---------------- COMPONENT ---------------- */
 
 export default function SiteCreationForm() {
-  const [formData, setFormData] = useState<FormValues>(buildInitialFormData);
-  const [fileInputs, setFileInputs] = useState<FileValues>(buildInitialFileValues);
-  const [loading, setLoading] = useState(false);
-
-  const [stateOptions, setStateOptions] = useState<
-    Array<{ value: string; label: string }>
-  >([]);
-  const [districtOptions, setDistrictOptions] = useState<
-    Array<{ value: string; label: string }>
-  >([]);
-
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
+  const queryClient = useQueryClient();
 
-  const { encMasters, encSiteCreation } = getEncryptedRoute();
-  const LIST_PATH = `/${encMasters}/${encSiteCreation}`;
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<SiteFormValues>({
+    resolver: zodResolver(siteSchema),
+    defaultValues: {
+      site_name: "",
+      state_id: "",
+      district_id: "",
+      ulb: "",
+      status: "",
+      site_address: "",
+      latitude: "",
+      longitude: "",
+      project_value: "",
+      project_type_details: "",
+      basic_payment_per_m3: "",
+      dc_invoice_no: "",
+      min_max_type: "",
+      screen_name: "",
+      weighbridge_count: "",
+      eb_rate: "",
+      unit_per_cost: "",
+      kwh: "",
+      demand_cost: "",
+      eb_start_date: "",
+      eb_end_date: "",
+      no_of_zones: "",
+      no_of_phases: "",
+      density_volume: "",
+      extended_quantity: "",
+      service_charge: "",
+      transportation_cost: "",
+      gst: "",
+      bank_name: "",
+      account_number: "",
+      ifsc_code: "",
+      bank_address: "",
+      erection_start_date: "",
+      commissioning_start_date: "",
+      project_completion_date: "",
+      weighment_folder_name: "",
+      petty_cash: "",
+      proposed_change: "",
+      remarks: "",
+    },
+  });
 
-  /* -------- DROPDOWNS -------- */
+  const [fileInputs, setFileInputs] = useState<FileValues>(buildInitialFileValues);
+
+  const statesQuery = useStatesSelectOptions();
+  const districtsQuery = useDistrictsSelectOptions();
+
+  const stateOptions = statesQuery.selectOptions ?? [];
+  const districtOptions = districtsQuery.selectOptions ?? [];
+
+  const queriesReady = statesQuery.isSuccess && districtsQuery.isSuccess;
+  const stateId = watch("state_id");
+  const districtId = watch("district_id");
+
+  const filteredStates = useMemo(() => {
+    const activeStates = stateOptions.filter(isOptionActive);
+    return includeSelectedOption(activeStates, stateOptions, stateId);
+  }, [stateId, stateOptions]);
+
+  const filteredDistricts = useMemo(() => {
+    if (!stateId) return [];
+    const activeDistricts = districtOptions.filter(
+      (option) => option.stateId === stateId && isOptionActive(option)
+    );
+    return includeSelectedOption(activeDistricts, districtOptions, districtId);
+  }, [stateId, districtId, districtOptions]);
+
+  const detailQuery = useQuery<SiteRecord>({
+    queryKey: [...masterQueryKeys.sites, "detail", id ?? "new"],
+    queryFn: () => siteApi.get(id as string),
+    enabled: isEdit,
+  });
 
   useEffect(() => {
-    (async () => {
-      const states = await stateApi.list();
-      const districts = await districtApi.list();
-      setStateOptions(mapLocationOptions(states));
-      setDistrictOptions(mapLocationOptions(districts));
-    })();
-  }, []);
+    if (!detailQuery.data || !queriesReady) return;
 
-  useEffect(() => {
-    setFormData((prev) => {
-      const next = { ...prev };
-      if (stateOptions.length) {
-        const resolved = resolveOptionValue(prev.state_id, stateOptions);
-        if (resolved !== prev.state_id) next.state_id = resolved;
-      }
-      if (districtOptions.length) {
-        const resolved = resolveOptionValue(prev.district_id, districtOptions);
-        if (resolved !== prev.district_id) next.district_id = resolved;
-      }
-      return next;
+    const site = detailQuery.data;
+    reset({
+      site_name: site.site_name ?? "",
+      state_id: resolveOptionValue(site.state_id, stateOptions),
+      district_id: resolveOptionValue(site.district_id, districtOptions),
+      ulb: site.ulb ?? "",
+      status: normalizeStatusLabel(site.status),
+      site_address: site.site_address ?? "",
+      latitude: site.latitude ?? "",
+      longitude: site.longitude ?? "",
+      project_value: site.project_value ?? "",
+      project_type_details: site.project_type_details ?? "",
+      basic_payment_per_m3: site.basic_payment_per_m3 ?? "",
+      dc_invoice_no: site.dc_invoice_no ?? "",
+      min_max_type: site.min_max_type ?? "",
+      screen_name: site.screen_name ?? "",
+      weighbridge_count: site.weighbridge_count ?? "",
+      eb_rate: site.eb_rate ?? "",
+      unit_per_cost: site.unit_per_cost ?? "",
+      kwh: site.kwh ?? "",
+      demand_cost: site.demand_cost ?? "",
+      eb_start_date: site.eb_start_date ?? "",
+      eb_end_date: site.eb_end_date ?? "",
+      no_of_zones: site.no_of_zones ?? "",
+      no_of_phases: site.no_of_phases ?? "",
+      density_volume: site.density_volume ?? "",
+      extended_quantity: site.extended_quantity ?? "",
+      service_charge: site.service_charge ?? "",
+      transportation_cost: site.transportation_cost ?? "",
+      gst: site.gst ?? "",
+      bank_name: site.bank_name ?? "",
+      account_number: site.account_number ?? "",
+      ifsc_code: site.ifsc_code ?? "",
+      bank_address: site.bank_address ?? "",
+      erection_start_date: site.erection_start_date ?? "",
+      commissioning_start_date: site.commissioning_start_date ?? "",
+      project_completion_date: site.project_completion_date ?? "",
+      weighment_folder_name: site.weighment_folder_name ?? "",
+      petty_cash: site.petty_cash ?? "",
+      proposed_change: site.proposed_change ?? "",
+      remarks: site.remarks ?? "",
     });
-  }, [stateOptions, districtOptions]);
 
-  /* -------- EDIT MODE -------- */
+    setFileInputs(buildInitialFileValues());
+  }, [detailQuery.data, districtOptions, queriesReady, reset, stateOptions]);
 
   useEffect(() => {
-    if (!isEdit) return;
-
-    (async () => {
-      const site = await siteApi.get(id!);
-
-      setFormData({
-        site_name: coerceString(site.site_name),
-        state_id: resolveOptionValue(coerceString(site.state_id), stateOptions),
-        district_id: resolveOptionValue(
-          coerceString(site.district_id),
-          districtOptions
-        ),
-        ulb: coerceString(site.ulb),
-        site_address: coerceString(site.site_address),
-        status: site.status
-          ? normalizeStatusLabel(coerceString(site.status))
-          : site.is_active !== undefined
-          ? site.is_active
-            ? "Active"
-            : "Inactive"
-          : "",
-        latitude: coerceString(site.latitude),
-        longitude: coerceString(site.longitude),
-        project_value: coerceString(site.project_value),
-        project_type_details: coerceString(site.project_type_details),
-        basic_payment_per_m3: coerceString(site.basic_payment_per_m3),
-        dc_invoice_no: coerceString(site.dc_invoice_no),
-        min_max_type: coerceString(site.min_max_type),
-        screen_name: coerceString(site.screen_name),
-        weighbridge_count: coerceString(site.weighbridge_count),
-        eb_rate: coerceString(site.eb_rate),
-        unit_per_cost: coerceString(site.unit_per_cost),
-        kwh: coerceString(site.kwh),
-        demand_cost: coerceString(site.demand_cost),
-        eb_start_date: coerceString(site.eb_start_date),
-        eb_end_date: coerceString(site.eb_end_date),
-        no_of_zones: coerceString(site.no_of_zones),
-        no_of_phases: coerceString(site.no_of_phases),
-        density_volume: coerceString(site.density_volume),
-        extended_quantity: coerceString(site.extended_quantity),
-        service_charge: coerceString(site.service_charge),
-        transportation_cost: coerceString(site.transportation_cost),
-        gst: coerceString(site.gst),
-        bank_name: coerceString(site.bank_name),
-        account_number: coerceString(site.account_number),
-        ifsc_code: coerceString(site.ifsc_code),
-        bank_address: coerceString(site.bank_address),
-        erection_start_date: coerceString(site.erection_start_date),
-        commissioning_start_date: coerceString(site.commissioning_start_date),
-        project_completion_date: coerceString(site.project_completion_date),
-        weighment_folder_name: coerceString(site.weighment_folder_name),
-        verification_document: "",
-        document_view: "",
-        petty_cash: coerceString(site.petty_cash),
-        proposed_change: coerceString(site.proposed_change),
-        remarks: coerceString(site.remarks),
+    if (detailQuery.error) {
+      Swal.fire({
+        icon: "error",
+        title: "Failed to load site",
+        text: "Something went wrong",
       });
-    })();
-  }, [id, isEdit, stateOptions, districtOptions]);
-
-  /* -------- HANDLERS -------- */
-
-  const handleChange = (name: string, value: string) =>
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-  const handleFileChange = (name: string, file: File | null) =>
-    setFileInputs((prev) => ({ ...prev, [name]: file }));
-
-  /* -------- SUBMIT -------- */
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-
-    const payload = {
-      site_name: formData.site_name,
-      state_id: formData.state_id,
-      district_id: formData.district_id,
-      ulb: formData.ulb,
-      site_address: formData.site_address,
-      status: formData.status,
-      is_active: formData.status ? formData.status === "Active" : undefined,
-      latitude: toNumberValue(formData.latitude),
-      longitude: toNumberValue(formData.longitude),
-      project_value: toNumberValue(formData.project_value),
-      project_type_details: formData.project_type_details,
-      basic_payment_per_m3: toNumberValue(formData.basic_payment_per_m3),
-      dc_invoice_no: formData.dc_invoice_no,
-      min_max_type: formData.min_max_type,
-      screen_name: formData.screen_name,
-      weighbridge_count: toNumberValue(formData.weighbridge_count),
-      eb_rate: toNumberValue(formData.eb_rate),
-      unit_per_cost: toNumberValue(formData.unit_per_cost),
-      kwh: toNumberValue(formData.kwh),
-      demand_cost: toNumberValue(formData.demand_cost),
-      eb_start_date: formData.eb_start_date,
-      eb_end_date: formData.eb_end_date,
-      no_of_zones: toNumberValue(formData.no_of_zones),
-      no_of_phases: toNumberValue(formData.no_of_phases),
-      density_volume: toNumberValue(formData.density_volume),
-      extended_quantity: toNumberValue(formData.extended_quantity),
-      service_charge: toNumberValue(formData.service_charge),
-      transportation_cost: toNumberValue(formData.transportation_cost),
-      gst: formData.gst,
-      bank_name: formData.bank_name,
-      account_number: formData.account_number,
-      ifsc_code: formData.ifsc_code,
-      bank_address: formData.bank_address,
-      erection_start_date: formData.erection_start_date,
-      commissioning_start_date: formData.commissioning_start_date,
-      project_completion_date: formData.project_completion_date,
-      weighment_folder_name: formData.weighment_folder_name,
-      petty_cash: toNumberValue(formData.petty_cash),
-      proposed_change: formData.proposed_change,
-      remarks: formData.remarks,
-    };
-
-    const hasFiles = Object.values(fileInputs).some(Boolean);
-
-    try {
-      setLoading(true);
-
-      if (hasFiles) {
-        const formBody = new FormData();
-        Object.entries(payload).forEach(([key, value]) => {
-          if (value === undefined || value === null) return;
-          formBody.append(key, String(value));
-        });
-        Object.entries(fileInputs).forEach(([key, file]) => {
-          if (file) formBody.append(key, file);
-        });
-
-        if (isEdit) {
-          await siteApi.update(id!, formBody);
-        } else {
-          await siteApi.create(formBody);
-        }
-      } else if (isEdit) {
-        await siteApi.update(id!, payload);
-      } else {
-        await siteApi.create(payload);
-      }
-
-      Swal.fire("Success", "Saved successfully", "success");
-      navigate(LIST_PATH);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.detail ||
-        error?.response?.data ||
-        "Save failed";
-      Swal.fire("Error", String(message), "error");
-    } finally {
-      setLoading(false);
     }
+  }, [detailQuery.error]);
+
+  type SiteMutationVariables = {
+    payload: Record<string, unknown>;
+    formData?: FormData;
   };
 
-  /* -------- UI -------- */
+  const saveMutation = useMutation({
+    mutationFn: ({ payload, formData }: SiteMutationVariables) =>
+      isEdit
+        ? siteApi.update(id as string, formData ?? payload)
+        : siteApi.create(formData ?? payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterQueryKeys.sites });
+      Swal.fire({
+        icon: "success",
+        title: "Saved successfully",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      navigate(LIST_PATH);
+    },
+    onError: () => {
+      Swal.fire("Error", "Save failed", "error");
+    },
+  });
+
+  const isSubmitting = saveMutation.isPending;
+  const showLoader = isEdit && (!detailQuery.data || !queriesReady);
+
+  const handleFileChange = (name: FileFieldName, file: File | null) =>
+    setFileInputs((prev) => ({ ...prev, [name]: file }));
+
+  const buildFormBody = (payload: Record<string, unknown>) => {
+    const formBody = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === "") return;
+      formBody.append(key, String(value));
+    });
+    Object.entries(fileInputs).forEach(([key, file]) => {
+      if (file) {
+        formBody.append(key, file);
+      }
+    });
+    return formBody;
+  };
+
+  const onSubmit = (values: SiteFormValues) => {
+    const payload: Record<string, unknown> = {
+      ...values,
+      is_active: values.status ? values.status === "Active" : undefined,
+      latitude: toNumberValue(values.latitude),
+      longitude: toNumberValue(values.longitude),
+      project_value: toNumberValue(values.project_value),
+      basic_payment_per_m3: toNumberValue(values.basic_payment_per_m3),
+      weighbridge_count: toNumberValue(values.weighbridge_count),
+      eb_rate: toNumberValue(values.eb_rate),
+      unit_per_cost: toNumberValue(values.unit_per_cost),
+      kwh: toNumberValue(values.kwh),
+      demand_cost: toNumberValue(values.demand_cost),
+      no_of_zones: toNumberValue(values.no_of_zones),
+      no_of_phases: toNumberValue(values.no_of_phases),
+      density_volume: toNumberValue(values.density_volume),
+      extended_quantity: toNumberValue(values.extended_quantity),
+      service_charge: toNumberValue(values.service_charge),
+      transportation_cost: toNumberValue(values.transportation_cost),
+      petty_cash: toNumberValue(values.petty_cash),
+    };
+
+    const willSubmitWithFiles = Object.values(fileInputs).some(Boolean);
+    saveMutation.mutate({
+      payload,
+      formData: willSubmitWithFiles ? buildFormBody(payload) : undefined,
+    });
+  };
+
+  const renderField = (field: FieldConfig) => {
+    if (field.type === "file") {
+      const fieldName = field.name as FileFieldName;
+      return (
+        <>
+          <Input
+            id={field.name}
+            type="file"
+            onChange={(event) =>
+              handleFileChange(fieldName, event.target.files?.[0] ?? null)
+            }
+          />
+          {fileInputs[fieldName] && (
+            <p className="text-xs text-muted-foreground">
+              Selected: {fileInputs[fieldName]?.name}
+            </p>
+          )}
+        </>
+      );
+    }
+
+    const fieldName = field.name as keyof SiteFormValues;
+    const error = errors[fieldName]?.message as string | undefined;
+
+    if (field.as === "textarea") {
+      return (
+        <>
+          <Textarea
+            id={field.name}
+            placeholder={field.placeholder}
+            {...register(fieldName)}
+          />
+          {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+        </>
+      );
+    }
+
+    if (field.as === "select") {
+      const isStateField = field.name === "state_id";
+      const isDistrictField = field.name === "district_id";
+      const options = isStateField
+        ? filteredStates
+        : isDistrictField
+        ? filteredDistricts
+        : field.options ?? [];
+      const disabled =
+        isSubmitting ||
+        (isStateField ? statesQuery.isFetching : false) ||
+        (isDistrictField ? (!stateId || districtsQuery.isFetching) : false);
+
+      return (
+        <>
+          <Controller
+            name={fieldName}
+            control={control}
+            render={({ field: controllerField }) => (
+              <Select
+                value={controllerField.value ?? ""}
+                onValueChange={(value) => {
+                  controllerField.onChange(value);
+                  if (isStateField) {
+                    setValue("district_id", "");
+                  }
+                }}
+                disabled={disabled}
+              >
+                <SelectTrigger id={field.name}>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {options.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      {isStateField
+                        ? "No states available"
+                        : isDistrictField
+                        ? stateId
+                          ? "No districts available"
+                          : "Select a state first"
+                        : "No options available"}
+                    </div>
+                  ) : (
+                    options.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Input
+          id={field.name}
+          {...register(fieldName)}
+          type={field.type ?? "text"}
+          step={field.step}
+          placeholder={field.placeholder}
+          disabled={isSubmitting}
+        />
+        {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      </>
+    );
+  };
+
+  if (showLoader) {
+    return (
+      <div className="py-10 text-center text-muted-foreground">Loading...</div>
+    );
+  }
 
   return (
     <div className="p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {sections.map((section) => (
           <section
             key={section.title}
@@ -604,17 +673,7 @@ export default function SiteCreationForm() {
               {section.fields.map((field) => (
                 <div key={field.name} className="space-y-1">
                   <Label htmlFor={field.name}>{field.label}</Label>
-                  {renderField(
-                    field,
-                    formData[field.name],
-                    handleChange,
-                    handleFileChange,
-                    field.name === "state_id"
-                      ? stateOptions
-                      : field.name === "district_id"
-                      ? districtOptions
-                      : undefined
-                  )}
+                  {renderField(field)}
                 </div>
               ))}
             </div>
@@ -622,14 +681,10 @@ export default function SiteCreationForm() {
         ))}
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update" : "Save"}
           </Button>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => navigate(LIST_PATH)}
-          >
+          <Button variant="outline" type="button" onClick={() => navigate(LIST_PATH)}>
             Cancel
           </Button>
         </div>
