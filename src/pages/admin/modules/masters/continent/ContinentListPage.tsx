@@ -1,17 +1,11 @@
 import { useState } from "react";
 import { DataTable } from "primereact/datatable";
-import type { DataTablePageEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  keepPreviousData,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -49,25 +43,30 @@ export default function ContinentList() {
   const [rows, setRows] = useState(5);
   const [first, setFirst] = useState(0); // DataTable UI sync only
 
+  // Tracks the page/rows of data ACTUALLY displayed on screen.
+  // Only updates after a successful fetch — never during keepPreviousData phase.
+  const [displayedPage, setDisplayedPage] = useState(1);
+  const [displayedRows, setDisplayedRows] = useState(5);
+
   const [globalFilter, setGlobalFilter] = useState("");
 
   /* ------------------------------
      Query
   ------------------------------ */
-  const query = useQuery({
-    queryKey: continentListQueryKey(page, rows),
-    queryFn: async (): Promise<PaginatedResponse<ContinentRecord>> =>
-      continentApi.listPaginated(page, rows),
-    placeholderData: keepPreviousData,
-  });
+const query = useQuery<PaginatedResponse<ContinentRecord>>({
+  queryKey: continentListQueryKey(page, rows),
+  queryFn: async (): Promise<PaginatedResponse<ContinentRecord>> =>
+    continentApi.listPaginated(page, rows),
+  placeholderData: keepPreviousData,
+  onSuccess: () => {
+    setDisplayedPage(page);
+    setDisplayedRows(rows);
+  },
+});
 
   const continents = query.data?.results ?? [];
   const totalRecords = query.data?.count ?? 0;
   const loading = query.isLoading || query.isFetching;
-
-  // Use the page number the backend actually used — eliminates any
-  // frontend state mismatch causing wrong S.No
-  const actualPage = (query.data as any)?.page ?? page;
 
   /* ------------------------------
      Mutation (Status Toggle)
@@ -95,20 +94,21 @@ export default function ContinentList() {
   /* ------------------------------
      Pagination Handler
   ------------------------------ */
-  const onPage = (event: DataTablePageEvent) => {
+  const onPage = (event: any) => {
     const newRows = event.rows;
     const newPage = Math.floor(event.first / event.rows) + 1;
     setRows(newRows);
     setPage(newPage);
-    setFirst(event.first);
+    setFirst(event.first); // keep for paginator UI sync only
   };
 
   /* ------------------------------
-     Serial Number — derived from backend's actual page value
-     so it's always in sync regardless of frontend state
+     Serial Number — always matches the data on screen
+     because displayedPage/displayedRows only update on fresh fetch
   ------------------------------ */
-  const indexTemplate = (_: any, options: any) =>
-    (actualPage - 1) * rows + options.rowIndex + 1;
+  const indexTemplate = (_: any, options: any) => {
+    return (displayedPage - 1) * displayedRows + options.rowIndex + 1;
+  };
 
   /* ------------------------------
      Status Column
