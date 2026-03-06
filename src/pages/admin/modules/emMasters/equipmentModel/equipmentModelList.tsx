@@ -14,43 +14,18 @@ import { Switch } from "@/components/ui/switch";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { equipmentModelApi } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import type {
+  EquipmentModelTableRow,
+  RawEquipmentModelListRecord,
+} from "@/types/emMasters/lists";
 import { useEquipmentModelsQuery } from "@/tanstack/admin";
-
-type RawEquipmentTypeRef = {
-  name?: string;
-};
-
-type RawEquipmentModel = {
-  unique_id?: string | number;
-  id?: string | number;
-  equipment_type_name?: string;
-  equipment_type?: string | number | RawEquipmentTypeRef | null;
-  manufacturer?: string;
-  model_name?: string;
-  description?: string;
-  is_active?: boolean | string | number | null;
-};
-
-type EquipmentModel = {
-  unique_id: string;
-  equipment_type: string;
-  manufacturer: string;
-  model_name: string;
-  description: string;
-  is_active: boolean;
-};
-
-type EquipmentModelFilters = {
-  global: { value: string | null; matchMode: FilterMatchMode };
-  model_name: { value: string | null; matchMode: FilterMatchMode };
-};
 
 const equipmentModelListQueryKey = [
   ...masterQueryKeys.equipmentModels,
   "list",
 ] as const;
 
-const toBoolean = (value: RawEquipmentModel["is_active"]): boolean => {
+const toBoolean = (value: RawEquipmentModelListRecord["is_active"]): boolean => {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value === 1;
   if (typeof value === "string") {
@@ -60,8 +35,8 @@ const toBoolean = (value: RawEquipmentModel["is_active"]): boolean => {
 };
 
 const normalizeEquipmentModel = (
-  item: RawEquipmentModel
-): EquipmentModel | null => {
+  item: RawEquipmentModelListRecord
+): EquipmentModelTableRow | null => {
   const id = item.unique_id ?? item.id;
   if (id == null) return null;
 
@@ -83,9 +58,15 @@ const normalizeEquipmentModel = (
 
 export default function EquipmentModelList() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState<EquipmentModelFilters>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    model_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+  const [filters, setFilters] = useState({
+    global: {
+      value: null as string | null,
+      matchMode: FilterMatchMode.CONTAINS,
+    },
+    model_name: {
+      value: null as string | null,
+      matchMode: FilterMatchMode.STARTS_WITH,
+    },
   });
 
   const navigate = useNavigate();
@@ -98,8 +79,8 @@ export default function EquipmentModelList() {
 
   const query = useEquipmentModelsQuery();
   const normalizedModels = (query.data ?? [])
-    .map((item) => normalizeEquipmentModel(item as RawEquipmentModel))
-    .filter((item): item is EquipmentModel => item !== null);
+    .map((item) => normalizeEquipmentModel(item as RawEquipmentModelListRecord))
+    .filter((item): item is EquipmentModelTableRow => item !== null);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
@@ -145,7 +126,7 @@ export default function EquipmentModelList() {
     await deleteMutation.mutateAsync(id);
   };
 
-  const statusTemplate = (row: EquipmentModel) => (
+  const statusTemplate = (row: EquipmentModelTableRow) => (
     <Switch
       checked={row.is_active}
       onCheckedChange={(checked) =>
@@ -158,7 +139,7 @@ export default function EquipmentModelList() {
     />
   );
 
-  const actionTemplate = (row: EquipmentModel) => (
+  const actionTemplate = (row: EquipmentModelTableRow) => (
     <div className="flex gap-2 justify-center">
       <button onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}>
         <PencilIcon className="size-5 text-blue-600" />

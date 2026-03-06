@@ -14,41 +14,15 @@ import { PencilIcon } from "@/icons";
 import { contractorApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import type {
+  ContractorTableRow,
+  RawContractorListRecord,
+} from "@/types/emMasters/lists";
 import { useContractorsQuery } from "@/tanstack/admin";
-
-type RawContractor = {
-  id?: string | number;
-  unique_id?: string | number;
-  contractor_code?: string;
-  contractor_name?: string;
-  contact_person?: string;
-  mobile_no?: string;
-  gst_type?: string;
-  gst_no?: string | null;
-  pan_no?: string | null;
-  is_active?: boolean | string | number | null;
-};
-
-type Contractor = {
-  id: string;
-  contractor_code: string;
-  contractor_name: string;
-  contact_person: string;
-  mobile_no: string;
-  gst_type: "yes" | "no";
-  gst_no?: string | null;
-  pan_no?: string | null;
-  is_active: boolean;
-};
-
-type ContractorFilters = {
-  global: { value: string | null; matchMode: FilterMatchMode };
-  contractor_name: { value: string | null; matchMode: FilterMatchMode };
-};
 
 const contractorListQueryKey = [...masterQueryKeys.contractors, "list"] as const;
 
-const toBoolean = (value: RawContractor["is_active"]): boolean => {
+const toBoolean = (value: RawContractorListRecord["is_active"]): boolean => {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value === 1;
   if (typeof value === "string") {
@@ -60,7 +34,9 @@ const toBoolean = (value: RawContractor["is_active"]): boolean => {
 const normalizeGstType = (value: string | undefined): "yes" | "no" =>
   String(value ?? "").toLowerCase() === "yes" ? "yes" : "no";
 
-const normalizeContractor = (item: RawContractor): Contractor | null => {
+const normalizeContractor = (
+  item: RawContractorListRecord
+): ContractorTableRow | null => {
   const id = item.id ?? item.unique_id;
   if (id == null) return null;
 
@@ -79,9 +55,15 @@ const normalizeContractor = (item: RawContractor): Contractor | null => {
 
 export default function ContractorList() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState<ContractorFilters>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    contractor_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+  const [filters, setFilters] = useState({
+    global: {
+      value: null as string | null,
+      matchMode: FilterMatchMode.CONTAINS,
+    },
+    contractor_name: {
+      value: null as string | null,
+      matchMode: FilterMatchMode.STARTS_WITH,
+    },
   });
 
   const navigate = useNavigate();
@@ -93,8 +75,8 @@ export default function ContractorList() {
 
   const query = useContractorsQuery();
   const normalizedData = (query.data ?? [])
-    .map((item) => normalizeContractor(item as RawContractor))
-    .filter((item): item is Contractor => item !== null);
+    .map((item) => normalizeContractor(item as RawContractorListRecord))
+    .filter((item): item is ContractorTableRow => item !== null);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
@@ -140,7 +122,7 @@ export default function ContractorList() {
     await deleteMutation.mutateAsync(id);
   };
 
-  const statusTemplate = (row: Contractor) => (
+  const statusTemplate = (row: ContractorTableRow) => (
     <Switch
       checked={row.is_active}
       onCheckedChange={(checked) =>
@@ -153,7 +135,7 @@ export default function ContractorList() {
     />
   );
 
-  const actionTemplate = (row: Contractor) => (
+  const actionTemplate = (row: ContractorTableRow) => (
     <div className="flex gap-2 justify-center">
       <button onClick={() => navigate(ENC_EDIT(row.id))}>
         <PencilIcon className="size-5 text-blue-600" />
@@ -223,7 +205,9 @@ export default function ContractorList() {
         <Column field="mobile_no" header="Mobile" />
         <Column
           header="GST"
-          body={(row: Contractor) => (row.gst_type === "yes" ? row.gst_no : "No")}
+          body={(row: ContractorTableRow) =>
+            row.gst_type === "yes" ? row.gst_no : "No"
+          }
         />
         <Column header="Status" body={statusTemplate} />
         <Column header="Actions" body={actionTemplate} />

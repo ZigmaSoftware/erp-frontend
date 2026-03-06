@@ -26,7 +26,10 @@ import { masterQueryKeys } from "@/types/tanstack/masters";
 import { contractorSchema } from "@/validations/emMasters/contractor.schema";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import { toBoolean } from "@/utils/formHelpers";
-import type { ContractorDetail } from "@/types/emMasters/forms";
+import type {
+  ContractorDetail,
+  ContractorSubmitPayload,
+} from "@/types/emMasters/forms";
 
 const contractorDetailQueryKey = (id: string | undefined) =>
   [...masterQueryKeys.contractors, "detail", id ?? "new"] as const;
@@ -89,19 +92,7 @@ export default function ContractorForm() {
   }, [detailQuery.error]);
 
   const saveMutation = useMutation({
-    mutationFn: (payload: {
-      contractor_name: string;
-      contact_person: string;
-      mobile_no: string;
-      email: string;
-      gst_type: "yes" | "no";
-      gst_no: string | null;
-      pan_no: string | null;
-      opening_balance: string;
-      address: string;
-      bank_details: string | null;
-      is_active: boolean;
-    }) =>
+    mutationFn: (payload: ContractorSubmitPayload) =>
       isEdit
         ? contractorApi.update(id as string, payload)
         : contractorApi.create(payload),
@@ -150,10 +141,13 @@ export default function ContractorForm() {
 
     saveMutation.mutate({
       ...validation.data,
-      gst_no: validation.data.gst_type === "yes" ? validation.data.gst_no : null,
-      pan_no: validation.data.pan_no || null,
-      bank_details: validation.data.bank_details || null,
-      opening_balance: validation.data.opening_balance || "",
+      gst_no:
+        validation.data.gst_type === "yes"
+          ? (validation.data.gst_no ?? "") || null
+          : null,
+      pan_no: (validation.data.pan_no ?? "") || null,
+      bank_details: (validation.data.bank_details ?? "") || null,
+      opening_balance: validation.data.opening_balance ?? "",
     });
   };
 

@@ -19,33 +19,8 @@ import { Switch } from "@/components/ui/switch";
 import { machineryHireApi } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
 import type { MachineryHireRecord } from "@/types/tanstack/masters";
+import type { MachineryHireTableRow } from "@/types/emMasters/lists";
 import { useMachineryHiresQuery } from "@/tanstack/admin";
-
-export type VehicleRecord = {
-  id: number;
-  unique_id: string;
-
-  site_id: string;
-  site_name: string;
-
-  equipment_type_id: string;
-  equipment_type_name: string;
-
-  equipment_model_id: string;
-  equipment_model_name: string;
-
-  vehicle_id: string;
-  vehicle_code: string;
-
-  date: string;
-  diesel_status: "WITH_DIESEL" | "WITHOUT_DIESEL" | string;
-
-  hire_rate: string;
-  unit: string;
-
-  is_active: boolean;
-  is_deleted: boolean;
-};
 
 const toBoolean = (
   value: boolean | string | number | null | undefined
@@ -79,7 +54,7 @@ const pickFirstString = (...values: unknown[]): string => {
 
 const normalizeMachineryHireRecord = (
   item: MachineryHireRecord
-): VehicleRecord | null => {
+): MachineryHireTableRow | null => {
   const uniqueId = pickFirstString(item.unique_id, (item as Record<string, unknown>)["id"]);
   if (!uniqueId) return null;
 
@@ -122,7 +97,7 @@ export default function MachineryHireList() {
 
   const normalizedRecords = (query.data ?? [])
     .map(normalizeMachineryHireRecord)
-    .filter((item): item is VehicleRecord => Boolean(item && item.unique_id));
+    .filter((item): item is MachineryHireTableRow => Boolean(item && item.unique_id));
 
   const loading = query.isLoading || query.isFetching || query.isRefetching;
 
@@ -163,10 +138,10 @@ export default function MachineryHireList() {
     setGlobalFilterValue(value);
   };
 
-  const indexTemplate = (_: VehicleRecord, { rowIndex }: any) =>
+  const indexTemplate = (_: MachineryHireTableRow, { rowIndex }: any) =>
     rowIndex + 1;
 
-  const statusTemplate = (row: VehicleRecord) => {
+  const statusTemplate = (row: MachineryHireTableRow) => {
     const updateStatus = async (value: boolean) => {
       await machineryHireApi.update(row.unique_id, {
         is_active: value,
@@ -178,7 +153,7 @@ export default function MachineryHireList() {
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
-  const actionTemplate = (row: VehicleRecord) => (
+  const actionTemplate = (row: MachineryHireTableRow) => (
     <div className="flex gap-2 justify-center">
       <button
         className="text-blue-600 hover:text-blue-800"

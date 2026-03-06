@@ -31,39 +31,29 @@ import {
   toNumberValue,
 } from "@/utils/formHelpers";
 import { masterQueryKeys, type SiteRecord } from "@/types/tanstack/masters";
+import type {
+  SiteFileFieldName,
+  SiteFileValues,
+  SiteFormFieldConfig,
+  SiteFormSectionConfig,
+  SiteMutationVariables,
+} from "@/types/masters/forms";
+import { SITE_FILE_FIELD_NAMES } from "@/types/masters/forms";
 import { siteSchema, type SiteFormValues } from "@/validations/masters/site.schema";
 
 const { encMasters, encSiteCreation } = getEncryptedRoute();
 const LIST_PATH = `/${encMasters}/${encSiteCreation}`;
 
-/* ---------------- TYPES ---------------- */
+const toFormString = (value: string | number | null | undefined): string =>
+  value == null ? "" : String(value);
 
-type FieldConfig = {
-  label: string;
-  name: keyof SiteFormValues | "verification_document" | "document_view";
-  type?: string;
-  placeholder?: string;
-  as?: "textarea" | "select";
-  options?: Array<{ value: string; label: string }>;
-  step?: string;
-};
-
-type SectionConfig = {
-  title: string;
-  fields: FieldConfig[];
-};
-
-const fileFieldNames = ["verification_document", "document_view"] as const;
-type FileFieldName = (typeof fileFieldNames)[number];
-type FileValues = Record<FileFieldName, File | null>;
-
-const buildInitialFileValues = (): FileValues =>
-  fileFieldNames.reduce((acc, key) => {
+const buildInitialFileValues = (): SiteFileValues =>
+  SITE_FILE_FIELD_NAMES.reduce((acc, key) => {
     acc[key] = null;
     return acc;
-  }, {} as FileValues);
+  }, {} as SiteFileValues);
 
-const sections: SectionConfig[] = [
+const sections: SiteFormSectionConfig[] = [
   {
     title: "Core Site & Location",
     fields: [
@@ -356,7 +346,7 @@ export default function SiteCreationForm() {
     },
   });
 
-  const [fileInputs, setFileInputs] = useState<FileValues>(buildInitialFileValues);
+  const [fileInputs, setFileInputs] = useState<SiteFileValues>(buildInitialFileValues);
 
   const statesQuery = useStatesSelectOptions();
   const districtsQuery = useDistrictsSelectOptions();
@@ -398,27 +388,27 @@ export default function SiteCreationForm() {
       ulb: site.ulb ?? "",
       status: normalizeStatusLabel(site.status),
       site_address: site.site_address ?? "",
-      latitude: site.latitude ?? "",
-      longitude: site.longitude ?? "",
-      project_value: site.project_value ?? "",
+      latitude: toFormString(site.latitude),
+      longitude: toFormString(site.longitude),
+      project_value: toFormString(site.project_value),
       project_type_details: site.project_type_details ?? "",
-      basic_payment_per_m3: site.basic_payment_per_m3 ?? "",
+      basic_payment_per_m3: toFormString(site.basic_payment_per_m3),
       dc_invoice_no: site.dc_invoice_no ?? "",
       min_max_type: site.min_max_type ?? "",
       screen_name: site.screen_name ?? "",
-      weighbridge_count: site.weighbridge_count ?? "",
-      eb_rate: site.eb_rate ?? "",
-      unit_per_cost: site.unit_per_cost ?? "",
-      kwh: site.kwh ?? "",
-      demand_cost: site.demand_cost ?? "",
+      weighbridge_count: toFormString(site.weighbridge_count),
+      eb_rate: toFormString(site.eb_rate),
+      unit_per_cost: toFormString(site.unit_per_cost),
+      kwh: toFormString(site.kwh),
+      demand_cost: toFormString(site.demand_cost),
       eb_start_date: site.eb_start_date ?? "",
       eb_end_date: site.eb_end_date ?? "",
-      no_of_zones: site.no_of_zones ?? "",
-      no_of_phases: site.no_of_phases ?? "",
-      density_volume: site.density_volume ?? "",
-      extended_quantity: site.extended_quantity ?? "",
-      service_charge: site.service_charge ?? "",
-      transportation_cost: site.transportation_cost ?? "",
+      no_of_zones: toFormString(site.no_of_zones),
+      no_of_phases: toFormString(site.no_of_phases),
+      density_volume: toFormString(site.density_volume),
+      extended_quantity: toFormString(site.extended_quantity),
+      service_charge: toFormString(site.service_charge),
+      transportation_cost: toFormString(site.transportation_cost),
       gst: site.gst ?? "",
       bank_name: site.bank_name ?? "",
       account_number: site.account_number ?? "",
@@ -428,7 +418,7 @@ export default function SiteCreationForm() {
       commissioning_start_date: site.commissioning_start_date ?? "",
       project_completion_date: site.project_completion_date ?? "",
       weighment_folder_name: site.weighment_folder_name ?? "",
-      petty_cash: site.petty_cash ?? "",
+      petty_cash: toFormString(site.petty_cash),
       proposed_change: site.proposed_change ?? "",
       remarks: site.remarks ?? "",
     });
@@ -445,11 +435,6 @@ export default function SiteCreationForm() {
       });
     }
   }, [detailQuery.error]);
-
-  type SiteMutationVariables = {
-    payload: Record<string, unknown>;
-    formData?: FormData;
-  };
 
   const saveMutation = useMutation({
     mutationFn: ({ payload, formData }: SiteMutationVariables) =>
@@ -474,7 +459,7 @@ export default function SiteCreationForm() {
   const isSubmitting = saveMutation.isPending;
   const showLoader = isEdit && (!detailQuery.data || !queriesReady);
 
-  const handleFileChange = (name: FileFieldName, file: File | null) =>
+  const handleFileChange = (name: SiteFileFieldName, file: File | null) =>
     setFileInputs((prev) => ({ ...prev, [name]: file }));
 
   const buildFormBody = (payload: Record<string, unknown>) => {
@@ -520,9 +505,9 @@ export default function SiteCreationForm() {
     });
   };
 
-  const renderField = (field: FieldConfig) => {
+  const renderField = (field: SiteFormFieldConfig) => {
     if (field.type === "file") {
-      const fieldName = field.name as FileFieldName;
+      const fieldName = field.name as SiteFileFieldName;
       return (
         <>
           <Input

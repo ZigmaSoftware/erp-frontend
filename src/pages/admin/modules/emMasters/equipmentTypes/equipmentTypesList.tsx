@@ -18,15 +18,22 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 import { equipmentTypeApi } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import type { EquipmentTypeTableRow } from "@/types/emMasters/lists";
 import { useEquipmentTypesQuery } from "@/tanstack/admin";
 
-type EquipmentType = {
-  unique_id: string;
-  name: string;
-  description?: string;
-  category?: string;
-  image?: string;
-  is_active: boolean;
+const toBoolean = (value: unknown): boolean => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "active"].includes(value.toLowerCase());
+  }
+  return false;
+};
+
+const toStringValue = (value: unknown): string => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && !Number.isNaN(value)) return String(value);
+  return "";
 };
 
 export default function EquipmentTypeList() {
@@ -46,33 +53,36 @@ export default function EquipmentTypeList() {
   const queryClient = useQueryClient();
   const query = useEquipmentTypesQuery();
 
-  const normalizeEquipmentType = (item: any): EquipmentType => {
-    const statusFromIsActive = item?.is_active;
-    const statusFromStatus = item?.status;
+  const normalizeEquipmentType = (item: unknown): EquipmentTypeTableRow => {
+    const payload =
+      item && typeof item === "object" && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {};
+
+    const statusFromIsActive = payload["is_active"];
+    const statusFromStatus = payload["status"];
     const derivedStatus =
       statusFromIsActive !== undefined && statusFromIsActive !== null
-        ? Boolean(statusFromIsActive)
-        : typeof statusFromStatus === "boolean"
-          ? statusFromStatus
-          : String(statusFromStatus ?? "").toLowerCase() === "active";
+        ? toBoolean(statusFromIsActive)
+        : toBoolean(statusFromStatus);
 
     return {
-      unique_id: String(item?.unique_id ?? item?.id ?? ""),
-      name:
-        item?.name ??
-        item?.equipment_type_name ??
-        item?.equipmenttype_name ??
-        "",
-      description: item?.description ?? item?.remarks ?? "",
-      category: item?.category ?? item?.category_name ?? "",
-      image: item?.image ?? item?.image_url ?? "",
+      unique_id: toStringValue(payload["unique_id"] ?? payload["id"]),
+      name: toStringValue(
+        payload["name"] ??
+          payload["equipment_type_name"] ??
+          payload["equipmenttype_name"]
+      ),
+      description: toStringValue(payload["description"] ?? payload["remarks"]),
+      category: toStringValue(payload["category"] ?? payload["category_name"]),
+      image: toStringValue(payload["image"] ?? payload["image_url"]),
       is_active: derivedStatus,
     };
   };
 
   const normalizedRecords = (query.data ?? [])
     .map(normalizeEquipmentType)
-    .filter((item): item is EquipmentType => Boolean(item.unique_id));
+    .filter((item): item is EquipmentTypeTableRow => Boolean(item.unique_id));
 
   const loading = query.isLoading || query.isFetching || query.isRefetching;
 
@@ -110,11 +120,11 @@ export default function EquipmentTypeList() {
   };
 
   const indexTemplate = (
-    _: EquipmentType,
+    _: EquipmentTypeTableRow,
     { rowIndex }: { rowIndex: number }
   ) => rowIndex + 1;
 
-  const actionTemplate = (row: EquipmentType) => (
+  const actionTemplate = (row: EquipmentTypeTableRow) => (
     <div className="flex gap-2 justify-center">
       <button
         title="Edit"
@@ -134,7 +144,7 @@ export default function EquipmentTypeList() {
     </div>
   );
 
-  const statusTemplate = (row: EquipmentType) => {
+  const statusTemplate = (row: EquipmentTypeTableRow) => {
     const updateStatus = async (value: boolean) => {
       await equipmentTypeApi.update(row.unique_id, {
         name: row.name,
@@ -207,7 +217,7 @@ export default function EquipmentTypeList() {
         <Column
           field="image"
           header="Image"
-          body={(row: EquipmentType) =>
+          body={(row: EquipmentTypeTableRow) =>
             row.image ? (
               <img
                 src={row.image}

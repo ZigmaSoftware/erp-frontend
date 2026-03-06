@@ -29,15 +29,27 @@ export const vehicleSupplierSchema = z
   })
   .superRefine((value, ctx) => {
     if (value.gst_type === "yes" && !value.gst_no) {
-      ctx.addIssue({ path: ["gst_no"], message: "GST number is required when GST type is Yes" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["gst_no"],
+        message: "GST number is required when GST type is Yes",
+      });
     }
 
     if (value.gst_no && !GST_REGEX.test(value.gst_no.toUpperCase())) {
-      ctx.addIssue({ path: ["gst_no"], message: "GST number is invalid" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["gst_no"],
+        message: "GST number is invalid",
+      });
     }
 
     if (value.pan_no && !PAN_REGEX.test(value.pan_no.toUpperCase())) {
-      ctx.addIssue({ path: ["pan_no"], message: "PAN number is invalid" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["pan_no"],
+        message: "PAN number is invalid",
+      });
     }
   });
 
