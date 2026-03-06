@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -34,6 +39,10 @@ const cityListQueryKey = (page: number, rows: number) =>
 
 export default function CityList() {
   const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
+  const [displayedLazyParams, setDisplayedLazyParams] = useState({
+    page: 1,
+    rows: 10,
+  });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const navigate = useNavigate();
@@ -51,7 +60,8 @@ export default function CityList() {
   const query = useQuery<PaginatedResponse<CityRecord>>({
     queryKey: cityListQueryKey(lazyParams.page, lazyParams.rows),
     queryFn: () =>
-      cityApi.listPaginated(lazyParams.page, lazyParams.rows)
+      cityApi.listPaginated(lazyParams.page, lazyParams.rows),
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
@@ -63,6 +73,12 @@ export default function CityList() {
       });
     }
   }, [query.error]);
+
+  useEffect(() => {
+    if (!query.isLoading && !query.isFetching) {
+      setDisplayedLazyParams(lazyParams);
+    }
+  }, [lazyParams, query.isFetching, query.isLoading]);
 
   /* ---------------- STATUS MUTATION ---------------- */
 
@@ -191,7 +207,7 @@ export default function CityList() {
   );
 
   const indexTemplate = (_: CityRecord, { rowIndex }: any) =>
-    (lazyParams.page - 1) * lazyParams.rows + rowIndex + 1;
+    (displayedLazyParams.page - 1) * displayedLazyParams.rows + rowIndex + 1;
 
   const header = (
     <div className="flex justify-end items-center">
