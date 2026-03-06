@@ -13,6 +13,7 @@ export type CountryRecord = {
   name: string;
   continent_id?: string | number | null;
   continent?: string | number | null;
+  continent_name?: string;
   is_active: boolean;
   mob_code?: string;
   currency?: string;

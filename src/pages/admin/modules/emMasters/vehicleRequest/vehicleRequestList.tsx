@@ -17,31 +17,17 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { vehicleRequestApi, userCreationApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import type {
+  VehicleRequestItem,
+  VehicleRequestTableRow,
+} from "@/types/emMasters/lists";
 import { useSitesQuery, useVehicleRequestsQuery } from "@/tanstack/admin";
-
-type RequestItem = Record<string, unknown>;
-
-type VehicleRequestRecord = {
-  unique_id: string;
-  description: string;
-  site_id: string;
-  staff_id: string;
-  site_name: string;
-  staff_name: string;
-  request_status: string;
-  items: RequestItem[];
-  created_at?: string;
-};
-
-type TableFilters = {
-  global: { value: string | null; matchMode: FilterMatchMode };
-};
 
 const normalizeRequest = (
   payload: Record<string, unknown>,
   siteLookup: Map<string, string>,
   staffLookup: Map<string, string>
-): VehicleRequestRecord => {
+): VehicleRequestTableRow => {
   const siteRecord = asRecord(payload["site"]);
   const staffRecord = asRecord(payload["staff"]);
 
@@ -103,7 +89,7 @@ const normalizeRequest = (
     staff_id: staffId,
     site_name: siteName,
     staff_name: staffName,
-    items: items as RequestItem[],
+    items: items as VehicleRequestItem[],
     created_at,
   };
 };
@@ -141,8 +127,11 @@ const pickFirstString = (...values: unknown[]): string => {
 };
 
 function VehicleRequestList() {
-  const [filters, setFilters] = useState<TableFilters>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  const [filters, setFilters] = useState({
+    global: {
+      value: null as string | null,
+      matchMode: FilterMatchMode.CONTAINS,
+    },
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
 
@@ -230,7 +219,7 @@ function VehicleRequestList() {
     setGlobalFilterValue(value);
   };
 
-  const actionTemplate = (row: VehicleRequestRecord) => (
+  const actionTemplate = (row: VehicleRequestTableRow) => (
     <div className="flex gap-2 justify-center">
       <button
         className="text-blue-600 hover:text-blue-800"
@@ -302,9 +291,12 @@ function VehicleRequestList() {
         <Column header="S.No" body={(_, { rowIndex }) => rowIndex + 1} />
         <Column field="unique_id" header="Request ID" />
         <Column field="site_name" header="Site" sortable />
-        <Column header="Items" body={(row: VehicleRequestRecord) => row.items.length} />
+        <Column header="Items" body={(row: VehicleRequestTableRow) => row.items.length} />
         <Column field="request_status" header="Status" sortable />
-        <Column header="Requested On" body={(row: VehicleRequestRecord) => formatDate(row.created_at)} />
+        <Column
+          header="Requested On"
+          body={(row: VehicleRequestTableRow) => formatDate(row.created_at)}
+        />
         <Column field="description" header="Description" />
         <Column header="Actions" body={actionTemplate} />
       </DataTable>

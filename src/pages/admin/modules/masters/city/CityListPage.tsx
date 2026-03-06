@@ -23,16 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { cityApi } from "@/helpers/admin";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import type { PaginatedResponse } from "@/helpers/admin";
-import { masterQueryKeys } from "@/types/tanstack/masters";
-
-type CityRecord = {
-  unique_id: string;
-  name: string;
-  is_active: boolean;
-  country_name: string;
-  state_name: string;
-  district_name: string;
-};
+import { masterQueryKeys, type CityRecord } from "@/types/tanstack/masters";
 
 const cityListQueryKey = (page: number, rows: number) =>
   [...masterQueryKeys.cities, "list", page, rows] as const;
@@ -181,7 +172,7 @@ export default function CityList() {
       disabled={isUpdatingStatus}
       onCheckedChange={(value) =>
         statusMutation.mutate({
-          id: row.unique_id,
+          id: String(row.unique_id),
           is_active: value,
         })
       }
@@ -191,14 +182,14 @@ export default function CityList() {
   const actionTemplate = (row: CityRecord) => (
     <div className="flex gap-3 justify-center">
       <button
-        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
+        onClick={() => navigate(ENC_EDIT_PATH(String(row.unique_id)))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
       </button>
 
       <button
-        onClick={() => handleDelete(row.unique_id)}
+        onClick={() => handleDelete(String(row.unique_id))}
         className="text-red-600 hover:text-red-800"
       >
         <i className="pi pi-trash" />

@@ -24,25 +24,15 @@ import { masterQueryKeys } from "@/types/tanstack/masters";
 import { equipmentModelSchema } from "@/validations/emMasters/equipment-model.schema";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import { normalizeRelationId, toBoolean } from "@/utils/formHelpers";
-import type { EquipmentModelDetail } from "@/types/emMasters/forms";
+import type {
+  EquipmentModelDetail,
+  EquipmentModelSubmitPayload,
+  EquipmentTypeLookupOption,
+  RawEquipmentTypeLookupRecord,
+} from "@/types/emMasters/forms";
 
 const { encEmMasters, encEquipmentModel } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encEmMasters}/${encEquipmentModel}`;
-
-type EquipmentType = {
-  unique_id: string;
-  name: string;
-  is_active: boolean;
-};
-
-type RawEquipmentType = {
-  unique_id?: string | number;
-  id?: string | number;
-  name?: string;
-  equipment_type_name?: string;
-  is_active?: boolean | string | number | null;
-  status?: boolean | string | number | null;
-};
 
 const equipmentTypeListQueryKey = [
   ...masterQueryKeys.equipmentTypes,
@@ -52,7 +42,9 @@ const equipmentTypeListQueryKey = [
 const equipmentModelDetailQueryKey = (id: string | undefined) =>
   [...masterQueryKeys.equipmentModels, "detail", id ?? "new"] as const;
 
-const normalizeEquipmentType = (item: RawEquipmentType): EquipmentType | null => {
+const normalizeEquipmentType = (
+  item: RawEquipmentTypeLookupRecord
+): EquipmentTypeLookupOption | null => {
   const id = item.unique_id ?? item.id;
   if (id == null) return null;
 
@@ -77,11 +69,11 @@ export default function EquipmentModelForm() {
 
   const equipmentTypesQuery = useQuery({
     queryKey: equipmentTypeListQueryKey,
-    queryFn: async (): Promise<EquipmentType[]> => {
+    queryFn: async (): Promise<EquipmentTypeLookupOption[]> => {
       const response = await equipmentTypeApi.list();
       return response
-        .map((item) => normalizeEquipmentType(item as RawEquipmentType))
-        .filter((item): item is EquipmentType => item !== null);
+        .map((item) => normalizeEquipmentType(item as RawEquipmentTypeLookupRecord))
+        .filter((item): item is EquipmentTypeLookupOption => item !== null);
     },
   });
 
@@ -123,13 +115,7 @@ export default function EquipmentModelForm() {
   }, [detailQuery.error]);
 
   const saveMutation = useMutation({
-    mutationFn: (payload: {
-      equipment_type: string;
-      manufacturer: string;
-      model_name: string;
-      description: string;
-      is_active: boolean;
-    }) =>
+    mutationFn: (payload: EquipmentModelSubmitPayload) =>
       isEdit
         ? equipmentModelApi.update(id as string, payload)
         : equipmentModelApi.create(payload),
@@ -176,7 +162,10 @@ export default function EquipmentModelForm() {
       return;
     }
 
-    saveMutation.mutate(validation.data);
+    saveMutation.mutate({
+      ...validation.data,
+      description: validation.data.description ?? "",
+    });
   };
 
   const equipmentTypes = equipmentTypesQuery.data ?? [];

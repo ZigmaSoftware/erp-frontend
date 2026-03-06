@@ -24,15 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { stateApi } from "@/helpers/admin";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import type { PaginatedResponse } from "@/helpers/admin";
-import { masterQueryKeys } from "@/types/tanstack/masters";
-
-type StateRecord = {
-  unique_id: string;
-  name: string;
-  country_name: string;
-  label: string;
-  is_active: boolean;
-};
+import { masterQueryKeys, type StateRecord } from "@/types/tanstack/masters";
 
 const stateListQueryKey = (page: number, rows: number) =>
   [...masterQueryKeys.states, "list", page, rows] as const;
@@ -131,7 +123,7 @@ export default function StateList() {
       checked={row.is_active}
       disabled={isUpdatingStatus}
       onCheckedChange={(value) =>
-        statusMutation.mutate({ id: row.unique_id, is_active: value })
+        statusMutation.mutate({ id: String(row.unique_id), is_active: value })
       }
     />
   );
@@ -139,7 +131,7 @@ export default function StateList() {
   const actionTemplate = (row: StateRecord) => (
     <div className="flex gap-3 justify-center">
       <button
-        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
+        onClick={() => navigate(ENC_EDIT_PATH(String(row.unique_id)))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />

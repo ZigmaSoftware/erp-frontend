@@ -21,6 +21,7 @@ import { TrashBinIcon } from "@/icons";
 import { equipmentModelApi, siteApi, vehicleRequestApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import type { EmFormSelectOption } from "@/types/emMasters/forms";
 import {
   vehicleRequestSchema,
   type VehicleRequestFormValues,
@@ -32,12 +33,7 @@ import {
   toStringValue,
 } from "@/utils/formHelpers";
 
-type SelectOption = {
-  value: string;
-  label: string;
-};
-
-const STATUS_OPTIONS: SelectOption[] = [
+const STATUS_OPTIONS: EmFormSelectOption[] = [
   { value: "draft", label: "Draft" },
   { value: "requested", label: "Requested" },
   { value: "pending", label: "Pending" },
@@ -47,7 +43,7 @@ const STATUS_OPTIONS: SelectOption[] = [
 
 const DEFAULT_STATUS_VALUE = STATUS_OPTIONS[0].value as VehicleRequestFormValues["request_status"];
 
-const UNIT_OPTIONS: SelectOption[] = [
+const UNIT_OPTIONS: EmFormSelectOption[] = [
   { value: "nos", label: "nos" },
   { value: "hrs", label: "hrs" },
   { value: "days", label: "days" },
@@ -80,17 +76,17 @@ const toSelectOptions = (
   list: unknown[],
   getId: (item: Record<string, unknown>) => string,
   getLabel: (item: Record<string, unknown>) => string
-): SelectOption[] =>
+): EmFormSelectOption[] =>
   list
     .map(asRecord)
     .filter((item): item is Record<string, unknown> => Boolean(item))
-    .map((item) => {
+    .map((item): EmFormSelectOption | null => {
       const value = getId(item);
       const label = getLabel(item);
       if (!value || !label) return null;
       return { value, label };
     })
-    .filter((item): item is SelectOption => Boolean(item));
+    .filter((item): item is EmFormSelectOption => Boolean(item));
 
 const resolveModelLabel = (model: Record<string, unknown>) => {
   const name = pickFirstString(model["model_name"], model["name"]);
@@ -176,8 +172,8 @@ export default function VehicleRequestForm() {
   const lookupsQuery = useQuery({
     queryKey: vehicleRequestLookupsQueryKey,
     queryFn: async (): Promise<{
-      equipmentModels: SelectOption[];
-      siteOptions: SelectOption[];
+      equipmentModels: EmFormSelectOption[];
+      siteOptions: EmFormSelectOption[];
     }> => {
       const [models, sites] = await Promise.all([
         equipmentModelApi.list(),

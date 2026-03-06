@@ -13,7 +13,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { PencilIcon } from "@/icons";
 import { siteApi } from "@/helpers/admin";
-import type { PaginatedResponse } from "@/helpers/admin/crudHelpers";
 import {
   useDistrictsSelectOptions,
   useStatesSelectOptions,
@@ -22,6 +21,7 @@ import {
   masterQueryKeys,
   type SiteRecord,
 } from "@/types/tanstack/masters";
+import type { PaginatedSites, SiteTableRow } from "@/types/masters/lists";
 import { encryptSegment } from "@/utils/routeCrypto";
 
 /* ---------------- ROUTE ---------------- */
@@ -32,10 +32,6 @@ const encSiteCreation = encryptSegment("site-creation");
 const ENC_NEW_PATH = `/${encMasters}/${encSiteCreation}/new`;
 const ENC_EDIT_PATH = (id: string | number) =>
   `/${encMasters}/${encSiteCreation}/${id}/edit`;
-
-/* ---------------- TYPES ---------------- */
-
-type PaginatedSites = PaginatedResponse<SiteRecord>;
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -107,7 +103,7 @@ export default function SiteCreationList() {
 
   /* ---------------- TABLE DATA ---------------- */
 
-  const siteRows = useMemo(() => {
+  const siteRows = useMemo<SiteTableRow[]>(() => {
     return (siteQuery.data?.results ?? []).map(
       (site: SiteRecord) => ({
         ...site,
@@ -137,11 +133,11 @@ export default function SiteCreationList() {
 
     const term = globalFilterValue.toLowerCase();
 
-    return siteRows.filter((site: SiteRecord) =>
+    return siteRows.filter((site: SiteTableRow) =>
       [
         site.site_name,
-        (site as any).state,
-        (site as any).district,
+        site.state,
+        site.district,
         site.ulb,
       ]
         .filter(Boolean)
@@ -176,7 +172,7 @@ export default function SiteCreationList() {
   /* ---------------- STATUS UPDATE ---------------- */
 
   const updateStatus = async (
-    row: SiteRecord,
+    row: SiteTableRow,
     value: boolean
   ) => {
     const id =
@@ -313,7 +309,7 @@ export default function SiteCreationList() {
 
         <Column
           header="Status"
-          body={(row: SiteRecord) => (
+          body={(row: SiteTableRow) => (
             <Switch
               checked={!!row.is_active}
               onCheckedChange={(v) =>
@@ -345,7 +341,7 @@ export default function SiteCreationList() {
 
         <Column
           header="Actions"
-          body={(row: SiteRecord) => {
+          body={(row: SiteTableRow) => {
             const id =
               row.unique_id ??
               (row as any).id;
