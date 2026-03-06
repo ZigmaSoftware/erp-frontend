@@ -24,38 +24,20 @@ import {
   vehicleSupplierApi,
 } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import type {
+  VehicleCreationEquipmentModelOption,
+  VehicleCreationLookupState,
+  VehicleCreationRelationMaps,
+  VehicleCreationSelectOption,
+} from "@/types/emMasters/forms";
 import { vehicleCreationSchema } from "@/validations/emMasters/vehicle-creation.schema";
 
-type SelectOption = {
-  value: string;
-  label: string;
-};
-
-type EquipmentModelOption = SelectOption & {
-  equipmentTypeId: string;
-};
-
-type LookupState = {
-  contractors: SelectOption[];
-  suppliers: SelectOption[];
-  requests: SelectOption[];
-  sites: SelectOption[];
-  equipmentTypes: SelectOption[];
-  equipmentModels: EquipmentModelOption[];
-};
-
-type RelationMaps = {
-  typeAliasToCanonical: Record<string, string>;
-  modelAliasToCanonical: Record<string, string>;
-  modelToTypeCanonical: Record<string, string>;
-};
-
-const HIRE_TYPE_OPTIONS: SelectOption[] = [
+const HIRE_TYPE_OPTIONS: VehicleCreationSelectOption[] = [
   { value: "OWN", label: "Own" },
   { value: "HIRE", label: "Hire" },
 ];
 
-const RENTAL_BASIS_OPTIONS: SelectOption[] = [
+const RENTAL_BASIS_OPTIONS: VehicleCreationSelectOption[] = [
   { value: "HOUR", label: "Hour" },
   { value: "DAY", label: "Day" },
   { value: "KM", label: "KM" },
@@ -84,17 +66,17 @@ const toOptionList = (
   list: unknown[],
   getId: (item: Record<string, unknown>) => string,
   getLabel: (item: Record<string, unknown>) => string,
-): SelectOption[] => {
+): VehicleCreationSelectOption[] => {
   return list
     .map(asRecord)
     .filter((item): item is Record<string, unknown> => Boolean(item))
-    .map((item) => {
+    .map((item): VehicleCreationSelectOption | null => {
       const value = getId(item);
       const label = getLabel(item);
       if (!value || !label) return null;
       return { value, label };
     })
-    .filter((item): item is SelectOption => Boolean(item));
+    .filter((item): item is VehicleCreationSelectOption => Boolean(item));
 };
 
 const normalizeAliasKey = (value: unknown): string => pickFirstString(value).trim().toLowerCase();
@@ -176,7 +158,7 @@ export default function VehicleCreationForm() {
   const [rcInvoiceDate, setRcInvoiceDate] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  const [lookups, setLookups] = useState<LookupState>({
+  const [lookups, setLookups] = useState<VehicleCreationLookupState>({
     contractors: [],
     suppliers: [],
     requests: [],
@@ -188,7 +170,7 @@ export default function VehicleCreationForm() {
   const [lookupLoading, setLookupLoading] = useState(true);
   const [recordLoading, setRecordLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [relationMaps, setRelationMaps] = useState<RelationMaps>({
+  const [relationMaps, setRelationMaps] = useState<VehicleCreationRelationMaps>({
     typeAliasToCanonical: {},
     modelAliasToCanonical: {},
     modelToTypeCanonical: {},
@@ -282,7 +264,7 @@ export default function VehicleCreationForm() {
       const normalizedEquipmentTypes = (Array.isArray(equipmentTypes) ? equipmentTypes : [])
         .map(asRecord)
         .filter((item): item is Record<string, unknown> => Boolean(item))
-        .map((item) => {
+        .map((item): VehicleCreationSelectOption | null => {
           const canonical = pickFirstString(item["unique_id"], item["id"]);
           const label = pickFirstString(
             item["name"],
@@ -302,14 +284,14 @@ export default function VehicleCreationForm() {
           addAlias(typeAliasToCanonical, item["equipment_type_id"], canonical);
           return { value: canonical, label };
         })
-        .filter((item): item is SelectOption => Boolean(item));
+        .filter((item): item is VehicleCreationSelectOption => Boolean(item));
 
       const unresolvedModelTypeRefs: string[] = [];
 
-      const normalizedModels: EquipmentModelOption[] = (Array.isArray(equipmentModels) ? equipmentModels : [])
+      const normalizedModels: VehicleCreationEquipmentModelOption[] = (Array.isArray(equipmentModels) ? equipmentModels : [])
         .map(asRecord)
         .filter((item): item is Record<string, unknown> => Boolean(item))
-        .map((item) => {
+        .map((item): VehicleCreationEquipmentModelOption | null => {
           const modelCanonical = pickFirstString(item["unique_id"], item["id"]);
           const modelTypeRef = resolveCanonicalFromAliases(
             typeAliasToCanonical,
@@ -363,7 +345,7 @@ export default function VehicleCreationForm() {
             equipmentTypeId: modelTypeRef,
           };
         })
-        .filter((item): item is EquipmentModelOption => Boolean(item))
+        .filter((item): item is VehicleCreationEquipmentModelOption => Boolean(item))
         .filter((item) => item.value && item.label && item.equipmentTypeId);
 
       if (import.meta.env.DEV && unresolvedModelTypeRefs.length > 0) {

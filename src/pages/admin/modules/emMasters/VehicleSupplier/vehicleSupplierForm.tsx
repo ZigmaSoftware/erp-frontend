@@ -145,13 +145,16 @@ export default function VehicleSupplierForm() {
     payload.append("supplier_name", validation.data.supplier_name);
     payload.append("proprietor_name", validation.data.proprietor_name);
     payload.append("mobile_no", validation.data.mobile_no);
-    payload.append("email", validation.data.email);
+    payload.append("email", validation.data.email ?? "");
     payload.append("gst_type", validation.data.gst_type);
-    payload.append("gst_no", validation.data.gst_type === "yes" ? validation.data.gst_no : "");
-    payload.append("pan_no", validation.data.pan_no);
-    payload.append("transport_medium", validation.data.transport_medium);
+    payload.append(
+      "gst_no",
+      validation.data.gst_type === "yes" ? validation.data.gst_no ?? "" : ""
+    );
+    payload.append("pan_no", validation.data.pan_no ?? "");
+    payload.append("transport_medium", validation.data.transport_medium ?? "");
     payload.append("address", validation.data.address);
-    payload.append("bank_details", validation.data.bank_details);
+    payload.append("bank_details", validation.data.bank_details ?? "");
     payload.append("is_active", String(validation.data.is_active));
 
     if (imageFile) payload.append("image", imageFile);
