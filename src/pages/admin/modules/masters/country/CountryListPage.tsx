@@ -19,16 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { countryApi } from "@/helpers/admin";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import type { PaginatedResponse } from "@/helpers/admin";
-import { masterQueryKeys } from "@/types/tanstack/masters";
-
-type CountryRecord = {
-  unique_id: string;
-  name: string;
-  continent_name: string;
-  mob_code: string;
-  currency: string;
-  is_active: boolean;
-};
+import { masterQueryKeys, type CountryRecord } from "@/types/tanstack/masters";
 
 const countryListQueryKey = (page: number, rows: number) =>
   [...masterQueryKeys.countries, "list", page, rows] as const;
@@ -117,7 +108,7 @@ export default function CountryList() {
       checked={row.is_active}
       disabled={isUpdatingStatus}
       onCheckedChange={(value) =>
-        statusMutation.mutate({ id: row.unique_id, is_active: value })
+        statusMutation.mutate({ id: String(row.unique_id), is_active: value })
       }
     />
   );
@@ -125,7 +116,7 @@ export default function CountryList() {
   const actionTemplate = (c: CountryRecord) => (
     <div className="flex gap-3 justify-center">
       <button
-        onClick={() => navigate(ENC_EDIT_PATH(c.unique_id))}
+        onClick={() => navigate(ENC_EDIT_PATH(String(c.unique_id)))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />

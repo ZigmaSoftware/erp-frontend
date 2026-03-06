@@ -18,42 +18,20 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 import { vehicleSupplierApi } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
+import type {
+  RawVehicleSupplierListRecord,
+  VehicleSupplierTableRow,
+} from "@/types/emMasters/lists";
 import { useVehicleSuppliersQuery } from "@/tanstack/admin";
-
-type VehicleSupplier = {
-  unique_id: string;
-  supplier_name: string;
-  proprietor_name: string;
-  mobile_no: string;
-  gst_type?: string;
-  transport_medium?: string;
-  image?: string;
-  is_active: boolean;
-};
-
-type VehicleSupplierFilters = {
-  global: { value: string | null; matchMode: FilterMatchMode };
-  supplier_name: { value: string | null; matchMode: FilterMatchMode };
-};
-
-type RawVehicleSupplier = {
-  unique_id?: string | number;
-  id?: string | number;
-  supplier_name?: string;
-  proprietor_name?: string;
-  mobile_no?: string;
-  gst_type?: string;
-  transport_medium?: string;
-  image?: string;
-  is_active?: boolean | string | number | null;
-};
 
 const vehicleSupplierListQueryKey = [
   ...masterQueryKeys.vehicleSuppliers,
   "list",
 ] as const;
 
-const toBoolean = (value: RawVehicleSupplier["is_active"]): boolean => {
+const toBoolean = (
+  value: RawVehicleSupplierListRecord["is_active"]
+): boolean => {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value === 1;
   if (typeof value === "string") {
@@ -62,7 +40,9 @@ const toBoolean = (value: RawVehicleSupplier["is_active"]): boolean => {
   return false;
 };
 
-const normalizeSupplier = (item: RawVehicleSupplier): VehicleSupplier | null => {
+const normalizeSupplier = (
+  item: RawVehicleSupplierListRecord
+): VehicleSupplierTableRow | null => {
   const id = item.unique_id ?? item.id;
   if (id == null) return null;
 
@@ -80,9 +60,15 @@ const normalizeSupplier = (item: RawVehicleSupplier): VehicleSupplier | null => 
 
 export default function VehicleSupplierList() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState<VehicleSupplierFilters>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    supplier_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+  const [filters, setFilters] = useState({
+    global: {
+      value: null as string | null,
+      matchMode: FilterMatchMode.CONTAINS,
+    },
+    supplier_name: {
+      value: null as string | null,
+      matchMode: FilterMatchMode.STARTS_WITH,
+    },
   });
 
   const navigate = useNavigate();
@@ -95,8 +81,8 @@ export default function VehicleSupplierList() {
 
   const query = useVehicleSuppliersQuery();
   const suppliers = (query.data ?? [])
-    .map((item) => normalizeSupplier(item as RawVehicleSupplier))
-    .filter((item): item is VehicleSupplier => item !== null);
+    .map((item) => normalizeSupplier(item as RawVehicleSupplierListRecord))
+    .filter((item): item is VehicleSupplierTableRow => item !== null);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
@@ -139,7 +125,7 @@ export default function VehicleSupplierList() {
     await deleteMutation.mutateAsync(id);
   };
 
-  const statusTemplate = (row: VehicleSupplier) => (
+  const statusTemplate = (row: VehicleSupplierTableRow) => (
     <Switch
       checked={row.is_active}
       onCheckedChange={(checked) =>
@@ -152,7 +138,7 @@ export default function VehicleSupplierList() {
     />
   );
 
-  const actionTemplate = (row: VehicleSupplier) => (
+  const actionTemplate = (row: VehicleSupplierTableRow) => (
     <div className="flex gap-2 justify-center">
       <button onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}>
         <PencilIcon className="size-5 text-blue-600" />
@@ -219,7 +205,7 @@ export default function VehicleSupplierList() {
         <Column header="S.No" body={(_, { rowIndex }) => rowIndex + 1} />
         <Column
           header="Image"
-          body={(row: VehicleSupplier) =>
+          body={(row: VehicleSupplierTableRow) =>
             row.image ? (
               <img src={row.image} className="h-10 w-10 rounded object-cover" />
             ) : (

@@ -18,26 +18,8 @@ import { Switch } from "@/components/ui/switch";
 import { vehicleCreationApi } from "@/helpers/admin";
 import { masterQueryKeys } from "@/types/tanstack/masters";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import type { VehicleCreationTableRow } from "@/types/emMasters/lists";
 import { useVehicleCreationsQuery } from "@/tanstack/admin";
-
-type VehicleCreationRow = {
-  unique_id: string;
-  vehicle_code: string;
-  vehicle_reg_no: string;
-  hire_type: string;
-  rental_basis: string;
-  request_no: string;
-  site_name: string;
-  equipment_type_name: string;
-  equipment_model_name: string;
-  contractor_name: string;
-  supplier_name: string;
-  is_active: boolean;
-};
-
-type TableFilters = {
-  global: { value: string | null; matchMode: FilterMatchMode };
-};
 
 const vehicleCreationListQueryKey = [...masterQueryKeys.vehicleCreations, "list"] as const;
 
@@ -70,7 +52,9 @@ const toBoolean = (value: unknown): boolean => {
   return false;
 };
 
-const normalizeRow = (payload: Record<string, unknown>): VehicleCreationRow => {
+const normalizeRow = (
+  payload: Record<string, unknown>
+): VehicleCreationTableRow => {
   const contractor = asRecord(payload["contractor_id"]);
   const supplier = asRecord(payload["supplier_id"]);
   const site = asRecord(payload["site_id"]);
@@ -115,8 +99,11 @@ const normalizeRow = (payload: Record<string, unknown>): VehicleCreationRow => {
 };
 
 export default function VehicleCreationList() {
-  const [filters, setFilters] = useState<TableFilters>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  const [filters, setFilters] = useState({
+    global: {
+      value: null as string | null,
+      matchMode: FilterMatchMode.CONTAINS,
+    },
   });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
 
@@ -187,7 +174,7 @@ export default function VehicleCreationList() {
     setGlobalFilterValue(value);
   };
 
-  const actionTemplate = (row: VehicleCreationRow) => (
+  const actionTemplate = (row: VehicleCreationTableRow) => (
     <div className="flex gap-2 justify-center">
       <button
         className="text-blue-600 hover:text-blue-800"
@@ -204,7 +191,7 @@ export default function VehicleCreationList() {
     </div>
   );
 
-  const statusTemplate = (row: VehicleCreationRow) => (
+  const statusTemplate = (row: VehicleCreationTableRow) => (
     <Switch
       checked={row.is_active}
       onCheckedChange={(checked) =>
@@ -285,13 +272,13 @@ export default function VehicleCreationList() {
           field="contractor_name"
           header="Contractor"
           sortable
-          body={(row: VehicleCreationRow) => row.contractor_name || "—"}
+          body={(row: VehicleCreationTableRow) => row.contractor_name || "—"}
         />
         <Column
           field="supplier_name"
           header="Supplier"
           sortable
-          body={(row: VehicleCreationRow) => row.supplier_name || "—"}
+          body={(row: VehicleCreationTableRow) => row.supplier_name || "—"}
         />
         <Column header="Status" body={statusTemplate} />
         <Column field="rental_basis" header="Rental Basis" sortable />
