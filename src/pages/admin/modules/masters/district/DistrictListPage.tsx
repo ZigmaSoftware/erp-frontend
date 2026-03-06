@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -26,6 +31,10 @@ const districtListQueryKey = (page: number, rows: number) =>
 
 export default function DistrictListPage() {
   const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
+  const [displayedLazyParams, setDisplayedLazyParams] = useState({
+    page: 1,
+    rows: 10,
+  });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -40,6 +49,7 @@ export default function DistrictListPage() {
   const query = useQuery<PaginatedResponse<DistrictRecord>>({
     queryKey: districtListQueryKey(lazyParams.page, lazyParams.rows),
     queryFn: () => districtApi.listPaginated(lazyParams.page, lazyParams.rows),
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
@@ -51,6 +61,12 @@ export default function DistrictListPage() {
       });
     }
   }, [query.error]);
+
+  useEffect(() => {
+    if (!query.isLoading && !query.isFetching) {
+      setDisplayedLazyParams(lazyParams);
+    }
+  }, [lazyParams, query.isFetching, query.isLoading]);
 
   const statusMutation = useMutation({
     mutationFn: (payload: { id: string; is_active: boolean }) =>
@@ -130,7 +146,7 @@ export default function DistrictListPage() {
   );
 
   const indexTemplate = (_: DistrictRecord, { rowIndex }: any) =>
-    (lazyParams.page - 1) * lazyParams.rows + rowIndex + 1;
+    (displayedLazyParams.page - 1) * displayedLazyParams.rows + rowIndex + 1;
 
   return (
     <div className="p-3">

@@ -74,17 +74,20 @@ export default function PlantList() {
   );
 
   const plantRows = useMemo(() => {
-    const rows = plantsQuery.data ?? [];
-    if (!globalFilterValue.trim()) return rows;
+    const data = plantsQuery.data ?? [];
+    if (!globalFilterValue.trim()) return data;
     const term = globalFilterValue.toLowerCase();
-    return rows.filter((plant) =>
+    return data.filter((plant) =>
       [plant.plant_name, plant.site_name]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term))
     );
   }, [plantsQuery.data, globalFilterValue]);
 
-  const indexTemplate = (_: any, options: any) => first + options.rowIndex + 1;
+  const indexTemplate = (
+    _: PlantRecord,
+    { rowIndex }: { rowIndex: number }
+  ) => first + rowIndex + 1;
 
   return (
     <div className="p-3">

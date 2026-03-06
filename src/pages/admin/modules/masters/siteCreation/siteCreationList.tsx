@@ -1,10 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { Switch } from "@/components/ui/switch";
 import { PencilIcon } from "@/icons";
@@ -33,6 +37,10 @@ const ENC_EDIT_PATH = (id: string | number) =>
 
 export default function SiteCreationList() {
   const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
+  const [displayedLazyParams, setDisplayedLazyParams] = useState({
+    page: 1,
+    rows: 10,
+  });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const navigate = useNavigate();
@@ -60,8 +68,14 @@ export default function SiteCreationList() {
         lazyParams.page,
         lazyParams.rows
       ),
-    placeholderData: (prev) => prev,
+    placeholderData: keepPreviousData,
   });
+
+  useEffect(() => {
+    if (!siteQuery.isLoading && !siteQuery.isFetching) {
+      setDisplayedLazyParams(lazyParams);
+    }
+  }, [lazyParams, siteQuery.isFetching, siteQuery.isLoading]);
 
   /* ---------------- MASTER DATA ---------------- */
 
@@ -146,6 +160,14 @@ export default function SiteCreationList() {
 
   const totalRecords =
     siteQuery.data?.count ?? 0;
+  const indexTemplate = (
+    _: SiteRecord,
+    { rowIndex }: { rowIndex: number }
+  ) =>
+    (displayedLazyParams.page - 1) *
+      displayedLazyParams.rows +
+    rowIndex +
+    1;
 
   /* ---------------- STATUS UPDATE ---------------- */
 
@@ -258,6 +280,12 @@ export default function SiteCreationList() {
         showGridlines
         className="p-datatable-sm"
       >
+        <Column
+          header="S.No"
+          body={indexTemplate}
+          style={{ width: "80px" }}
+        />
+
         <Column
           header="Site Name"
           field="site_name"

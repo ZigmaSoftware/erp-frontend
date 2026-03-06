@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -26,6 +31,10 @@ const stateListQueryKey = (page: number, rows: number) =>
 
 export default function StateList() {
   const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
+  const [displayedLazyParams, setDisplayedLazyParams] = useState({
+    page: 1,
+    rows: 10,
+  });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -40,6 +49,7 @@ export default function StateList() {
   const query = useQuery<PaginatedResponse<StateRecord>>({
     queryKey: stateListQueryKey(lazyParams.page, lazyParams.rows),
     queryFn: () => stateApi.listPaginated(lazyParams.page, lazyParams.rows),
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
@@ -51,6 +61,12 @@ export default function StateList() {
       });
     }
   }, [query.error]);
+
+  useEffect(() => {
+    if (!query.isLoading && !query.isFetching) {
+      setDisplayedLazyParams(lazyParams);
+    }
+  }, [lazyParams, query.isFetching, query.isLoading]);
 
   const statusMutation = useMutation({
     mutationFn: (payload: { id: string; is_active: boolean }) =>
@@ -124,7 +140,7 @@ export default function StateList() {
   );
 
   const indexTemplate = (_: StateRecord, { rowIndex }: any) =>
-    (lazyParams.page - 1) * lazyParams.rows + rowIndex + 1;
+    (displayedLazyParams.page - 1) * displayedLazyParams.rows + rowIndex + 1;
 
   return (
     <div className="p-3">
