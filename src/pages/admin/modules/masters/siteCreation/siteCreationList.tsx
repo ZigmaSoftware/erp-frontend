@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { DataTable } from "primereact/datatable";
@@ -36,11 +36,12 @@ const ENC_EDIT_PATH = (id: string | number) =>
 /* ---------------- COMPONENT ---------------- */
 
 export default function SiteCreationList() {
-  const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
-  const [displayedLazyParams, setDisplayedLazyParams] = useState({
-    page: 1,
-    rows: 10,
-  });
+  const [page, setPage] = useState(1);
+  const [rows, setRows] = useState(10);
+
+  const [displayedPage, setDisplayedPage] = useState(1);
+  const [displayedRows, setDisplayedRows] = useState(10);
+
   const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const navigate = useNavigate();
@@ -49,33 +50,24 @@ export default function SiteCreationList() {
   /* ---------------- QUERY KEY ---------------- */
 
   const siteQueryKey = useMemo(
-    () =>
-      [
-        ...masterQueryKeys.sites,
-        "paginated",
-        lazyParams.page,
-        lazyParams.rows,
-      ] as const,
-    [lazyParams.page, lazyParams.rows]
+    () => [...masterQueryKeys.sites, "paginated", page, rows] as const,
+    [page, rows]
   );
 
-  /* ---------------- PAGINATED QUERY (TanStack v5) ---------------- */
+  /* ---------------- QUERY ---------------- */
 
   const siteQuery = useQuery({
     queryKey: siteQueryKey,
     queryFn: async (): Promise<PaginatedSites> =>
-      await siteApi.listPaginated(
-        lazyParams.page,
-        lazyParams.rows
-      ),
-    placeholderData: keepPreviousData,
-  });
+      await siteApi.listPaginated(page, rows),
 
-  useEffect(() => {
-    if (!siteQuery.isLoading && !siteQuery.isFetching) {
-      setDisplayedLazyParams(lazyParams);
-    }
-  }, [lazyParams, siteQuery.isFetching, siteQuery.isLoading]);
+    placeholderData: keepPreviousData,
+
+    onSuccess: () => {
+      setDisplayedPage(page);
+      setDisplayedRows(rows);
+    },
+  });
 
   /* ---------------- MASTER DATA ---------------- */
 
@@ -88,7 +80,10 @@ export default function SiteCreationList() {
   const stateLabelMap = useMemo(() => {
     const map = new Map<string, string>();
     stateOptions.forEach((opt) =>
-      map.set(opt.value, typeof opt.label === "string" ? opt.label : String(opt.label ?? ""))
+      map.set(
+        opt.value,
+        typeof opt.label === "string" ? opt.label : String(opt.label ?? "")
+      )
     );
     return map;
   }, [stateOptions]);
@@ -96,7 +91,10 @@ export default function SiteCreationList() {
   const districtLabelMap = useMemo(() => {
     const map = new Map<string, string>();
     districtOptions.forEach((opt) =>
-      map.set(opt.value, typeof opt.label === "string" ? opt.label : String(opt.label ?? ""))
+      map.set(
+        opt.value,
+        typeof opt.label === "string" ? opt.label : String(opt.label ?? "")
+      )
     );
     return map;
   }, [districtOptions]);
@@ -104,26 +102,18 @@ export default function SiteCreationList() {
   /* ---------------- TABLE DATA ---------------- */
 
   const siteRows = useMemo<SiteTableRow[]>(() => {
-    return (siteQuery.data?.results ?? []).map(
-      (site: SiteRecord) => ({
-        ...site,
-        state:
-          site.state_name ??
-          stateLabelMap.get(
-            String(site.state_id ?? "")
-          ) ??
-          "",
-        district:
-          site.district_name ??
-          districtLabelMap.get(
-            String(site.district_id ?? "")
-          ) ??
-          "",
-        status: site.is_active
-          ? "Active"
-          : "Inactive",
-      })
-    );
+    return (siteQuery.data?.results ?? []).map((site: SiteRecord) => ({
+      ...site,
+      state:
+        site.state_name ??
+        stateLabelMap.get(String(site.state_id ?? "")) ??
+        "",
+      district:
+        site.district_name ??
+        districtLabelMap.get(String(site.district_id ?? "")) ??
+        "",
+      status: site.is_active ? "Active" : "Inactive",
+    }));
   }, [siteQuery.data, stateLabelMap, districtLabelMap]);
 
   /* ---------------- SEARCH FILTER ---------------- */
@@ -134,17 +124,10 @@ export default function SiteCreationList() {
     const term = globalFilterValue.toLowerCase();
 
     return siteRows.filter((site: SiteTableRow) =>
-      [
-        site.site_name,
-        site.state,
-        site.district,
-        site.ulb,
-      ]
+      [site.site_name, site.state, site.district, site.ulb]
         .filter(Boolean)
         .some((value) =>
-          String(value)
-            .toLowerCase()
-            .includes(term)
+          String(value).toLowerCase().includes(term)
         )
     );
   }, [globalFilterValue, siteRows]);
@@ -152,35 +135,28 @@ export default function SiteCreationList() {
   /* ---------------- PAGINATION ---------------- */
 
   const onPage = (event: any) => {
-    setLazyParams({
-      page: event.page + 1,
-      rows: event.rows,
-    });
+    const newRows = event.rows;
+    const newPage = Math.floor(event.first / event.rows) + 1;
+
+    setRows(newRows);
+    setPage(newPage);
   };
 
-  const totalRecords =
-    siteQuery.data?.count ?? 0;
+  const totalRecords = siteQuery.data?.count ?? 0;
+
   const indexTemplate = (
     _: SiteRecord,
     { rowIndex }: { rowIndex: number }
   ) =>
-    (displayedLazyParams.page - 1) *
-      displayedLazyParams.rows +
-    rowIndex +
-    1;
+    (displayedPage - 1) * displayedRows + rowIndex + 1;
 
   /* ---------------- STATUS UPDATE ---------------- */
 
-  const updateStatus = async (
-    row: SiteTableRow,
-    value: boolean
-  ) => {
-    const id =
-      row.unique_id ?? (row as any).id;
+  const updateStatus = async (row: SiteTableRow, value: boolean) => {
+    const id = row.unique_id ?? (row as any).id;
     if (!id) return;
 
-    const previousData =
-      siteQuery.data;
+    const previousData = siteQuery.data;
 
     queryClient.setQueryData(
       siteQueryKey,
@@ -189,15 +165,10 @@ export default function SiteCreationList() {
 
         return {
           ...data,
-          results: data.results.map(
-            (site: SiteRecord) =>
-              (site.unique_id ??
-                (site as any).id) === id
-                ? {
-                    ...site,
-                    is_active: value,
-                  }
-                : site
+          results: data.results.map((site: SiteRecord) =>
+            (site.unique_id ?? (site as any).id) === id
+              ? { ...site, is_active: value }
+              : site
           ),
         };
       }
@@ -208,10 +179,7 @@ export default function SiteCreationList() {
         is_active: value ? 1 : 0,
       });
     } catch {
-      queryClient.setQueryData(
-        siteQueryKey,
-        previousData
-      );
+      queryClient.setQueryData(siteQueryKey, previousData);
 
       Swal.fire({
         title: "Error",
@@ -229,9 +197,7 @@ export default function SiteCreationList() {
         <i className="pi pi-search text-gray-500" />
         <InputText
           value={globalFilterValue}
-          onChange={(e) =>
-            setGlobalFilterValue(e.target.value)
-          }
+          onChange={(e) => setGlobalFilterValue(e.target.value)}
           placeholder="Search sites..."
           className="p-inputtext-sm border-0 shadow-none"
         />
@@ -253,10 +219,7 @@ export default function SiteCreationList() {
           </p>
         </div>
 
-        <Link
-          to={ENC_NEW_PATH}
-          className="p-button p-button-success"
-        >
+        <Link to={ENC_NEW_PATH} className="p-button p-button-success">
           + Add Site
         </Link>
       </div>
@@ -264,15 +227,12 @@ export default function SiteCreationList() {
       <DataTable
         value={filteredSites}
         dataKey="unique_id"
-        loading={siteQuery.isFetching}
+        loading={siteQuery.isLoading || siteQuery.isFetching}
         lazy
         paginator
-        rows={lazyParams.rows}
+        rows={rows}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        first={
-          (lazyParams.page - 1) *
-          lazyParams.rows
-        }
+        first={(page - 1) * rows}
         totalRecords={totalRecords}
         onPage={onPage}
         header={tableHeader}
@@ -280,81 +240,37 @@ export default function SiteCreationList() {
         showGridlines
         className="p-datatable-sm"
       >
-        <Column
-          header="S.No"
-          body={indexTemplate}
-          style={{ width: "80px" }}
-        />
+        <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
 
-        <Column
-          header="Site Name"
-          field="site_name"
-          sortable
-        />
-        <Column
-          header="State"
-          field="state"
-          sortable
-        />
-        <Column
-          header="District"
-          field="district"
-          sortable
-        />
-        <Column
-          header="ULB"
-          field="ulb"
-          sortable
-        />
+        <Column header="Site Name" field="site_name" sortable />
+        <Column header="State" field="state" sortable />
+        <Column header="District" field="district" sortable />
+        <Column header="ULB" field="ulb" sortable />
 
         <Column
           header="Status"
           body={(row: SiteTableRow) => (
             <Switch
               checked={!!row.is_active}
-              onCheckedChange={(v) =>
-                updateStatus(row, v)
-              }
+              onCheckedChange={(v) => updateStatus(row, v)}
             />
           )}
-          style={{
-            textAlign: "center",
-            width: "140px",
-          }}
+          style={{ textAlign: "center", width: "140px" }}
         />
 
-        <Column
-          header="Project Value"
-          field="project_value"
-          sortable
-        />
-        <Column
-          header="Project Type"
-          field="project_type_details"
-          sortable
-        />
-        <Column
-          header="Weighbridge Count"
-          field="weighbridge_count"
-          sortable
-        />
+        <Column header="Project Value" field="project_value" sortable />
+        <Column header="Project Type" field="project_type_details" sortable />
+        <Column header="Weighbridge Count" field="weighbridge_count" sortable />
 
         <Column
           header="Actions"
           body={(row: SiteTableRow) => {
-            const id =
-              row.unique_id ??
-              (row as any).id;
+            const id = row.unique_id ?? (row as any).id;
 
             return (
               <div className="flex justify-center">
                 <button
-                  onClick={() =>
-                    id &&
-                    navigate(
-                      ENC_EDIT_PATH(id)
-                    )
-                  }
+                  onClick={() => id && navigate(ENC_EDIT_PATH(id))}
                   className="text-blue-600 hover:text-blue-800"
                   title="Edit"
                 >
@@ -363,10 +279,7 @@ export default function SiteCreationList() {
               </div>
             );
           }}
-          style={{
-            textAlign: "center",
-            width: "140px",
-          }}
+          style={{ textAlign: "center", width: "140px" }}
         />
       </DataTable>
     </div>
