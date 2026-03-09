@@ -183,6 +183,7 @@ export default function EquipmentModelList() {
         loading={loading}
         paginator
         rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]} 
         filters={filters}
         globalFilterFields={["model_name", "manufacturer", "equipment_type"]}
         header={
