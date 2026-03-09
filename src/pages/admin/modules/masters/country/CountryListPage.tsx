@@ -30,15 +30,24 @@ const countryListQueryKey = (page: number, rows: number) =>
   [...masterQueryKeys.countries, "list", page, rows] as const;
 
 export default function CountryList() {
-  const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
-  const [displayedLazyParams, setDisplayedLazyParams] = useState({
-    page: 1,
-    rows: 10,
-  });
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  /* ------------------------------
+     Pagination States (same as ContinentList)
+  ------------------------------ */
+  const [page, setPage] = useState(1);
+  const [rows, setRows] = useState(5);
+  const [first, setFirst] = useState(0);
+
+  const [displayedPage, setDisplayedPage] = useState(1);
+  const [displayedRows, setDisplayedRows] = useState(5);
+
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
+
+  /* ------------------------------
+     Routes
+  ------------------------------ */
   const encMasters = encryptSegment("masters");
   const encCountries = encryptSegment("countries");
 
@@ -46,11 +55,23 @@ export default function CountryList() {
   const ENC_EDIT_PATH = (unique_id: string) =>
     `/${encMasters}/${encCountries}/${unique_id}/edit`;
 
+  /* ------------------------------
+     Query
+  ------------------------------ */
   const query = useQuery<PaginatedResponse<CountryRecord>>({
-    queryKey: countryListQueryKey(lazyParams.page, lazyParams.rows),
-    queryFn: () => countryApi.listPaginated(lazyParams.page, lazyParams.rows),
+    queryKey: countryListQueryKey(page, rows),
+    queryFn: async (): Promise<PaginatedResponse<CountryRecord>> =>
+      countryApi.listPaginated(page, rows),
     placeholderData: keepPreviousData,
+    onSuccess: () => {
+      setDisplayedPage(page);
+      setDisplayedRows(rows);
+    },
   });
+
+  const countries = query.data?.results ?? [];
+  const totalRecords = query.data?.count ?? 0;
+  const loading = query.isLoading || query.isFetching;
 
   useEffect(() => {
     if (query.error) {
@@ -62,46 +83,91 @@ export default function CountryList() {
     }
   }, [query.error]);
 
-  useEffect(() => {
-    if (!query.isLoading && !query.isFetching) {
-      setDisplayedLazyParams(lazyParams);
-    }
-  }, [lazyParams, query.isFetching, query.isLoading]);
-
-  const statusMutation = useMutation({
-    mutationFn: (payload: { id: string; is_active: boolean }) =>
+  /* ------------------------------
+     Mutation (Status Toggle)
+  ------------------------------ */
+  const mutation = useMutation({
+    mutationFn: (payload: { id: string | number; is_active: boolean }) =>
       countryApi.update(payload.id, { is_active: payload.is_active }),
+
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: masterQueryKeys.countries,
+        queryKey: countryListQueryKey(page, rows),
       });
     },
-    onError: (error) => {
-      Swal.fire({
-        icon: "error",
-        title: "Failed to update status",
-        text: extractErrorMessage(error),
-      });
+
+    onError: () => {
+      Swal.fire("Error", "Status update failed", "error");
     },
   });
 
-  const isUpdatingStatus = statusMutation.isPending;
+  const isUpdating = mutation.isPending;
 
-  const totalRecords = query.data?.count ?? 0;
-  const countries = query.data?.results ?? [];
-  const loading = query.isLoading || query.isFetching;
+  /* ------------------------------
+     Pagination Handler
+  ------------------------------ */
+  const onPage = (event: any) => {
+    const newRows = event.rows;
+    const newPage = Math.floor(event.first / event.rows) + 1;
 
+    setRows(newRows);
+    setPage(newPage);
+    setFirst(event.first);
+  };
+
+  /* ------------------------------
+     Serial Number Logic
+  ------------------------------ */
+  const indexTemplate = (_: CountryRecord, options: any) => {
+    return (displayedPage - 1) * displayedRows + options.rowIndex + 1;
+  };
+
+  /* ------------------------------
+     Search
+  ------------------------------ */
   const onGlobalFilterChange = (e: ChangeEvent<HTMLInputElement>) => {
     setGlobalFilterValue(e.target.value);
   };
 
-  const onPage = (event: any) => {
-    setLazyParams({
-      page: event.page + 1,
-      rows: event.rows,
-    });
-  };
+  /* ------------------------------
+     Utilities
+  ------------------------------ */
+  const cap = (str?: string) =>
+    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
+  /* ------------------------------
+     Status Column
+  ------------------------------ */
+  const statusTemplate = (row: CountryRecord) => (
+    <Switch
+      checked={row.is_active}
+      onCheckedChange={(checked) =>
+        mutation.mutate({
+          id: row.unique_id,
+          is_active: checked,
+        })
+      }
+      disabled={isUpdating}
+    />
+  );
+
+  /* ------------------------------
+     Actions Column
+  ------------------------------ */
+  const actionTemplate = (c: CountryRecord) => (
+    <div className="flex gap-3 justify-center">
+      <button
+        onClick={() => navigate(ENC_EDIT_PATH(String(c.unique_id)))}
+        className="text-blue-600 hover:text-blue-800"
+      >
+        <PencilIcon className="size-5" />
+      </button>
+    </div>
+  );
+
+  /* ------------------------------
+     Header
+  ------------------------------ */
   const header = (
     <div className="flex justify-end items-center">
       <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
@@ -116,33 +182,9 @@ export default function CountryList() {
     </div>
   );
 
-  const cap = (str?: string) =>
-    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
-
-  const statusTemplate = (row: CountryRecord) => (
-    <Switch
-      checked={row.is_active}
-      disabled={isUpdatingStatus}
-      onCheckedChange={(value) =>
-        statusMutation.mutate({ id: String(row.unique_id), is_active: value })
-      }
-    />
-  );
-
-  const actionTemplate = (c: CountryRecord) => (
-    <div className="flex gap-3 justify-center">
-      <button
-        onClick={() => navigate(ENC_EDIT_PATH(String(c.unique_id)))}
-        className="text-blue-600 hover:text-blue-800"
-      >
-        <PencilIcon className="size-5" />
-      </button>
-    </div>
-  );
-
-  const indexTemplate = (_: CountryRecord, { rowIndex }: any) =>
-    (displayedLazyParams.page - 1) * displayedLazyParams.rows + rowIndex + 1;
-
+  /* ------------------------------
+     Render
+  ------------------------------ */
   return (
     <div className="p-3">
       <div className="flex justify-between items-center mb-6">
@@ -164,9 +206,9 @@ export default function CountryList() {
         dataKey="unique_id"
         lazy
         paginator
-        rows={lazyParams.rows}
+        rows={rows}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        first={(lazyParams.page - 1) * lazyParams.rows}
+        first={first}
         totalRecords={totalRecords}
         onPage={onPage}
         loading={loading}
@@ -177,25 +219,31 @@ export default function CountryList() {
         className="p-datatable-sm"
       >
         <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+
         <Column
           field="continent_name"
           header="Continent"
           body={(r) => cap(r.continent_name)}
           sortable
         />
+
         <Column
           field="name"
           header="Country Name"
           body={(r) => cap(r.name)}
           sortable
         />
+
         <Column field="mob_code" header="Mob Code" />
+
         <Column field="currency" header="Currency" />
+
         <Column
           header="Status"
           body={statusTemplate}
           style={{ width: "150px", textAlign: "center" }}
         />
+
         <Column
           header="Actions"
           body={actionTemplate}

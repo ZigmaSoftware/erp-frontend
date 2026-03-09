@@ -30,14 +30,20 @@ const stateListQueryKey = (page: number, rows: number) =>
   [...masterQueryKeys.states, "list", page, rows] as const;
 
 export default function StateList() {
-  const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
-  const [displayedLazyParams, setDisplayedLazyParams] = useState({
-    page: 1,
-    rows: 10,
-  });
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  /* ------------------------------
+     Pagination States
+  ------------------------------ */
+  const [page, setPage] = useState(1);
+  const [rows, setRows] = useState(10);
+  const [first, setFirst] = useState(0);
+
+  const [displayedPage, setDisplayedPage] = useState(1);
+  const [displayedRows, setDisplayedRows] = useState(10);
+
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const encMasters = encryptSegment("masters");
   const encStates = encryptSegment("states");
@@ -46,11 +52,22 @@ export default function StateList() {
   const ENC_EDIT_PATH = (unique_id: string) =>
     `/${encMasters}/${encStates}/${unique_id}/edit`;
 
+  /* ------------------------------
+     Query
+  ------------------------------ */
   const query = useQuery<PaginatedResponse<StateRecord>>({
-    queryKey: stateListQueryKey(lazyParams.page, lazyParams.rows),
-    queryFn: () => stateApi.listPaginated(lazyParams.page, lazyParams.rows),
+    queryKey: stateListQueryKey(page, rows),
+    queryFn: async () => stateApi.listPaginated(page, rows),
     placeholderData: keepPreviousData,
+    onSuccess: () => {
+      setDisplayedPage(page);
+      setDisplayedRows(rows);
+    },
   });
+
+  const totalRecords = query.data?.count ?? 0;
+  const states = query.data?.results ?? [];
+  const loading = query.isLoading || query.isFetching;
 
   useEffect(() => {
     if (query.error) {
@@ -62,18 +79,15 @@ export default function StateList() {
     }
   }, [query.error]);
 
-  useEffect(() => {
-    if (!query.isLoading && !query.isFetching) {
-      setDisplayedLazyParams(lazyParams);
-    }
-  }, [lazyParams, query.isFetching, query.isLoading]);
-
+  /* ------------------------------
+     Mutation
+  ------------------------------ */
   const statusMutation = useMutation({
     mutationFn: (payload: { id: string; is_active: boolean }) =>
       stateApi.update(payload.id, { is_active: payload.is_active }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: masterQueryKeys.states,
+        queryKey: stateListQueryKey(page, rows),
       });
     },
     onError: (error) => {
@@ -86,19 +100,24 @@ export default function StateList() {
   });
 
   const isUpdatingStatus = statusMutation.isPending;
-  const totalRecords = query.data?.count ?? 0;
-  const states = query.data?.results ?? [];
-  const loading = query.isLoading || query.isFetching;
 
-  const onGlobalFilterChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setGlobalFilterValue(e.target.value);
+  /* ------------------------------
+     Pagination
+  ------------------------------ */
+  const onPage = (event: any) => {
+    const newRows = event.rows;
+    const newPage = Math.floor(event.first / event.rows) + 1;
+
+    setRows(newRows);
+    setPage(newPage);
+    setFirst(event.first);
   };
 
-  const onPage = (event: any) => {
-    setLazyParams({
-      page: event.page + 1,
-      rows: event.rows,
-    });
+  /* ------------------------------
+     Search
+  ------------------------------ */
+  const onGlobalFilterChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setGlobalFilterValue(e.target.value);
   };
 
   const header = (
@@ -118,6 +137,9 @@ export default function StateList() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
+  /* ------------------------------
+     Templates
+  ------------------------------ */
   const statusTemplate = (row: StateRecord) => (
     <Switch
       checked={row.is_active}
@@ -139,8 +161,8 @@ export default function StateList() {
     </div>
   );
 
-  const indexTemplate = (_: StateRecord, { rowIndex }: any) =>
-    (displayedLazyParams.page - 1) * displayedLazyParams.rows + rowIndex + 1;
+  const indexTemplate = (_: StateRecord, options: any) =>
+    (displayedPage - 1) * displayedRows + options.rowIndex + 1;
 
   return (
     <div className="p-3">
@@ -163,9 +185,9 @@ export default function StateList() {
         dataKey="unique_id"
         lazy
         paginator
-        rows={lazyParams.rows}
+        rows={rows}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        first={(lazyParams.page - 1) * lazyParams.rows}
+        first={first}
         totalRecords={totalRecords}
         onPage={onPage}
         loading={loading}
@@ -176,24 +198,29 @@ export default function StateList() {
         className="p-datatable-sm"
       >
         <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+
         <Column
           field="country_name"
           header="Country"
           body={(r) => cap(r.country_name)}
           sortable
         />
+
         <Column
           field="name"
           header="State Name"
           body={(r) => cap(r.name)}
           sortable
         />
+
         <Column field="label" header="Label" />
+
         <Column
           header="Status"
           body={statusTemplate}
           style={{ width: "150px", textAlign: "center" }}
         />
+
         <Column
           header="Actions"
           body={actionTemplate}

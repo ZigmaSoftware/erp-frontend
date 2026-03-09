@@ -30,14 +30,20 @@ const districtListQueryKey = (page: number, rows: number) =>
   [...masterQueryKeys.districts, "list", page, rows] as const;
 
 export default function DistrictListPage() {
-  const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
-  const [displayedLazyParams, setDisplayedLazyParams] = useState({
-    page: 1,
-    rows: 10,
-  });
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  /* ------------------------------
+     Pagination States
+  ------------------------------ */
+  const [page, setPage] = useState(1);
+  const [rows, setRows] = useState(10);
+  const [first, setFirst] = useState(0);
+
+  const [displayedPage, setDisplayedPage] = useState(1);
+  const [displayedRows, setDisplayedRows] = useState(10);
+
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const encMasters = encryptSegment("masters");
   const encDistricts = encryptSegment("districts");
@@ -46,10 +52,17 @@ export default function DistrictListPage() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encDistricts}/${id}/edit`;
 
+  /* ------------------------------
+     Query
+  ------------------------------ */
   const query = useQuery<PaginatedResponse<DistrictRecord>>({
-    queryKey: districtListQueryKey(lazyParams.page, lazyParams.rows),
-    queryFn: () => districtApi.listPaginated(lazyParams.page, lazyParams.rows),
+    queryKey: districtListQueryKey(page, rows),
+    queryFn: () => districtApi.listPaginated(page, rows),
     placeholderData: keepPreviousData,
+    onSuccess: () => {
+      setDisplayedPage(page);
+      setDisplayedRows(rows);
+    },
   });
 
   useEffect(() => {
@@ -62,18 +75,15 @@ export default function DistrictListPage() {
     }
   }, [query.error]);
 
-  useEffect(() => {
-    if (!query.isLoading && !query.isFetching) {
-      setDisplayedLazyParams(lazyParams);
-    }
-  }, [lazyParams, query.isFetching, query.isLoading]);
-
+  /* ------------------------------
+     Mutation
+  ------------------------------ */
   const statusMutation = useMutation({
     mutationFn: (payload: { id: string; is_active: boolean }) =>
       districtApi.update(payload.id, { is_active: payload.is_active }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: masterQueryKeys.districts,
+        queryKey: districtListQueryKey(page, rows),
       });
     },
     onError: (error) => {
@@ -87,26 +97,39 @@ export default function DistrictListPage() {
 
   const isUpdatingStatus = statusMutation.isPending;
 
+  /* ------------------------------
+     Data
+  ------------------------------ */
   const districts = useMemo<DistrictRecord[]>(() => {
     const results = query.data?.results ?? [];
     return [...results].sort((a, b) => a.name.localeCompare(b.name));
   }, [query.data]);
-  console.log(districts);
 
   const totalRecords = query.data?.count ?? 0;
   const loading = query.isLoading || query.isFetching;
 
+  /* ------------------------------
+     Search
+  ------------------------------ */
   const onGlobalFilterChange = (e: ChangeEvent<HTMLInputElement>) => {
     setGlobalFilterValue(e.target.value);
   };
 
+  /* ------------------------------
+     Pagination
+  ------------------------------ */
   const onPage = (event: any) => {
-    setLazyParams({
-      page: event.page + 1,
-      rows: event.rows,
-    });
+    const newRows = event.rows;
+    const newPage = Math.floor(event.first / event.rows) + 1;
+
+    setRows(newRows);
+    setPage(newPage);
+    setFirst(event.first);
   };
 
+  /* ------------------------------
+     Header
+  ------------------------------ */
   const header = (
     <div className="flex justify-end items-center">
       <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
@@ -124,6 +147,9 @@ export default function DistrictListPage() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
+  /* ------------------------------
+     Templates
+  ------------------------------ */
   const statusTemplate = (row: DistrictRecord) => (
     <Switch
       checked={row.is_active}
@@ -145,8 +171,8 @@ export default function DistrictListPage() {
     </div>
   );
 
-  const indexTemplate = (_: DistrictRecord, { rowIndex }: any) =>
-    (displayedLazyParams.page - 1) * displayedLazyParams.rows + rowIndex + 1;
+  const indexTemplate = (_: DistrictRecord, options: any) =>
+    (displayedPage - 1) * displayedRows + options.rowIndex + 1;
 
   return (
     <div className="p-3">
@@ -170,9 +196,9 @@ export default function DistrictListPage() {
         loading={loading}
         lazy
         paginator
-        rows={lazyParams.rows}
+        rows={rows}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        first={(lazyParams.page - 1) * lazyParams.rows}
+        first={first}
         totalRecords={totalRecords}
         onPage={onPage}
         header={header}
@@ -182,6 +208,7 @@ export default function DistrictListPage() {
         className="p-datatable-sm"
       >
         <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+
         <Column
           field="country_name"
           header="Country"
@@ -195,17 +222,20 @@ export default function DistrictListPage() {
           body={(r) => cap(r.state_name)}
           sortable
         />
+
         <Column
           field="name"
           header="District"
           body={(r) => cap(r.name)}
           sortable
         />
+
         <Column
           header="Status"
           body={statusTemplate}
           style={{ width: "150px", textAlign: "center" }}
         />
+
         <Column
           header="Actions"
           body={actionTemplate}

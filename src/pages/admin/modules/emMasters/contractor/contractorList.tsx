@@ -179,6 +179,8 @@ export default function ContractorList() {
         loading={loading}
         paginator
         rows={10}
+
+       rowsPerPageOptions={[5, 10, 25, 50]} 
         filters={filters}
         globalFilterFields={[
           "contractor_name",

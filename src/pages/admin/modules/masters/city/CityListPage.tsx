@@ -29,15 +29,19 @@ const cityListQueryKey = (page: number, rows: number) =>
   [...masterQueryKeys.cities, "list", page, rows] as const;
 
 export default function CityList() {
-  const [lazyParams, setLazyParams] = useState({ page: 1, rows: 10 });
-  const [displayedLazyParams, setDisplayedLazyParams] = useState({
-    page: 1,
-    rows: 10,
-  });
-  const [globalFilterValue, setGlobalFilterValue] = useState("");
-
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  /* ---------------- PAGINATION STATE ---------------- */
+
+  const [page, setPage] = useState(1);
+  const [rows, setRows] = useState(10);
+  const [first, setFirst] = useState(0);
+
+  const [displayedPage, setDisplayedPage] = useState(1);
+  const [displayedRows, setDisplayedRows] = useState(10);
+
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const encMasters = encryptSegment("masters");
   const encCities = encryptSegment("cities");
@@ -49,10 +53,13 @@ export default function CityList() {
   /* ---------------- QUERY ---------------- */
 
   const query = useQuery<PaginatedResponse<CityRecord>>({
-    queryKey: cityListQueryKey(lazyParams.page, lazyParams.rows),
-    queryFn: () =>
-      cityApi.listPaginated(lazyParams.page, lazyParams.rows),
+    queryKey: cityListQueryKey(page, rows),
+    queryFn: () => cityApi.listPaginated(page, rows),
     placeholderData: keepPreviousData,
+    onSuccess: () => {
+      setDisplayedPage(page);
+      setDisplayedRows(rows);
+    },
   });
 
   useEffect(() => {
@@ -65,12 +72,6 @@ export default function CityList() {
     }
   }, [query.error]);
 
-  useEffect(() => {
-    if (!query.isLoading && !query.isFetching) {
-      setDisplayedLazyParams(lazyParams);
-    }
-  }, [lazyParams, query.isFetching, query.isLoading]);
-
   /* ---------------- STATUS MUTATION ---------------- */
 
   const statusMutation = useMutation({
@@ -79,7 +80,7 @@ export default function CityList() {
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: masterQueryKeys.cities,
+        queryKey: cityListQueryKey(page, rows),
       });
     },
 
@@ -125,9 +126,7 @@ export default function CityList() {
 
   const cities = useMemo<CityRecord[]>(() => {
     const results = query.data?.results ?? [];
-    return [...results].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    return [...results].sort((a, b) => a.name.localeCompare(b.name));
   }, [query.data]);
 
   const totalRecords = query.data?.count ?? 0;
@@ -140,10 +139,12 @@ export default function CityList() {
   };
 
   const onPage = (event: any) => {
-    setLazyParams({
-      page: event.page + 1,
-      rows: event.rows,
-    });
+    const newRows = event.rows;
+    const newPage = Math.floor(event.first / event.rows) + 1;
+
+    setRows(newRows);
+    setPage(newPage);
+    setFirst(event.first);
   };
 
   const handleDelete = async (id: string) => {
@@ -197,8 +198,8 @@ export default function CityList() {
     </div>
   );
 
-  const indexTemplate = (_: CityRecord, { rowIndex }: any) =>
-    (displayedLazyParams.page - 1) * displayedLazyParams.rows + rowIndex + 1;
+  const indexTemplate = (_: CityRecord, options: any) =>
+    (displayedPage - 1) * displayedRows + options.rowIndex + 1;
 
   const header = (
     <div className="flex justify-end items-center">
@@ -221,9 +222,7 @@ export default function CityList() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 mb-1">Cities</h1>
-          <p className="text-gray-500 text-sm">
-            Manage city records
-          </p>
+          <p className="text-gray-500 text-sm">Manage city records</p>
         </div>
 
         <Button
@@ -240,9 +239,9 @@ export default function CityList() {
         loading={loading}
         lazy
         paginator
-        rows={lazyParams.rows}
+        rows={rows}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        first={(lazyParams.page - 1) * lazyParams.rows}
+        first={first}
         totalRecords={totalRecords}
         onPage={onPage}
         header={header}
@@ -274,12 +273,7 @@ export default function CityList() {
           sortable
         />
 
-        <Column
-          field="name"
-          header="City"
-          body={(r) => cap(r.name)}
-          sortable
-        />
+        <Column field="name" header="City" body={(r) => cap(r.name)} sortable />
 
         <Column
           header="Status"
