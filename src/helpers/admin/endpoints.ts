@@ -11,6 +11,7 @@ const MASTER_SERVICE = "master-service";
 const AUTH_APP = "auth";
 const MASTER_APP = "masters";
 const EM_APP = "em-masters";
+const SALES_APP = "sales-masters";
 
 /* Version */
 
@@ -58,6 +59,16 @@ export const emMastersEndpoints = {
 export type EmMasterEntity = keyof typeof emMastersEndpoints;
 
 /* ========================================================
+    SALES MASTER ENDPOINTS
+======================================================== */
+export const salesMasterEndpoints = {
+  scrapSalesCategory: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/scrap-sales-categories/`,
+  itemType: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/item-types/`,
+} as const;
+
+export type SalesMasterEntity = keyof typeof salesMasterEndpoints;
+
+/* ========================================================
     COMMON MASTER ENDPOINTS
 ======================================================== */
 export const commonMasterEndpoints = {
@@ -100,3 +111,7 @@ export const getAdminMasterEndpointPath = (
 export const getEmMasterEndpointPath = (
   entity: EmMasterEntity
 ): string => buildUrl(emMastersEndpoints[entity]);
+
+export const getSalesMasterEndpointPath = (
+  entity: SalesMasterEntity
+): string => buildUrl(salesMasterEndpoints[entity]);

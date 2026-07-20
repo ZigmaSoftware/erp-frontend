@@ -9,7 +9,7 @@ const menuButtonBase =
   "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold";
 
 const AppSidebar: React.FC = () => {
-  const { admin, masters } = useMemo(getAdminNavigation, []);
+  const { admin, masters, salesMasters } = useMemo(getAdminNavigation, []);
   const { isExpanded, isMobileOpen, setActiveItem, activeItem } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,6 +60,8 @@ const AppSidebar: React.FC = () => {
     ) {
       // IMPORTANT: EM Masters collapses into Masters context
       setActiveItem("masters");
+    } else if (currentDecodedPath.master === "sales-masters") {
+      setActiveItem("sales-masters");
     } else {
       setActiveItem(null);
     }
@@ -82,8 +84,14 @@ const AppSidebar: React.FC = () => {
         items: masters,
         defaultPath: findPrimaryPath(masters),
       },
+      {
+        key: "sales-masters",
+        label: "Sales",
+        items: salesMasters,
+        defaultPath: findPrimaryPath(salesMasters),
+      },
     ],
-    [admin, masters, findPrimaryPath]
+    [admin, masters, salesMasters, findPrimaryPath]
   );
 
   /* ----------------------------------------

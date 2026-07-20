@@ -19,6 +19,7 @@ export type AdminNavConfig = {
   admin: NavItem[];
   masters: NavItem[];
   emMasters: NavItem[];
+  salesMasters: NavItem[];
 };
 
 export function getAdminNavigation(): AdminNavConfig {
@@ -43,6 +44,9 @@ export function getAdminNavigation(): AdminNavConfig {
     encVehicleRequest,
     encMachineryHire,
     encVehicleCreation,
+    encSalesMasters,
+    encScrapSalesCategory,
+    encItemType,
   } = getEncryptedRoute();
 
   const home: NavItem[] = [
@@ -93,5 +97,16 @@ export function getAdminNavigation(): AdminNavConfig {
     },
   ];
 
-  return { home, admin, masters, emMasters };
+  const salesMasters: NavItem[] = [
+    {
+      name: "Sales",
+      icon: <Layers3 size={18} />,
+      subItems: [
+        { name: "Scrap Sales Category", path: `/${encSalesMasters}/${encScrapSalesCategory}` },
+        { name: "Item Type", path: `/${encSalesMasters}/${encItemType}` },
+      ],
+    },
+  ];
+
+  return { home, admin, masters, emMasters, salesMasters };
 }

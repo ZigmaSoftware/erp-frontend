@@ -39,6 +39,11 @@ import VehicleCreationList from "@/pages/admin/modules/emMasters/vehicleCreation
 import VehicleCreationForm from "@/pages/admin/modules/emMasters/vehicleCreation/vehicleCreationForm";
 import MachineryHireList from "@/pages/admin/modules/emMasters/machineryHire/machineryHireList";
 import MachineryHireForm from "@/pages/admin/modules/emMasters/machineryHire/machineryHireForm";
+// Sales Masters
+import ScrapSalesCategoryList from "@/pages/admin/modules/salesMasters/scrapSalesCategory/scrapSalesCategoryList";
+import ScrapSalesCategoryForm from "@/pages/admin/modules/salesMasters/scrapSalesCategory/scrapSalesCategoryForm";
+import ItemTypeList from "@/pages/admin/modules/salesMasters/itemType/itemTypeList";
+import ItemTypeForm from "@/pages/admin/modules/salesMasters/itemType/itemTypeForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -74,6 +79,10 @@ const ROUTES: RouteMap = {
     "vehicle-request": { list: VehicleRequestList, form: VehicleRequestForm },
     "vehicle-creation": { list: VehicleCreationList, form: VehicleCreationForm },
     "machinery-hire": { list: MachineryHireList, form: MachineryHireForm },
+  },
+  "sales-masters": {
+    "scrap-sales-category": { list: ScrapSalesCategoryList, form: ScrapSalesCategoryForm },
+    "item-type": { list: ItemTypeList, form: ItemTypeForm },
   },
 };
 
