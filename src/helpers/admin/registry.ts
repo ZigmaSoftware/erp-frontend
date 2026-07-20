@@ -2,14 +2,17 @@ import {
   commonMasterEndpoints,
   emMastersEndpoints,
   adminMasterEndpoints,
+  salesMasterEndpoints,
 
   getCommonMasterEndpointPath,
   getEmMasterEndpointPath,
   getAdminMasterEndpointPath,
+  getSalesMasterEndpointPath,
 
   type CommonMasterEntity,
   type EmMasterEntity,
-  type AdminMasterEntity
+  type AdminMasterEntity,
+  type SalesMasterEntity
 } from "./endpoints";
 
 import { createCrudHelpers, type CrudHelpers } from "./crudHelpers";
@@ -81,3 +84,26 @@ export const adminMasterApi: AdminMasterApiRegistry =
 
 export const getAdminMasterApi = (entity: AdminMasterEntity) =>
   adminMasterApi[entity];
+
+
+/* ========================================================
+   SALES MASTER API REGISTRY
+======================================================== */
+
+type SalesMasterApiRegistry = {
+  [K in SalesMasterEntity]: CrudHelpers;
+};
+
+export const salesMasterApi: SalesMasterApiRegistry =
+  (Object.keys(salesMasterEndpoints) as SalesMasterEntity[]).reduce(
+    (map, key) => {
+      map[key] = createCrudHelpers(
+        getSalesMasterEndpointPath(key)
+      );
+      return map;
+    },
+    {} as SalesMasterApiRegistry
+  );
+
+export const getSalesMasterApi = (entity: SalesMasterEntity) =>
+  salesMasterApi[entity];

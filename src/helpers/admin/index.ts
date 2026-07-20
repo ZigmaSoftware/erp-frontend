@@ -1,4 +1,4 @@
-import { commonMasterApi, emMasterApi, adminMasterApi } from "./registry";
+import { commonMasterApi, emMasterApi, adminMasterApi, salesMasterApi } from "./registry";
 
 /* -------- Masters -------- */
 export const continentApi = commonMasterApi.continents;
@@ -23,6 +23,10 @@ export const vehicleSupplierApi = emMasterApi.vehicleSuppliers;
 export const vehicleRequestApi = emMasterApi.vehicleRequest;
 export const vehicleCreationApi = emMasterApi.vehicleCreations;
 export const machineryHireApi = emMasterApi.machineryHires;
+
+/* -------- Sales Masters -------- */
+export const scrapSalesCategoryApi = salesMasterApi.scrapSalesCategory;
+export const itemTypeApi = salesMasterApi.itemType;
 
 
 /* -------- Login And Refresh -------- */
