@@ -27,6 +27,7 @@ export const machineryHireApi = emMasterApi.machineryHires;
 /* -------- Sales Masters -------- */
 export const scrapSalesCategoryApi = salesMasterApi.scrapSalesCategory;
 export const itemTypeApi = salesMasterApi.itemType;
+export const itemCreationApi = salesMasterApi.itemCreation;
 export const itemGroupCreationApi = salesMasterApi.itemGroupCreation;
 export const transportMediumCreationApi = salesMasterApi.transportMediumCreation;
 export const termsOfPaymentCreationApi = salesMasterApi.termsOfPaymentCreation;

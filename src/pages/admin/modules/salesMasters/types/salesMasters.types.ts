@@ -24,6 +24,22 @@ export interface ItemType extends BaseEntity {
 }
 
 /* ===========================================================
+   ITEM CREATION
+=========================================================== */
+export interface ItemCreation extends BaseEntity {
+  item_type_id: string;
+  item_type_name?: string;
+  category_id: string;
+  category_name?: string;
+  site_id: string;
+  site_name?: string;
+  item_name: string;
+  item_code: string;
+  purpose_application?: string | null;
+  description?: string | null;
+}
+
+/* ===========================================================
    ITEM GROUP CREATION MASTER
 =========================================================== */
 export interface ItemGroupCreation extends BaseEntity {
