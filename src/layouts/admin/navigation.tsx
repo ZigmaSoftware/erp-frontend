@@ -47,6 +47,7 @@ export function getAdminNavigation(): AdminNavConfig {
     encSalesMasters,
     encScrapSalesCategory,
     encItemType,
+    encItemCreation,
   } = getEncryptedRoute();
 
   const home: NavItem[] = [
@@ -104,6 +105,7 @@ export function getAdminNavigation(): AdminNavConfig {
       subItems: [
         { name: "Scrap Sales Category", path: `/${encSalesMasters}/${encScrapSalesCategory}` },
         { name: "Item Type", path: `/${encSalesMasters}/${encItemType}` },
+        { name: "Item Creation", path: `/${encSalesMasters}/${encItemCreation}` },
       ],
     },
   ];
