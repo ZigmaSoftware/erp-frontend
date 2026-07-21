@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
@@ -58,11 +58,13 @@ const query = useQuery<PaginatedResponse<ContinentRecord>>({
   queryFn: async (): Promise<PaginatedResponse<ContinentRecord>> =>
     continentApi.listPaginated(page, rows),
   placeholderData: keepPreviousData,
-  onSuccess: () => {
+});
+
+  useEffect(() => {
+    if (!query.data || query.isPlaceholderData) return;
     setDisplayedPage(page);
     setDisplayedRows(rows);
-  },
-});
+  }, [page, query.data, query.isPlaceholderData, rows]);
 
   const continents = query.data?.results ?? [];
   const totalRecords = query.data?.count ?? 0;

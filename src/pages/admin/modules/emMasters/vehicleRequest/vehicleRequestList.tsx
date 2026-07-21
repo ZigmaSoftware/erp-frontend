@@ -33,7 +33,6 @@ const normalizeRequest = (
 
   const unique_id = pickFirstString(
     payload["unique_id"],
-    payload["id"],
     payload["request_id"],
     payload["request_uuid"]
   );
@@ -41,7 +40,6 @@ const normalizeRequest = (
   const siteId = pickFirstString(
     payload["site_id"],
     siteRecord?.["unique_id"],
-    siteRecord?.["id"],
     payload["site"]
   );
 
@@ -155,7 +153,7 @@ function VehicleRequestList() {
     .map(asRecord)
     .filter((item): item is Record<string, unknown> => Boolean(item))
     .forEach((item) => {
-      const id = pickFirstString(item["unique_id"], item["id"]);
+      const id = pickFirstString(item["unique_id"]);
       const label = pickFirstString(
         item["site_name"],
         item["name"],

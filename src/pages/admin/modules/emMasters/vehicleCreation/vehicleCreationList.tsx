@@ -63,7 +63,7 @@ const normalizeRow = (
   const equipmentModel = asRecord(payload["equipment_model_id"]);
 
   return {
-    unique_id: pickFirstString(payload["unique_id"], payload["id"]),
+    unique_id: pickFirstString(payload["unique_id"]),
     vehicle_code: pickFirstString(payload["vehicle_code"]),
     vehicle_reg_no: pickFirstString(payload["vehicle_reg_no"]),
     hire_type: pickFirstString(payload["hire_type"]),

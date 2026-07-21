@@ -265,7 +265,7 @@ export default function VehicleCreationForm() {
         .map(asRecord)
         .filter((item): item is Record<string, unknown> => Boolean(item))
         .map((item): VehicleCreationSelectOption | null => {
-          const canonical = pickFirstString(item["unique_id"], item["id"]);
+          const canonical = pickFirstString(item["unique_id"]);
           const label = pickFirstString(
             item["name"],
             item["equipment_type_name"],
@@ -292,7 +292,7 @@ export default function VehicleCreationForm() {
         .map(asRecord)
         .filter((item): item is Record<string, unknown> => Boolean(item))
         .map((item): VehicleCreationEquipmentModelOption | null => {
-          const modelCanonical = pickFirstString(item["unique_id"], item["id"]);
+          const modelCanonical = pickFirstString(item["unique_id"]);
           const modelTypeRef = resolveCanonicalFromAliases(
             typeAliasToCanonical,
             asRecord(item["equipment_type"])?.["unique_id"],
@@ -355,25 +355,25 @@ export default function VehicleCreationForm() {
       setLookups({
         contractors: toOptionList(
           Array.isArray(contractors) ? contractors : [],
-          (item) => pickFirstString(item["unique_id"], item["id"]),
+          (item) => pickFirstString(item["unique_id"]),
           (item) =>
             pickFirstString(item["contractor_name"], item["name"], item["contractor_code"]),
         ),
         suppliers: toOptionList(
           Array.isArray(suppliers) ? suppliers : [],
-          (item) => pickFirstString(item["unique_id"], item["id"]),
+          (item) => pickFirstString(item["unique_id"]),
           (item) =>
             pickFirstString(item["supplier_name"], item["name"], item["supplier_code"]),
         ),
         requests: toOptionList(
           Array.isArray(requests) ? requests : [],
-          (item) => pickFirstString(item["unique_id"], item["id"]),
+          (item) => pickFirstString(item["unique_id"]),
           (item) =>
             pickFirstString(item["request_no"], item["description"], item["request_status"]),
         ),
         sites: toOptionList(
           Array.isArray(sites) ? sites : [],
-          (item) => pickFirstString(item["unique_id"], item["id"]),
+          (item) => pickFirstString(item["unique_id"]),
           (item) => pickFirstString(item["site_name"], item["name"]),
         ),
         equipmentTypes: normalizedEquipmentTypes,
@@ -412,7 +412,6 @@ export default function VehicleCreationForm() {
           pickFirstString(
             payload["contractor_id"],
             asRecord(payload["contractor_id"])?.["unique_id"],
-            asRecord(payload["contractor_id"])?.["id"],
           ),
         );
         setRecordContractorLabel(
@@ -426,7 +425,6 @@ export default function VehicleCreationForm() {
           pickFirstString(
             payload["supplier_id"],
             asRecord(payload["supplier_id"])?.["unique_id"],
-            asRecord(payload["supplier_id"])?.["id"],
           ),
         );
         setRecordSupplierLabel(
@@ -440,14 +438,12 @@ export default function VehicleCreationForm() {
           pickFirstString(
             payload["request_id"],
             asRecord(payload["request_id"])?.["unique_id"],
-            asRecord(payload["request_id"])?.["id"],
           ),
         );
         setSiteId(
           pickFirstString(
             payload["site_id"],
             asRecord(payload["site_id"])?.["unique_id"],
-            asRecord(payload["site_id"])?.["id"],
           ),
         );
         setRecordTypeRef(
@@ -561,7 +557,7 @@ export default function VehicleCreationForm() {
         const row = (Array.isArray(rows) ? rows : [])
           .map(asRecord)
           .filter((item): item is Record<string, unknown> => Boolean(item))
-          .find((item) => pickFirstString(item["unique_id"], item["id"]) === id);
+          .find((item) => pickFirstString(item["unique_id"]) === id);
         if (!row) return;
 
         const fallbackTypeRef = pickFirstString(
@@ -595,12 +591,10 @@ export default function VehicleCreationForm() {
         const fallbackContractorId = pickFirstString(
           row["contractor_id"],
           asRecord(row["contractor_id"])?.["unique_id"],
-          asRecord(row["contractor_id"])?.["id"],
         );
         const fallbackSupplierId = pickFirstString(
           row["supplier_id"],
           asRecord(row["supplier_id"])?.["unique_id"],
-          asRecord(row["supplier_id"])?.["id"],
         );
         const fallbackContractorLabel = pickFirstString(
           row["contractor_name"],
