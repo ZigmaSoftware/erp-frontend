@@ -32,6 +32,8 @@ export const itemGroupCreationApi = salesMasterApi.itemGroupCreation;
 export const transportMediumCreationApi = salesMasterApi.transportMediumCreation;
 export const termsOfPaymentCreationApi = salesMasterApi.termsOfPaymentCreation;
 export const mailDetailsCreationApi = salesMasterApi.mailDetailsCreation;
+export const documentTypeApi = salesMasterApi.documentType;
+export const transportEntryApi = salesMasterApi.transportEntry;
 
 
 /* -------- Login And Refresh -------- */

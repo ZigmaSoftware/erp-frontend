@@ -54,6 +54,10 @@ import TermsOfPaymentCreationList from "@/pages/admin/modules/salesMasters/terms
 import TermsOfPaymentCreationForm from "@/pages/admin/modules/salesMasters/termsOfPaymentCreation/termsOfPaymentCreationForm";
 import MailDetailsCreationList from "@/pages/admin/modules/salesMasters/mailDetailsCreation/mailDetailsCreationList";
 import MailDetailsCreationForm from "@/pages/admin/modules/salesMasters/mailDetailsCreation/mailDetailsCreationForm";
+import DocumentTypeList from "@/pages/admin/modules/salesMasters/documentType/documentTypeList";
+import DocumentTypeForm from "@/pages/admin/modules/salesMasters/documentType/documentTypeForm";
+import TransportEntryList from "@/pages/admin/modules/salesMasters/transportEntry/transportEntryList";
+import TransportEntryForm from "@/pages/admin/modules/salesMasters/transportEntry/transportEntryForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -98,6 +102,8 @@ const ROUTES: RouteMap = {
     "transport-medium-creation": { list: TransportMediumCreationList, form: TransportMediumCreationForm },
     "terms-of-payment-creation": { list: TermsOfPaymentCreationList, form: TermsOfPaymentCreationForm },
     "mail-details-creation": { list: MailDetailsCreationList, form: MailDetailsCreationForm },
+    "document-type": { list: DocumentTypeList, form: DocumentTypeForm },
+    "transport-master": { list: TransportEntryList, form: TransportEntryForm },
   },
 };
 
