@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
+import type { DataTableFilterMeta } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
@@ -14,38 +15,30 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { extractErrorMessage } from "@/utils/errorUtils";
-import { Switch } from "@/components/ui/switch";
-import { transportEntryApi } from "@/helpers/admin";
-import type { TransportEntry } from "../types/salesMasters.types";
+import { targetEntryApi } from "@/helpers/admin";
+import type { TargetEntry } from "../types/salesMasters.types";
 
-export default function TransportEntryList() {
-  const [entries, setEntries] = useState<TransportEntry[]>([]);
+export default function TargetEntryList() {
+  const [entries, setEntries] = useState<TargetEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<DataTableFilterMeta>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    transport_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    target_no: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
   const navigate = useNavigate();
-  const { encSalesMasters, encTransportMaster } = getEncryptedRoute();
+  const { encSalesMasters, encTargetEntry } = getEncryptedRoute();
 
-  const ENC_NEW_PATH = `/${encSalesMasters}/${encTransportMaster}/new`;
+  const ENC_NEW_PATH = `/${encSalesMasters}/${encTargetEntry}/new`;
   const ENC_EDIT_PATH = (unique_id: string) =>
-    `/${encSalesMasters}/${encTransportMaster}/${unique_id}/edit`;
+    `/${encSalesMasters}/${encTargetEntry}/${unique_id}/edit`;
 
   const fetchEntries = async () => {
     try {
-      const res = await transportEntryApi.list();
-      const payload: any = res;
-      const data = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload.data)
-          ? payload.data
-          : (payload.data?.results ?? []);
-      setEntries(data);
+      const res = (await targetEntryApi.list()) as TargetEntry[];
+      setEntries(res);
     } finally {
       setLoading(false);
     }
@@ -58,7 +51,7 @@ export default function TransportEntryList() {
   const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
-      text: "This transport entry will be permanently deleted!",
+      text: "This target entry (and all its items) will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -68,7 +61,7 @@ export default function TransportEntryList() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await transportEntryApi.remove(unique_id);
+    await targetEntryApi.remove(unique_id);
 
     Swal.fire({
       icon: "success",
@@ -80,24 +73,26 @@ export default function TransportEntryList() {
     fetchEntries();
   };
 
-  const onGlobalFilterChange = (e: any) => {
+  const onGlobalFilterChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const _filters = { ...filters };
-    _filters["global"].value = value;
-    setFilters(_filters);
+    setFilters((prev) => ({
+      ...prev,
+      global: { value, matchMode: FilterMatchMode.CONTAINS },
+    }));
     setGlobalFilterValue(value);
   };
 
-  const indexTemplate = (_: TransportEntry, { rowIndex }: { rowIndex: number }) =>
+  const indexTemplate = (_: TargetEntry, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
-  const transportTypeTemplate = (row: TransportEntry) =>
-    row.transport_type === "creditor" ? "Creditor" : "Debitor";
+  const monthTemplate = (row: TargetEntry) => {
+    if (!row.entry_month) return "-";
+    const date = new Date(row.entry_month);
+    if (Number.isNaN(date.getTime())) return row.entry_month;
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  };
 
-  const siteNamesTemplate = (row: TransportEntry) =>
-    row.site_names && row.site_names.length > 0 ? row.site_names.join(", ") : "-";
-
-  const actionTemplate = (row: TransportEntry) => (
+  const actionTemplate = (row: TargetEntry) => (
     <div className="flex gap-2 justify-center">
       <button
         title="Edit"
@@ -117,25 +112,6 @@ export default function TransportEntryList() {
     </div>
   );
 
-  const statusTemplate = (row: TransportEntry) => {
-    const updateStatus = async (value: boolean) => {
-      try {
-        const formData = new FormData();
-        formData.append("is_active", String(value));
-        await transportEntryApi.uploadUpdate(row.unique_id, formData);
-        fetchEntries();
-      } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Status update failed",
-          text: extractErrorMessage(error),
-        });
-      }
-    };
-
-    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
-  };
-
   const header = (
     <div className="flex justify-end items-center">
       <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
@@ -143,7 +119,7 @@ export default function TransportEntryList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search transport entries..."
+          placeholder="Search target entries..."
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -152,14 +128,13 @@ export default function TransportEntryList() {
 
   return (
     <div className="px-3 py-3 w-full">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 mb-1">
-            Transport Entry
+            Target Entry
           </h1>
           <p className="text-gray-500 text-sm">
-            Manage transport entry records
+            Manage target entry records
           </p>
         </div>
 
@@ -178,49 +153,43 @@ export default function TransportEntryList() {
         loading={loading}
         filters={filters}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        globalFilterFields={["transport_name", "contact_person", "mobile_no"]}
+        globalFilterFields={["target_no", "site_name"]}
         header={header}
-        emptyMessage="No transport entries found."
+        emptyMessage="No target entries found."
         stripedRows
         showGridlines
         className="p-datatable-sm"
       >
+        <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
         <Column
-          header="S.No"
-          body={indexTemplate}
-          style={{ width: "80px" }}
+          field="target_no"
+          header="Target No"
+          sortable
+          style={{ minWidth: "160px" }}
         />
+        <Column header="Month" body={monthTemplate} style={{ minWidth: "140px" }} />
         <Column
-          field="transport_name"
-          header="Transport Name"
+          field="site_name"
+          header="Site Name"
           sortable
           style={{ minWidth: "180px" }}
         />
         <Column
-          header="Transport Type"
-          body={transportTypeTemplate}
-          style={{ minWidth: "130px" }}
+          field="tot_target"
+          header="Target Qty"
+          style={{ minWidth: "120px" }}
         />
         <Column
-          field="mobile_no"
-          header="Mobile No"
-          style={{ minWidth: "130px" }}
+          field="tot_expense"
+          header="Expense Amount"
+          style={{ minWidth: "140px" }}
         />
         <Column
-          header="Site(s)"
-          body={siteNamesTemplate}
-          style={{ minWidth: "220px" }}
+          field="tot_revenue"
+          header="Revenue Amount"
+          style={{ minWidth: "140px" }}
         />
-        <Column
-          header="Status"
-          body={statusTemplate}
-          style={{ width: "150px" }}
-        />
-        <Column
-          header="Action"
-          body={actionTemplate}
-          style={{ width: "150px" }}
-        />
+        <Column header="Action" body={actionTemplate} style={{ width: "150px" }} />
       </DataTable>
     </div>
   );

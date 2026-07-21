@@ -58,6 +58,10 @@ import DocumentTypeList from "@/pages/admin/modules/salesMasters/documentType/do
 import DocumentTypeForm from "@/pages/admin/modules/salesMasters/documentType/documentTypeForm";
 import TransportEntryList from "@/pages/admin/modules/salesMasters/transportEntry/transportEntryList";
 import TransportEntryForm from "@/pages/admin/modules/salesMasters/transportEntry/transportEntryForm";
+import SubCategoryList from "@/pages/admin/modules/salesMasters/subCategory/subCategoryList";
+import SubCategoryForm from "@/pages/admin/modules/salesMasters/subCategory/subCategoryForm";
+import TargetEntryList from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryList";
+import TargetEntryForm from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -97,6 +101,7 @@ const ROUTES: RouteMap = {
   "sales-masters": {
     "scrap-sales-category": { list: ScrapSalesCategoryList, form: ScrapSalesCategoryForm },
     "item-type": { list: ItemTypeList, form: ItemTypeForm },
+    "sub-category": { list: SubCategoryList, form: SubCategoryForm },
     "item-creation": { list: ItemCreationList, form: ItemCreationForm },
     "item-group-creation": { list: ItemGroupCreationList, form: ItemGroupCreationForm },
     "transport-medium-creation": { list: TransportMediumCreationList, form: TransportMediumCreationForm },
@@ -104,6 +109,7 @@ const ROUTES: RouteMap = {
     "mail-details-creation": { list: MailDetailsCreationList, form: MailDetailsCreationForm },
     "document-type": { list: DocumentTypeList, form: DocumentTypeForm },
     "transport-master": { list: TransportEntryList, form: TransportEntryForm },
+    "target-entry": { list: TargetEntryList, form: TargetEntryForm },
   },
 };
 

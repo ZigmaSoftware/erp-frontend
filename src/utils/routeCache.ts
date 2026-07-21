@@ -63,6 +63,8 @@ export type EncryptedRoutes = {
   encTermsOfPaymentCreation: string;
   encMailDetailsCreation: string;
   encDocumentType: string;
+  encSubCategory: string;
+  encTargetEntry: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -128,6 +130,8 @@ const plainRoutes: EncryptedRoutes = {
   encTransportMediumCreation: "transport-medium-creation",
   encTermsOfPaymentCreation: "terms-of-payment-creation",
   encMailDetailsCreation: "mail-details-creation",
+  encSubCategory: "sub-category",
+  encTargetEntry: "target-entry",
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {

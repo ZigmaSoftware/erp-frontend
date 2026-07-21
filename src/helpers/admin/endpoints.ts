@@ -71,6 +71,9 @@ export const salesMasterEndpoints = {
   mailDetailsCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/mail-details-creations/`,
   documentType: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/document-types/`,
   transportEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/transport-entries/`,
+  subCategory: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/sub-categories/`,
+  targetEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/target-entries/`,
+  targetEntryItem: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/target-entry-items/`,
 } as const;
 
 export type SalesMasterEntity = keyof typeof salesMasterEndpoints;

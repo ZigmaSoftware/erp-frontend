@@ -407,7 +407,7 @@ export default function TransportEntryForm() {
 
     try {
       if (isEdit) {
-        await transportEntryApi.update(id as string, formData);
+        await transportEntryApi.uploadUpdate(id as string, formData);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -415,7 +415,7 @@ export default function TransportEntryForm() {
           showConfirmButton: false,
         });
       } else {
-        await transportEntryApi.create(formData);
+        await transportEntryApi.upload(formData);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",
