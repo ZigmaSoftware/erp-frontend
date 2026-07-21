@@ -12,7 +12,7 @@ export type RawContractorListRecord = {
 };
 
 export type ContractorTableRow = {
-  id: string;
+  unique_id: string;
   contractor_code: string;
   contractor_name: string;
   contact_person: string;
@@ -80,7 +80,6 @@ export type EquipmentTypeTableRow = {
 };
 
 export type MachineryHireTableRow = {
-  id: number;
   unique_id: string;
   site_id: string;
   site_name: string;

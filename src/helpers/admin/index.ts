@@ -28,6 +28,10 @@ export const machineryHireApi = emMasterApi.machineryHires;
 export const scrapSalesCategoryApi = salesMasterApi.scrapSalesCategory;
 export const itemTypeApi = salesMasterApi.itemType;
 export const itemCreationApi = salesMasterApi.itemCreation;
+export const itemGroupCreationApi = salesMasterApi.itemGroupCreation;
+export const transportMediumCreationApi = salesMasterApi.transportMediumCreation;
+export const termsOfPaymentCreationApi = salesMasterApi.termsOfPaymentCreation;
+export const mailDetailsCreationApi = salesMasterApi.mailDetailsCreation;
 
 
 /* -------- Login And Refresh -------- */

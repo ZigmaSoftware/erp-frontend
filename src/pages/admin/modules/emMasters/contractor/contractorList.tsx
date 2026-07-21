@@ -37,11 +37,10 @@ const normalizeGstType = (value: string | undefined): "yes" | "no" =>
 const normalizeContractor = (
   item: RawContractorListRecord
 ): ContractorTableRow | null => {
-  const id = item.id ?? item.unique_id;
-  if (id == null) return null;
+  if (item.unique_id == null) return null;
 
   return {
-    id: String(id),
+    unique_id: String(item.unique_id),
     contractor_code: item.contractor_code ?? "",
     contractor_name: item.contractor_name ?? "",
     contact_person: item.contact_person ?? "",
@@ -127,7 +126,7 @@ export default function ContractorList() {
       checked={row.is_active}
       onCheckedChange={(checked) =>
         statusMutation.mutate({
-          id: row.id,
+          id: row.unique_id,
           is_active: checked,
         })
       }
@@ -137,10 +136,10 @@ export default function ContractorList() {
 
   const actionTemplate = (row: ContractorTableRow) => (
     <div className="flex gap-2 justify-center">
-      <button onClick={() => navigate(ENC_EDIT(row.id))}>
+      <button onClick={() => navigate(ENC_EDIT(row.unique_id))}>
         <PencilIcon className="size-5 text-blue-600" />
       </button>
-      {/* <button onClick={() => handleDelete(row.id)}>
+      {/* <button onClick={() => handleDelete(row.unique_id)}>
         <TrashBinIcon className="size-5 text-red-600" />
       </button> */}
     </div>

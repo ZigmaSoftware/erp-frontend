@@ -59,11 +59,13 @@ export default function DistrictListPage() {
     queryKey: districtListQueryKey(page, rows),
     queryFn: () => districtApi.listPaginated(page, rows),
     placeholderData: keepPreviousData,
-    onSuccess: () => {
-      setDisplayedPage(page);
-      setDisplayedRows(rows);
-    },
   });
+
+  useEffect(() => {
+    if (!query.data || query.isPlaceholderData) return;
+    setDisplayedPage(page);
+    setDisplayedRows(rows);
+  }, [page, query.data, query.isPlaceholderData, rows]);
 
   useEffect(() => {
     if (query.error) {

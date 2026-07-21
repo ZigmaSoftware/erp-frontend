@@ -46,6 +46,14 @@ import ItemTypeList from "@/pages/admin/modules/salesMasters/itemType/itemTypeLi
 import ItemTypeForm from "@/pages/admin/modules/salesMasters/itemType/itemTypeForm";
 import ItemCreationList from "@/pages/admin/modules/salesMasters/itemCreation/itemCreationList";
 import ItemCreationForm from "@/pages/admin/modules/salesMasters/itemCreation/itemCreationForm";
+import ItemGroupCreationList from "@/pages/admin/modules/salesMasters/itemGroupCreation/itemGroupCreationList";
+import ItemGroupCreationForm from "@/pages/admin/modules/salesMasters/itemGroupCreation/itemGroupCreationForm";
+import TransportMediumCreationList from "@/pages/admin/modules/salesMasters/transportMediumCreation/transportMediumCreationList";
+import TransportMediumCreationForm from "@/pages/admin/modules/salesMasters/transportMediumCreation/transportMediumCreationForm";
+import TermsOfPaymentCreationList from "@/pages/admin/modules/salesMasters/termsOfPaymentCreation/termsOfPaymentCreationList";
+import TermsOfPaymentCreationForm from "@/pages/admin/modules/salesMasters/termsOfPaymentCreation/termsOfPaymentCreationForm";
+import MailDetailsCreationList from "@/pages/admin/modules/salesMasters/mailDetailsCreation/mailDetailsCreationList";
+import MailDetailsCreationForm from "@/pages/admin/modules/salesMasters/mailDetailsCreation/mailDetailsCreationForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -86,6 +94,10 @@ const ROUTES: RouteMap = {
     "scrap-sales-category": { list: ScrapSalesCategoryList, form: ScrapSalesCategoryForm },
     "item-type": { list: ItemTypeList, form: ItemTypeForm },
     "item-creation": { list: ItemCreationList, form: ItemCreationForm },
+    "item-group-creation": { list: ItemGroupCreationList, form: ItemGroupCreationForm },
+    "transport-medium-creation": { list: TransportMediumCreationList, form: TransportMediumCreationForm },
+    "terms-of-payment-creation": { list: TermsOfPaymentCreationList, form: TermsOfPaymentCreationForm },
+    "mail-details-creation": { list: MailDetailsCreationList, form: MailDetailsCreationForm },
   },
 };
 

@@ -37,8 +37,7 @@ const toBoolean = (value: RawEquipmentModelListRecord["is_active"]): boolean => 
 const normalizeEquipmentModel = (
   item: RawEquipmentModelListRecord
 ): EquipmentModelTableRow | null => {
-  const id = item.unique_id ?? item.id;
-  if (id == null) return null;
+  if (item.unique_id == null) return null;
 
   const equipmentType =
     item.equipment_type_name ??
@@ -47,7 +46,7 @@ const normalizeEquipmentModel = (
       : "");
 
   return {
-    unique_id: String(id),
+    unique_id: String(item.unique_id),
     equipment_type: equipmentType,
     manufacturer: item.manufacturer ?? "",
     model_name: item.model_name ?? "",
