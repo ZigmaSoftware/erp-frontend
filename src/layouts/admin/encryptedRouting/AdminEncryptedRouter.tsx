@@ -44,6 +44,8 @@ import ScrapSalesCategoryList from "@/pages/admin/modules/salesMasters/scrapSale
 import ScrapSalesCategoryForm from "@/pages/admin/modules/salesMasters/scrapSalesCategory/scrapSalesCategoryForm";
 import ItemTypeList from "@/pages/admin/modules/salesMasters/itemType/itemTypeList";
 import ItemTypeForm from "@/pages/admin/modules/salesMasters/itemType/itemTypeForm";
+import ItemCreationList from "@/pages/admin/modules/salesMasters/itemCreation/itemCreationList";
+import ItemCreationForm from "@/pages/admin/modules/salesMasters/itemCreation/itemCreationForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -83,6 +85,7 @@ const ROUTES: RouteMap = {
   "sales-masters": {
     "scrap-sales-category": { list: ScrapSalesCategoryList, form: ScrapSalesCategoryForm },
     "item-type": { list: ItemTypeList, form: ItemTypeForm },
+    "item-creation": { list: ItemCreationList, form: ItemCreationForm },
   },
 };
 
