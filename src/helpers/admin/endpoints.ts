@@ -72,6 +72,9 @@ export const salesMasterEndpoints = {
   mailDetailsCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/mail-details-creations/`,
   documentType: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/document-types/`,
   transportEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/transport-entries/`,
+  subCategory: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/sub-categories/`,
+  targetEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/target-entries/`,
+  targetEntryItem: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/target-entry-items/`,
   rdfInertsPercEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/rdf-inerts-perc-entries/`,
   icwSupplierCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/icw-supplier-creations/`,
 } as const;

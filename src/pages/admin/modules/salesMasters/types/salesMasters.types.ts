@@ -24,6 +24,45 @@ export interface ItemType extends BaseEntity {
 }
 
 /* ===========================================================
+   SUB CATEGORY MASTER
+=========================================================== */
+export interface SubCategory extends BaseEntity {
+  item_type: string;
+  item_type_name?: string;
+  sub_category_name: string;
+}
+
+/* ===========================================================
+   TARGET ENTRY MASTER
+=========================================================== */
+export interface TargetEntryItem extends BaseEntity {
+  target_entry: string;
+  target_no?: string;
+  item_type: string;
+  item_type_name?: string;
+  sub_category?: string | null;
+  sub_category_name?: string | null;
+  target_qty: number | string;
+  expense_amount: number | string;
+  revenue_amount: number | string;
+  random_no?: string;
+  random_sc?: string;
+}
+
+export interface TargetEntry extends BaseEntity {
+  target_no: string;
+  entry_month: string;
+  site_id: string;
+  site_name?: string;
+  tot_target?: number | string;
+  tot_expense?: number | string;
+  tot_revenue?: number | string;
+  random_no?: string;
+  random_sc?: string;
+  items?: TargetEntryItem[];
+}
+
+/* ===========================================================
    DOCUMENT TYPE MASTER
 =========================================================== */
 export interface DocumentType extends BaseEntity {

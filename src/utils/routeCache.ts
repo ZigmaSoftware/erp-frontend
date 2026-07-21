@@ -64,6 +64,8 @@ export type EncryptedRoutes = {
   encTermsOfPaymentCreation: string;
   encMailDetailsCreation: string;
   encDocumentType: string;
+  encSubCategory: string;
+  encTargetEntry: string;
   encRdfInertsPercEntry: string;
   encIcwSupplierCreation: string;
 };
@@ -132,6 +134,8 @@ const plainRoutes: EncryptedRoutes = {
   encTermsOfDeliveryCreation: "terms-of-delivery-creation",
   encTermsOfPaymentCreation: "terms-of-payment-creation",
   encMailDetailsCreation: "mail-details-creation",
+  encSubCategory: "sub-category",
+  encTargetEntry: "target-entry",
   encRdfInertsPercEntry: "rdf-inerts-percentage-entry",
   encIcwSupplierCreation: "icw-supplier-creation",
 };
