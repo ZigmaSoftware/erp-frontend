@@ -70,6 +70,8 @@ export const salesMasterEndpoints = {
   termsOfDeliveryCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/terms-of-delivery-creations/`,
   termsOfPaymentCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/terms-of-payment-creations/`,
   mailDetailsCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/mail-details-creations/`,
+  documentType: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/document-types/`,
+  transportEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/transport-entries/`,
 } as const;
 
 export type SalesMasterEntity = keyof typeof salesMasterEndpoints;

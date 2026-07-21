@@ -53,6 +53,8 @@ export function getAdminNavigation(): AdminNavConfig {
     encTermsOfDeliveryCreation,
     encTermsOfPaymentCreation,
     encMailDetailsCreation,
+    encDocumentType,
+    encTransportMaster,
   } = getEncryptedRoute();
 
   const home: NavItem[] = [
@@ -116,6 +118,8 @@ export function getAdminNavigation(): AdminNavConfig {
         { name: "Terms Of Delivery Creation", path: `/${encSalesMasters}/${encTermsOfDeliveryCreation}` },
         { name: "Terms Of Payment Creation", path: `/${encSalesMasters}/${encTermsOfPaymentCreation}` },
         { name: "Mail Details Creation", path: `/${encSalesMasters}/${encMailDetailsCreation}` },
+        { name: "Document Type", path: `/${encSalesMasters}/${encDocumentType}` },
+        { name: "Transport Entry", path: `/${encSalesMasters}/${encTransportMaster}` },
       ],
     },
   ];
