@@ -59,6 +59,14 @@ export interface TransportMediumCreation extends BaseEntity {
 }
 
 /* ===========================================================
+   TERMS OF DELIVERY CREATION MASTER
+=========================================================== */
+export interface TermsOfDeliveryCreation extends BaseEntity {
+  terms_of_delivery: string;
+  description?: string | null;
+}
+
+/* ===========================================================
    TERMS OF PAYMENT CREATION MASTER
 =========================================================== */
 export interface TermsOfPaymentCreation extends BaseEntity {

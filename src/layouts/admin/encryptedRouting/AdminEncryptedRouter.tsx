@@ -50,6 +50,8 @@ import ItemGroupCreationList from "@/pages/admin/modules/salesMasters/itemGroupC
 import ItemGroupCreationForm from "@/pages/admin/modules/salesMasters/itemGroupCreation/itemGroupCreationForm";
 import TransportMediumCreationList from "@/pages/admin/modules/salesMasters/transportMediumCreation/transportMediumCreationList";
 import TransportMediumCreationForm from "@/pages/admin/modules/salesMasters/transportMediumCreation/transportMediumCreationForm";
+import TermsOfDeliveryCreationList from "@/pages/admin/modules/salesMasters/termsOfDeliveryCreation/termsOfDeliveryCreationList";
+import TermsOfDeliveryCreationForm from "@/pages/admin/modules/salesMasters/termsOfDeliveryCreation/termsOfDeliveryCreationForm";
 import TermsOfPaymentCreationList from "@/pages/admin/modules/salesMasters/termsOfPaymentCreation/termsOfPaymentCreationList";
 import TermsOfPaymentCreationForm from "@/pages/admin/modules/salesMasters/termsOfPaymentCreation/termsOfPaymentCreationForm";
 import MailDetailsCreationList from "@/pages/admin/modules/salesMasters/mailDetailsCreation/mailDetailsCreationList";
@@ -96,6 +98,7 @@ const ROUTES: RouteMap = {
     "item-creation": { list: ItemCreationList, form: ItemCreationForm },
     "item-group-creation": { list: ItemGroupCreationList, form: ItemGroupCreationForm },
     "transport-medium-creation": { list: TransportMediumCreationList, form: TransportMediumCreationForm },
+    "terms-of-delivery-creation": { list: TermsOfDeliveryCreationList, form: TermsOfDeliveryCreationForm },
     "terms-of-payment-creation": { list: TermsOfPaymentCreationList, form: TermsOfPaymentCreationForm },
     "mail-details-creation": { list: MailDetailsCreationList, form: MailDetailsCreationForm },
   },

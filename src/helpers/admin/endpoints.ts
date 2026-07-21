@@ -67,6 +67,7 @@ export const salesMasterEndpoints = {
   itemCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/item-creations/`,
   itemGroupCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/item-group-creations/`,
   transportMediumCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/transport-medium-creations/`,
+  termsOfDeliveryCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/terms-of-delivery-creations/`,
   termsOfPaymentCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/terms-of-payment-creations/`,
   mailDetailsCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/mail-details-creations/`,
 } as const;

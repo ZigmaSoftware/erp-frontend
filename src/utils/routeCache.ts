@@ -60,6 +60,7 @@ export type EncryptedRoutes = {
   encItemCreation: string;
   encItemGroupCreation: string;
   encTransportMediumCreation: string;
+  encTermsOfDeliveryCreation: string;
   encTermsOfPaymentCreation: string;
   encMailDetailsCreation: string;
 };
@@ -124,6 +125,7 @@ const plainRoutes: EncryptedRoutes = {
   encItemCreation: "item-creation",
   encItemGroupCreation: "item-group-creation",
   encTransportMediumCreation: "transport-medium-creation",
+  encTermsOfDeliveryCreation: "terms-of-delivery-creation",
   encTermsOfPaymentCreation: "terms-of-payment-creation",
   encMailDetailsCreation: "mail-details-creation",
 };
