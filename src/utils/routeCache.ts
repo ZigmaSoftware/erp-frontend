@@ -58,6 +58,7 @@ export type EncryptedRoutes = {
   encScrapSalesCategory: string;
   encItemType: string;
   encItemCreation: string;
+  encDocumentType: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -117,7 +118,8 @@ const plainRoutes: EncryptedRoutes = {
   encSalesMasters: "sales-masters",
   encScrapSalesCategory: "scrap-sales-category",
   encItemType: "item-type",
-  encItemCreation: "item-creation"
+  encItemCreation: "item-creation",
+  encDocumentType: "document-type"
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {
