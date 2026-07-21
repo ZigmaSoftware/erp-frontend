@@ -130,8 +130,7 @@ const normalizeItemRow = (
       item["equipment_model"],
       item["equipment_model_id"],
       item["model"],
-      modelRecord?.["unique_id"],
-      modelRecord?.["id"]
+      modelRecord?.["unique_id"]
     ),
     qty: pickFirstString(item["qty"], item["quantity"], item["qty_requested"]),
     unit: pickFirstString(item["unit"], item["uom"]),
@@ -185,7 +184,6 @@ export default function VehicleRequestForm() {
         (item) =>
           pickFirstString(
             item["unique_id"],
-            item["id"],
             item["model_id"],
             item["model"]
           ),
@@ -195,7 +193,7 @@ export default function VehicleRequestForm() {
       const siteOptions = toSelectOptions(
         sites,
         (item) =>
-          pickFirstString(item["unique_id"], item["id"], item["site_id"]),
+          pickFirstString(item["unique_id"], item["site_id"]),
         (item) => resolveSiteLabel(item)
       );
 
@@ -238,8 +236,7 @@ export default function VehicleRequestForm() {
       site_id: pickFirstString(
         payload["site"],
         payload["site_id"],
-        asRecord(payload["site"])?.["unique_id"],
-        asRecord(payload["site"])?.["id"]
+        asRecord(payload["site"])?.["unique_id"]
       ),
       request_status: resolveRequestStatus(
         payload["request_status"],

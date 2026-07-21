@@ -63,11 +63,13 @@ export default function CountryList() {
     queryFn: async (): Promise<PaginatedResponse<CountryRecord>> =>
       countryApi.listPaginated(page, rows),
     placeholderData: keepPreviousData,
-    onSuccess: () => {
-      setDisplayedPage(page);
-      setDisplayedRows(rows);
-    },
   });
+
+  useEffect(() => {
+    if (!query.data || query.isPlaceholderData) return;
+    setDisplayedPage(page);
+    setDisplayedRows(rows);
+  }, [page, query.data, query.isPlaceholderData, rows]);
 
   const countries = query.data?.results ?? [];
   const totalRecords = query.data?.count ?? 0;

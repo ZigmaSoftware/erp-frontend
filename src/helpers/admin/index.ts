@@ -27,6 +27,10 @@ export const machineryHireApi = emMasterApi.machineryHires;
 /* -------- Sales Masters -------- */
 export const scrapSalesCategoryApi = salesMasterApi.scrapSalesCategory;
 export const itemTypeApi = salesMasterApi.itemType;
+export const itemGroupCreationApi = salesMasterApi.itemGroupCreation;
+export const transportMediumCreationApi = salesMasterApi.transportMediumCreation;
+export const termsOfPaymentCreationApi = salesMasterApi.termsOfPaymentCreation;
+export const mailDetailsCreationApi = salesMasterApi.mailDetailsCreation;
 
 
 /* -------- Login And Refresh -------- */

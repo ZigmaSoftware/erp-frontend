@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { DataTable } from "primereact/datatable";
@@ -62,12 +62,13 @@ export default function SiteCreationList() {
       await siteApi.listPaginated(page, rows),
 
     placeholderData: keepPreviousData,
-
-    onSuccess: () => {
-      setDisplayedPage(page);
-      setDisplayedRows(rows);
-    },
   });
+
+  useEffect(() => {
+    if (!siteQuery.data || siteQuery.isPlaceholderData) return;
+    setDisplayedPage(page);
+    setDisplayedRows(rows);
+  }, [page, rows, siteQuery.data, siteQuery.isPlaceholderData]);
 
   /* ---------------- MASTER DATA ---------------- */
 
@@ -153,8 +154,7 @@ export default function SiteCreationList() {
   /* ---------------- STATUS UPDATE ---------------- */
 
   const updateStatus = async (row: SiteTableRow, value: boolean) => {
-    const id = row.unique_id ?? (row as any).id;
-    if (!id) return;
+    const id = row.unique_id;
 
     const previousData = siteQuery.data;
 
@@ -166,7 +166,7 @@ export default function SiteCreationList() {
         return {
           ...data,
           results: data.results.map((site: SiteRecord) =>
-            (site.unique_id ?? (site as any).id) === id
+            site.unique_id === id
               ? { ...site, is_active: value }
               : site
           ),
@@ -265,7 +265,7 @@ export default function SiteCreationList() {
         <Column
           header="Actions"
           body={(row: SiteTableRow) => {
-            const id = row.unique_id ?? (row as any).id;
+            const id = row.unique_id;
 
             return (
               <div className="flex justify-center">

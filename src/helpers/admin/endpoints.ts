@@ -64,6 +64,10 @@ export type EmMasterEntity = keyof typeof emMastersEndpoints;
 export const salesMasterEndpoints = {
   scrapSalesCategory: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/scrap-sales-categories/`,
   itemType: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/item-types/`,
+  itemGroupCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/item-group-creations/`,
+  transportMediumCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/transport-medium-creations/`,
+  termsOfPaymentCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/terms-of-payment-creations/`,
+  mailDetailsCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/mail-details-creations/`,
 } as const;
 
 export type SalesMasterEntity = keyof typeof salesMasterEndpoints;
