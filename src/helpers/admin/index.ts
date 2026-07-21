@@ -35,6 +35,8 @@ export const termsOfPaymentCreationApi = salesMasterApi.termsOfPaymentCreation;
 export const mailDetailsCreationApi = salesMasterApi.mailDetailsCreation;
 export const documentTypeApi = salesMasterApi.documentType;
 export const transportEntryApi = salesMasterApi.transportEntry;
+export const rdfInertsPercEntryApi = salesMasterApi.rdfInertsPercEntry;
+export const icwSupplierCreationApi = salesMasterApi.icwSupplierCreation;
 
 
 /* -------- Login And Refresh -------- */

@@ -72,6 +72,8 @@ export const salesMasterEndpoints = {
   mailDetailsCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/mail-details-creations/`,
   documentType: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/document-types/`,
   transportEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/transport-entries/`,
+  rdfInertsPercEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/rdf-inerts-perc-entries/`,
+  icwSupplierCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/icw-supplier-creations/`,
 } as const;
 
 export type SalesMasterEntity = keyof typeof salesMasterEndpoints;

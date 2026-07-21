@@ -60,6 +60,10 @@ import DocumentTypeList from "@/pages/admin/modules/salesMasters/documentType/do
 import DocumentTypeForm from "@/pages/admin/modules/salesMasters/documentType/documentTypeForm";
 import TransportEntryList from "@/pages/admin/modules/salesMasters/transportEntry/transportEntryList";
 import TransportEntryForm from "@/pages/admin/modules/salesMasters/transportEntry/transportEntryForm";
+import RdfInertsPercEntryList from "@/pages/admin/modules/salesMasters/rdfInertsPercEntry/rdfInertsPercEntryList";
+import RdfInertsPercEntryForm from "@/pages/admin/modules/salesMasters/rdfInertsPercEntry/rdfInertsPercEntryForm";
+import IcwSupplierCreationList from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationList";
+import IcwSupplierCreationForm from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -105,6 +109,8 @@ const ROUTES: RouteMap = {
     "terms-of-delivery-creation": { list: TermsOfDeliveryCreationList, form: TermsOfDeliveryCreationForm },
     "terms-of-payment-creation": { list: TermsOfPaymentCreationList, form: TermsOfPaymentCreationForm },
     "mail-details-creation": { list: MailDetailsCreationList, form: MailDetailsCreationForm },
+    "rdf-inerts-percentage-entry": { list: RdfInertsPercEntryList, form: RdfInertsPercEntryForm },
+    "icw-supplier-creation": { list: IcwSupplierCreationList, form: IcwSupplierCreationForm },
     "document-type": { list: DocumentTypeList, form: DocumentTypeForm },
     "transport-master": { list: TransportEntryList, form: TransportEntryForm },
   },
