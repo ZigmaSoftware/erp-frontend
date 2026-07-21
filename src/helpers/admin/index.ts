@@ -34,6 +34,9 @@ export const termsOfPaymentCreationApi = salesMasterApi.termsOfPaymentCreation;
 export const mailDetailsCreationApi = salesMasterApi.mailDetailsCreation;
 export const documentTypeApi = salesMasterApi.documentType;
 export const transportEntryApi = salesMasterApi.transportEntry;
+export const subCategoryApi = salesMasterApi.subCategory;
+export const targetEntryApi = salesMasterApi.targetEntry;
+export const targetEntryItemApi = salesMasterApi.targetEntryItem;
 
 
 /* -------- Login And Refresh -------- */
