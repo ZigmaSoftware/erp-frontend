@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { getAdminNavigation } from "../navigation";
 import ZigmaLogo from "@/images/logo.png";
 
-type MenuKey = "admins" | "masters" | "em-masters" | null;
+type MenuKey = "admins" | "masters" | "em-masters" | "sales-masters" | "sales-service" | null;
 
 const AppHeader: React.FC = () => {
   const [openMenu, setOpenMenu] = useState<MenuKey>(null);
@@ -26,7 +26,7 @@ const AppHeader: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  const { admin, masters, emMasters } = useMemo(getAdminNavigation, []);
+  const { admin, masters, emMasters, salesMasters, salesService } = useMemo(getAdminNavigation, []);
 
   /* -------------------------------------------------
      Helpers
@@ -69,9 +69,21 @@ const AppHeader: React.FC = () => {
     [emMasters, findPrimaryPath, withAdminPrefix]
   );
 
+  const salesMastersDashboardPath = useMemo(
+    () => withAdminPrefix(findPrimaryPath(salesMasters)),
+    [salesMasters, findPrimaryPath, withAdminPrefix]
+  );
+
+  const salesServiceDashboardPath = useMemo(
+    () => withAdminPrefix(findPrimaryPath(salesService)),
+    [salesService, findPrimaryPath, withAdminPrefix]
+  );
+
   const adminItems = admin[0]?.subItems || [];
   const masterItems = masters[0]?.subItems || [];
   const emMasterItems = emMasters[0]?.subItems || [];
+  const salesMasterItems = salesMasters[0]?.subItems || [];
+  const salesServiceItems = salesService[0]?.subItems || [];
 
   /* -------------------------------------------------
      Scroll + keyboard effects
@@ -110,6 +122,9 @@ const AppHeader: React.FC = () => {
   const showMastersGroup =
     activeItem === "masters" || activeItem === "em-masters";
 
+  const showSalesGroup = activeItem === "sales-masters";
+  const showSalesServiceGroup = activeItem === "sales-service";
+
   const toggleMenu = (menu: MenuKey) => {
     setActiveItem(menu);
     setOpenMenu((prev) => (prev === menu ? null : menu));
@@ -117,6 +132,8 @@ const AppHeader: React.FC = () => {
     if (menu === "admins") navigate(adminDashboardPath);
     if (menu === "masters") navigate(mastersDashboardPath);
     if (menu === "em-masters") navigate(emMastersDashboardPath);
+    if (menu === "sales-masters") navigate(salesMastersDashboardPath);
+    if (menu === "sales-service") navigate(salesServiceDashboardPath);
   };
 
   /* -------------------------------------------------
@@ -242,6 +259,12 @@ const AppHeader: React.FC = () => {
                   {renderNavMenu("EM Masters", "em-masters", emMasterItems)}
                 </>
               )}
+
+              {showSalesGroup &&
+                renderNavMenu("Masters", "sales-masters", salesMasterItems)}
+
+              {showSalesServiceGroup &&
+                renderNavMenu("Masters", "sales-service", salesServiceItems)}
             </div>
           </div>
 

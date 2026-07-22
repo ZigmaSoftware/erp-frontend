@@ -39,6 +39,68 @@ import VehicleCreationList from "@/pages/admin/modules/emMasters/vehicleCreation
 import VehicleCreationForm from "@/pages/admin/modules/emMasters/vehicleCreation/vehicleCreationForm";
 import MachineryHireList from "@/pages/admin/modules/emMasters/machineryHire/machineryHireList";
 import MachineryHireForm from "@/pages/admin/modules/emMasters/machineryHire/machineryHireForm";
+// Sales Masters
+import ScrapSalesCategoryList from "@/pages/admin/modules/salesMasters/scrapSalesCategory/scrapSalesCategoryList";
+import ScrapSalesCategoryForm from "@/pages/admin/modules/salesMasters/scrapSalesCategory/scrapSalesCategoryForm";
+import ItemTypeList from "@/pages/admin/modules/salesMasters/itemType/itemTypeList";
+import ItemTypeForm from "@/pages/admin/modules/salesMasters/itemType/itemTypeForm";
+import ItemCreationList from "@/pages/admin/modules/salesMasters/itemCreation/itemCreationList";
+import ItemCreationForm from "@/pages/admin/modules/salesMasters/itemCreation/itemCreationForm";
+import ItemGroupCreationList from "@/pages/admin/modules/salesMasters/itemGroupCreation/itemGroupCreationList";
+import ItemGroupCreationForm from "@/pages/admin/modules/salesMasters/itemGroupCreation/itemGroupCreationForm";
+import TransportMediumCreationList from "@/pages/admin/modules/salesMasters/transportMediumCreation/transportMediumCreationList";
+import TransportMediumCreationForm from "@/pages/admin/modules/salesMasters/transportMediumCreation/transportMediumCreationForm";
+import TermsOfDeliveryCreationList from "@/pages/admin/modules/salesMasters/termsOfDeliveryCreation/termsOfDeliveryCreationList";
+import TermsOfDeliveryCreationForm from "@/pages/admin/modules/salesMasters/termsOfDeliveryCreation/termsOfDeliveryCreationForm";
+import TermsOfPaymentCreationList from "@/pages/admin/modules/salesMasters/termsOfPaymentCreation/termsOfPaymentCreationList";
+import TermsOfPaymentCreationForm from "@/pages/admin/modules/salesMasters/termsOfPaymentCreation/termsOfPaymentCreationForm";
+import MailDetailsCreationList from "@/pages/admin/modules/salesMasters/mailDetailsCreation/mailDetailsCreationList";
+import MailDetailsCreationForm from "@/pages/admin/modules/salesMasters/mailDetailsCreation/mailDetailsCreationForm";
+import DocumentTypeList from "@/pages/admin/modules/salesMasters/documentType/documentTypeList";
+import DocumentTypeForm from "@/pages/admin/modules/salesMasters/documentType/documentTypeForm";
+import TransportEntryList from "@/pages/admin/modules/salesMasters/transportEntry/transportEntryList";
+import TransportEntryForm from "@/pages/admin/modules/salesMasters/transportEntry/transportEntryForm";
+import SubCategoryList from "@/pages/admin/modules/salesMasters/subCategory/subCategoryList";
+import SubCategoryForm from "@/pages/admin/modules/salesMasters/subCategory/subCategoryForm";
+import TargetEntryList from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryList";
+import TargetEntryForm from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryForm";
+import CustomerCreationList from "@/pages/admin/modules/salesMasters/customerCreation/customerCreationList";
+import CustomerCreationForm from "@/pages/admin/modules/salesMasters/customerCreation/customerCreationForm";
+import RdfInertsPercEntryList from "@/pages/admin/modules/salesMasters/rdfInertsPercEntry/rdfInertsPercEntryList";
+import RdfInertsPercEntryForm from "@/pages/admin/modules/salesMasters/rdfInertsPercEntry/rdfInertsPercEntryForm";
+import IcwSupplierCreationList from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationList";
+import IcwSupplierCreationForm from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationForm";
+// Sales Service (standalone sales_service microservice - parallel copy of Sales Masters)
+import ScrapSalesCategoryServiceList from "@/pages/admin/modules/salesService/scrapSalesCategory/scrapSalesCategoryList";
+import ScrapSalesCategoryServiceForm from "@/pages/admin/modules/salesService/scrapSalesCategory/scrapSalesCategoryForm";
+import ItemTypeServiceList from "@/pages/admin/modules/salesService/itemType/itemTypeList";
+import ItemTypeServiceForm from "@/pages/admin/modules/salesService/itemType/itemTypeForm";
+import ItemCreationServiceList from "@/pages/admin/modules/salesService/itemCreation/itemCreationList";
+import ItemCreationServiceForm from "@/pages/admin/modules/salesService/itemCreation/itemCreationForm";
+import ItemGroupCreationServiceList from "@/pages/admin/modules/salesService/itemGroupCreation/itemGroupCreationList";
+import ItemGroupCreationServiceForm from "@/pages/admin/modules/salesService/itemGroupCreation/itemGroupCreationForm";
+import TransportMediumCreationServiceList from "@/pages/admin/modules/salesService/transportMediumCreation/transportMediumCreationList";
+import TransportMediumCreationServiceForm from "@/pages/admin/modules/salesService/transportMediumCreation/transportMediumCreationForm";
+import TermsOfDeliveryCreationServiceList from "@/pages/admin/modules/salesService/termsOfDeliveryCreation/termsOfDeliveryCreationList";
+import TermsOfDeliveryCreationServiceForm from "@/pages/admin/modules/salesService/termsOfDeliveryCreation/termsOfDeliveryCreationForm";
+import TermsOfPaymentCreationServiceList from "@/pages/admin/modules/salesService/termsOfPaymentCreation/termsOfPaymentCreationList";
+import TermsOfPaymentCreationServiceForm from "@/pages/admin/modules/salesService/termsOfPaymentCreation/termsOfPaymentCreationForm";
+import MailDetailsCreationServiceList from "@/pages/admin/modules/salesService/mailDetailsCreation/mailDetailsCreationList";
+import MailDetailsCreationServiceForm from "@/pages/admin/modules/salesService/mailDetailsCreation/mailDetailsCreationForm";
+import DocumentTypeServiceList from "@/pages/admin/modules/salesService/documentType/documentTypeList";
+import DocumentTypeServiceForm from "@/pages/admin/modules/salesService/documentType/documentTypeForm";
+import TransportEntryServiceList from "@/pages/admin/modules/salesService/transportEntry/transportEntryList";
+import TransportEntryServiceForm from "@/pages/admin/modules/salesService/transportEntry/transportEntryForm";
+import SubCategoryServiceList from "@/pages/admin/modules/salesService/subCategory/subCategoryList";
+import SubCategoryServiceForm from "@/pages/admin/modules/salesService/subCategory/subCategoryForm";
+import TargetEntryServiceList from "@/pages/admin/modules/salesService/targetEntry/targetEntryList";
+import TargetEntryServiceForm from "@/pages/admin/modules/salesService/targetEntry/targetEntryForm";
+import CustomerCreationServiceList from "@/pages/admin/modules/salesService/customerCreation/customerCreationList";
+import CustomerCreationServiceForm from "@/pages/admin/modules/salesService/customerCreation/customerCreationForm";
+import RdfInertsPercEntryServiceList from "@/pages/admin/modules/salesService/rdfInertsPercEntry/rdfInertsPercEntryList";
+import RdfInertsPercEntryServiceForm from "@/pages/admin/modules/salesService/rdfInertsPercEntry/rdfInertsPercEntryForm";
+import IcwSupplierCreationServiceList from "@/pages/admin/modules/salesService/icwSupplierCreation/icwSupplierCreationList";
+import IcwSupplierCreationServiceForm from "@/pages/admin/modules/salesService/icwSupplierCreation/icwSupplierCreationForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -74,6 +136,40 @@ const ROUTES: RouteMap = {
     "vehicle-request": { list: VehicleRequestList, form: VehicleRequestForm },
     "vehicle-creation": { list: VehicleCreationList, form: VehicleCreationForm },
     "machinery-hire": { list: MachineryHireList, form: MachineryHireForm },
+  },
+  "sales-masters": {
+    "scrap-sales-category": { list: ScrapSalesCategoryList, form: ScrapSalesCategoryForm },
+    "item-type": { list: ItemTypeList, form: ItemTypeForm },
+    "sub-category": { list: SubCategoryList, form: SubCategoryForm },
+    "item-creation": { list: ItemCreationList, form: ItemCreationForm },
+    "item-group-creation": { list: ItemGroupCreationList, form: ItemGroupCreationForm },
+    "transport-medium-creation": { list: TransportMediumCreationList, form: TransportMediumCreationForm },
+    "terms-of-delivery-creation": { list: TermsOfDeliveryCreationList, form: TermsOfDeliveryCreationForm },
+    "terms-of-payment-creation": { list: TermsOfPaymentCreationList, form: TermsOfPaymentCreationForm },
+    "mail-details-creation": { list: MailDetailsCreationList, form: MailDetailsCreationForm },
+    "rdf-inerts-percentage-entry": { list: RdfInertsPercEntryList, form: RdfInertsPercEntryForm },
+    "icw-supplier-creation": { list: IcwSupplierCreationList, form: IcwSupplierCreationForm },
+    "document-type": { list: DocumentTypeList, form: DocumentTypeForm },
+    "transport-master": { list: TransportEntryList, form: TransportEntryForm },
+    "target-entry": { list: TargetEntryList, form: TargetEntryForm },
+    "customer-creation": { list: CustomerCreationList, form: CustomerCreationForm },
+  },
+  "sales-service": {
+    "scrap-sales-category": { list: ScrapSalesCategoryServiceList, form: ScrapSalesCategoryServiceForm },
+    "item-type": { list: ItemTypeServiceList, form: ItemTypeServiceForm },
+    "sub-category": { list: SubCategoryServiceList, form: SubCategoryServiceForm },
+    "item-creation": { list: ItemCreationServiceList, form: ItemCreationServiceForm },
+    "item-group-creation": { list: ItemGroupCreationServiceList, form: ItemGroupCreationServiceForm },
+    "transport-medium-creation": { list: TransportMediumCreationServiceList, form: TransportMediumCreationServiceForm },
+    "terms-of-delivery-creation": { list: TermsOfDeliveryCreationServiceList, form: TermsOfDeliveryCreationServiceForm },
+    "terms-of-payment-creation": { list: TermsOfPaymentCreationServiceList, form: TermsOfPaymentCreationServiceForm },
+    "mail-details-creation": { list: MailDetailsCreationServiceList, form: MailDetailsCreationServiceForm },
+    "rdf-inerts-percentage-entry": { list: RdfInertsPercEntryServiceList, form: RdfInertsPercEntryServiceForm },
+    "icw-supplier-creation": { list: IcwSupplierCreationServiceList, form: IcwSupplierCreationServiceForm },
+    "document-type": { list: DocumentTypeServiceList, form: DocumentTypeServiceForm },
+    "transport-master": { list: TransportEntryServiceList, form: TransportEntryServiceForm },
+    "target-entry": { list: TargetEntryServiceList, form: TargetEntryServiceForm },
+    "customer-creation": { list: CustomerCreationServiceList, form: CustomerCreationServiceForm },
   },
 };
 

@@ -43,11 +43,10 @@ const toBoolean = (
 const normalizeSupplier = (
   item: RawVehicleSupplierListRecord
 ): VehicleSupplierTableRow | null => {
-  const id = item.unique_id ?? item.id;
-  if (id == null) return null;
+  if (item.unique_id == null) return null;
 
   return {
-    unique_id: String(id),
+    unique_id: String(item.unique_id),
     supplier_name: item.supplier_name ?? "",
     proprietor_name: item.proprietor_name ?? "",
     mobile_no: item.mobile_no ?? "",

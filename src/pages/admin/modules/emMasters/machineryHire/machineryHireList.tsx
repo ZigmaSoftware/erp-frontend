@@ -55,13 +55,10 @@ const pickFirstString = (...values: unknown[]): string => {
 const normalizeMachineryHireRecord = (
   item: MachineryHireRecord
 ): MachineryHireTableRow | null => {
-  const uniqueId = pickFirstString(item.unique_id, (item as Record<string, unknown>)["id"]);
+  const uniqueId = pickFirstString(item.unique_id);
   if (!uniqueId) return null;
 
-  const numericId = Number((item as Record<string, unknown>)["id"] ?? item.unique_id);
-
   return {
-    id: Number.isNaN(numericId) ? 0 : numericId,
     unique_id: uniqueId,
     site_id: pickFirstString(item.site_id),
     site_name: pickFirstString(item.site_name),

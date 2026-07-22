@@ -2,14 +2,20 @@ import {
   commonMasterEndpoints,
   emMastersEndpoints,
   adminMasterEndpoints,
+  salesMasterEndpoints,
+  salesServiceEndpoints,
 
   getCommonMasterEndpointPath,
   getEmMasterEndpointPath,
   getAdminMasterEndpointPath,
+  getSalesMasterEndpointPath,
+  getSalesServiceEndpointPath,
 
   type CommonMasterEntity,
   type EmMasterEntity,
-  type AdminMasterEntity
+  type AdminMasterEntity,
+  type SalesMasterEntity,
+  type SalesServiceEntity
 } from "./endpoints";
 
 import { createCrudHelpers, type CrudHelpers } from "./crudHelpers";
@@ -81,3 +87,50 @@ export const adminMasterApi: AdminMasterApiRegistry =
 
 export const getAdminMasterApi = (entity: AdminMasterEntity) =>
   adminMasterApi[entity];
+
+
+/* ========================================================
+   SALES MASTER API REGISTRY
+======================================================== */
+
+type SalesMasterApiRegistry = {
+  [K in SalesMasterEntity]: CrudHelpers;
+};
+
+export const salesMasterApi: SalesMasterApiRegistry =
+  (Object.keys(salesMasterEndpoints) as SalesMasterEntity[]).reduce(
+    (map, key) => {
+      map[key] = createCrudHelpers(
+        getSalesMasterEndpointPath(key)
+      );
+      return map;
+    },
+    {} as SalesMasterApiRegistry
+  );
+
+export const getSalesMasterApi = (entity: SalesMasterEntity) =>
+  salesMasterApi[entity];
+
+
+/* ========================================================
+   SALES SERVICE API REGISTRY
+   (standalone sales_service microservice)
+======================================================== */
+
+type SalesServiceApiRegistry = {
+  [K in SalesServiceEntity]: CrudHelpers;
+};
+
+export const salesServiceApi: SalesServiceApiRegistry =
+  (Object.keys(salesServiceEndpoints) as SalesServiceEntity[]).reduce(
+    (map, key) => {
+      map[key] = createCrudHelpers(
+        getSalesServiceEndpointPath(key)
+      );
+      return map;
+    },
+    {} as SalesServiceApiRegistry
+  );
+
+export const getSalesServiceApi = (entity: SalesServiceEntity) =>
+  salesServiceApi[entity];

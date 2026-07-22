@@ -59,11 +59,13 @@ export default function StateList() {
     queryKey: stateListQueryKey(page, rows),
     queryFn: async () => stateApi.listPaginated(page, rows),
     placeholderData: keepPreviousData,
-    onSuccess: () => {
-      setDisplayedPage(page);
-      setDisplayedRows(rows);
-    },
   });
+
+  useEffect(() => {
+    if (!query.data || query.isPlaceholderData) return;
+    setDisplayedPage(page);
+    setDisplayedRows(rows);
+  }, [page, query.data, query.isPlaceholderData, rows]);
 
   const totalRecords = query.data?.count ?? 0;
   const states = query.data?.results ?? [];

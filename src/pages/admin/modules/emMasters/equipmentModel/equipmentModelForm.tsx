@@ -45,11 +45,10 @@ const equipmentModelDetailQueryKey = (id: string | undefined) =>
 const normalizeEquipmentType = (
   item: RawEquipmentTypeLookupRecord
 ): EquipmentTypeLookupOption | null => {
-  const id = item.unique_id ?? item.id;
-  if (id == null) return null;
+  if (item.unique_id == null) return null;
 
   return {
-    unique_id: String(id),
+    unique_id: String(item.unique_id),
     name: item.name ?? item.equipment_type_name ?? "",
     is_active: toBoolean(item.is_active ?? item.status),
   };

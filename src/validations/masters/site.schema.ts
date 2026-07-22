@@ -2,21 +2,28 @@ import { z } from "zod";
 
 const optionalString = z.string().optional().or(z.literal(""));
 const numericString = z.string().optional().or(z.literal(""));
+const requiredString = (label: string) =>
+  z.string().trim().min(1, `${label} is required`);
+const requiredNumericString = (label: string) =>
+  z.string().trim().min(1, `${label} is required`);
 
 export const siteSchema = z.object({
   site_name: z.string().min(2, "Site name must be at least 2 characters"),
-  state_id: z.string().min(1, "State is required"),
-  district_id: z.string().min(1, "District is required"),
-  ulb: optionalString,
-  status: z.enum(["Active", "Inactive"]).optional().or(z.literal("")),
-  site_address: optionalString,
+  state_id: requiredString("State"),
+  district_id: requiredString("District"),
+  ulb: requiredString("ULB"),
+  status: z
+    .enum(["Active", "Inactive"])
+    .or(z.literal(""))
+    .refine((value) => value !== "", "Status is required"),
+  site_address: requiredString("Site address"),
   latitude: numericString,
   longitude: numericString,
-  project_value: numericString,
-  project_type_details: optionalString,
-  basic_payment_per_m3: numericString,
-  dc_invoice_no: optionalString,
-  min_max_type: optionalString,
+  project_value: requiredNumericString("Project value"),
+  project_type_details: requiredString("Project type details"),
+  basic_payment_per_m3: requiredNumericString("Basic payment per m3"),
+  dc_invoice_no: requiredString("DC invoice no"),
+  min_max_type: requiredString("Min/Max type"),
   screen_name: optionalString,
   weighbridge_count: numericString,
   eb_rate: numericString,
@@ -28,7 +35,7 @@ export const siteSchema = z.object({
   no_of_zones: numericString,
   no_of_phases: numericString,
   density_volume: numericString,
-  extended_quantity: numericString,
+  extended_quantity: requiredNumericString("Extended quantity"),
   service_charge: numericString,
   transportation_cost: numericString,
   gst: optionalString,
@@ -45,4 +52,4 @@ export const siteSchema = z.object({
   remarks: optionalString,
 });
 
-export type SiteFormValues = z.infer<typeof siteSchema>;
+export type SiteFormValues = z.input<typeof siteSchema>;

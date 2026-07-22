@@ -54,6 +54,21 @@ export type EncryptedRoutes = {
   encVehicleSupplier: string;
   encVehicleRequest: string;
   encMachineryHire: string;
+  encSalesMasters: string;
+  encSalesService: string;
+  encScrapSalesCategory: string;
+  encItemType: string;
+  encItemCreation: string;
+  encItemGroupCreation: string;
+  encTransportMediumCreation: string;
+  encTermsOfDeliveryCreation: string;
+  encTermsOfPaymentCreation: string;
+  encMailDetailsCreation: string;
+  encDocumentType: string;
+  encSubCategory: string;
+  encTargetEntry: string;
+  encRdfInertsPercEntry: string;
+  encIcwSupplierCreation: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -109,7 +124,22 @@ const plainRoutes: EncryptedRoutes = {
   encContractor: "contractor",
   encVehicleSupplier: "vehicle-suppliers",
   encVehicleRequest: "vehicle-request",
-  encMachineryHire: "machinery-hire"
+  encMachineryHire: "machinery-hire",
+  encSalesMasters: "sales-masters",
+  encSalesService: "sales-service",
+  encScrapSalesCategory: "scrap-sales-category",
+  encItemType: "item-type",
+  encItemCreation: "item-creation",
+  encDocumentType: "document-type",
+  encItemGroupCreation: "item-group-creation",
+  encTransportMediumCreation: "transport-medium-creation",
+  encTermsOfDeliveryCreation: "terms-of-delivery-creation",
+  encTermsOfPaymentCreation: "terms-of-payment-creation",
+  encMailDetailsCreation: "mail-details-creation",
+  encSubCategory: "sub-category",
+  encTargetEntry: "target-entry",
+  encRdfInertsPercEntry: "rdf-inerts-percentage-entry",
+  encIcwSupplierCreation: "icw-supplier-creation",
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {
