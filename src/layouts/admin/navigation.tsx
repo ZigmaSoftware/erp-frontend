@@ -56,6 +56,7 @@ export function getAdminNavigation(): AdminNavConfig {
     encTransportMaster,
     encSubCategory,
     encTargetEntry,
+    encCustomerCreation,
   } = getEncryptedRoute();
 
   const home: NavItem[] = [
@@ -111,10 +112,11 @@ export function getAdminNavigation(): AdminNavConfig {
       name: "Sales",
       icon: <Layers3 size={18} />,
       subItems: [
-        { name: "Scrap Sales Category", path: `/${encSalesMasters}/${encScrapSalesCategory}` },
+        { name: "Category Creation", path: `/${encSalesMasters}/${encScrapSalesCategory}` },
         { name: "Item Type", path: `/${encSalesMasters}/${encItemType}` },
         { name: "Sub Category", path: `/${encSalesMasters}/${encSubCategory}` },
-        { name: "Target Entry", path: `/${encSalesMasters}/${encTargetEntry}` },
+        { name: "Customer Creation", path: `/${encSalesMasters}/${encCustomerCreation}` },
+        { name: "Outward Target Entry", path: `/${encSalesMasters}/${encTargetEntry}` },
         { name: "Item Creation", path: `/${encSalesMasters}/${encItemCreation}` },
         { name: "Item Group Creation", path: `/${encSalesMasters}/${encItemGroupCreation}` },
         { name: "Transport Medium Creation", path: `/${encSalesMasters}/${encTransportMediumCreation}` },

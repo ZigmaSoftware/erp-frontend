@@ -37,6 +37,9 @@ export const transportEntryApi = salesMasterApi.transportEntry;
 export const subCategoryApi = salesMasterApi.subCategory;
 export const targetEntryApi = salesMasterApi.targetEntry;
 export const targetEntryItemApi = salesMasterApi.targetEntryItem;
+export const customerCreationApi = salesMasterApi.customerCreation;
+export const customerDestinationApi = salesMasterApi.customerDestination;
+export const customerItemPurposeApi = salesMasterApi.customerItemPurpose;
 
 
 /* -------- Login And Refresh -------- */

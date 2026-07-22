@@ -62,6 +62,8 @@ import SubCategoryList from "@/pages/admin/modules/salesMasters/subCategory/subC
 import SubCategoryForm from "@/pages/admin/modules/salesMasters/subCategory/subCategoryForm";
 import TargetEntryList from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryList";
 import TargetEntryForm from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryForm";
+import CustomerCreationList from "@/pages/admin/modules/salesMasters/customerCreation/customerCreationList";
+import CustomerCreationForm from "@/pages/admin/modules/salesMasters/customerCreation/customerCreationForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -110,6 +112,7 @@ const ROUTES: RouteMap = {
     "document-type": { list: DocumentTypeList, form: DocumentTypeForm },
     "transport-master": { list: TransportEntryList, form: TransportEntryForm },
     "target-entry": { list: TargetEntryList, form: TargetEntryForm },
+    "customer-creation": { list: CustomerCreationList, form: CustomerCreationForm },
   },
 };
 
