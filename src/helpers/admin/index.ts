@@ -38,14 +38,11 @@ export const transportEntryApi = salesMasterApi.transportEntry;
 export const subCategoryApi = salesMasterApi.subCategory;
 export const targetEntryApi = salesMasterApi.targetEntry;
 export const targetEntryItemApi = salesMasterApi.targetEntryItem;
-<<<<<<< HEAD
 export const customerCreationApi = salesMasterApi.customerCreation;
 export const customerDestinationApi = salesMasterApi.customerDestination;
 export const customerItemPurposeApi = salesMasterApi.customerItemPurpose;
-=======
 export const rdfInertsPercEntryApi = salesMasterApi.rdfInertsPercEntry;
 export const icwSupplierCreationApi = salesMasterApi.icwSupplierCreation;
->>>>>>> fd73918c32ca5acd621b7fa832280f2fab593e0b
 
 
 /* -------- Login And Refresh -------- */
