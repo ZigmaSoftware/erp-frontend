@@ -33,7 +33,7 @@ export default function IcwSupplierCreationList() {
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<DataTableFilterMeta>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    customer_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    supplier_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
   const navigate = useNavigate();
@@ -160,7 +160,7 @@ export default function IcwSupplierCreationList() {
             ICW Supplier Creation
           </h1>
           <p className="text-gray-500 text-sm">
-            Manage ICW supplier customer and bank details
+            Manage ICW supplier and bank details
           </p>
         </div>
 
@@ -180,11 +180,11 @@ export default function IcwSupplierCreationList() {
         filters={filters}
         rowsPerPageOptions={[5, 10, 25, 50]}
         globalFilterFields={[
-          "customer_name",
+          "supplier_name",
           "contact_person",
           "mobile_no",
           "site_names",
-          "customer_id",
+          "supplier_id",
         ]}
         header={header}
         emptyMessage="No ICW suppliers found."
@@ -200,14 +200,14 @@ export default function IcwSupplierCreationList() {
           style={{ minWidth: "130px" }}
         />
         <Column
-          field="customer_id"
-          header="Customer Id"
+          field="supplier_id"
+          header="Supplier Id"
           sortable
           style={{ minWidth: "130px" }}
         />
         <Column
-          field="customer_name"
-          header="Customer Name"
+          field="supplier_name"
+          header="Supplier Name"
           sortable
           style={{ minWidth: "180px" }}
         />
@@ -239,7 +239,7 @@ export default function IcwSupplierCreationList() {
           style={{ minWidth: "170px" }}
         />
         <Column
-          header="Customer Status"
+          header="Supplier Status"
           body={customerStatusTemplate}
           style={{ width: "150px", textAlign: "center" }}
         />
@@ -248,7 +248,7 @@ export default function IcwSupplierCreationList() {
       </DataTable>
 
       <Dialog
-        header={detail?.customer_name ?? "ICW Supplier"}
+        header={detail?.supplier_name ?? "ICW Supplier"}
         visible={Boolean(detail)}
         style={{ width: "70vw", maxWidth: "900px" }}
         modal
@@ -257,7 +257,7 @@ export default function IcwSupplierCreationList() {
         {detail && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div><strong>Party Type:</strong> {partyTypeLabel(detail.party_type)}</div>
-            <div><strong>Customer Id:</strong> {detail.customer_id ?? "-"}</div>
+            <div><strong>Supplier Id:</strong> {detail.supplier_id ?? "-"}</div>
             <div><strong>Contact Person:</strong> {detail.contact_person}</div>
             <div><strong>Mobile No:</strong> {detail.mobile_no}</div>
             <div><strong>Site:</strong> {siteNamesTemplate(detail)}</div>
