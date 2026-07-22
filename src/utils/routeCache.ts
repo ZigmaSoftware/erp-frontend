@@ -55,6 +55,7 @@ export type EncryptedRoutes = {
   encVehicleRequest: string;
   encMachineryHire: string;
   encSalesMasters: string;
+  encSalesService: string;
   encScrapSalesCategory: string;
   encItemType: string;
   encItemCreation: string;
@@ -125,6 +126,7 @@ const plainRoutes: EncryptedRoutes = {
   encVehicleRequest: "vehicle-request",
   encMachineryHire: "machinery-hire",
   encSalesMasters: "sales-masters",
+  encSalesService: "sales-service",
   encScrapSalesCategory: "scrap-sales-category",
   encItemType: "item-type",
   encItemCreation: "item-creation",

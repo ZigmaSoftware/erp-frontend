@@ -20,6 +20,7 @@ export type AdminNavConfig = {
   masters: NavItem[];
   emMasters: NavItem[];
   salesMasters: NavItem[];
+  salesService: NavItem[];
 };
 
 export function getAdminNavigation(): AdminNavConfig {
@@ -45,6 +46,7 @@ export function getAdminNavigation(): AdminNavConfig {
     encMachineryHire,
     encVehicleCreation,
     encSalesMasters,
+    encSalesService,
     encScrapSalesCategory,
     encItemType,
     encItemCreation,
@@ -135,5 +137,29 @@ export function getAdminNavigation(): AdminNavConfig {
     },
   ];
 
-  return { home, admin, masters, emMasters, salesMasters };
+  const salesService: NavItem[] = [
+    {
+      name: "Sales Service",
+      icon: <Layers3 size={18} />,
+      subItems: [
+        { name: "Category Creation", path: `/${encSalesService}/${encScrapSalesCategory}` },
+        { name: "Item Type", path: `/${encSalesService}/${encItemType}` },
+        { name: "Customer Creation", path: `/${encSalesService}/${encCustomerCreation}` },
+        { name: "Outward Sub Category Creation", path: `/${encSalesService}/${encSubCategory}` },
+        { name: "Item Creation", path: `/${encSalesService}/${encItemCreation}` },
+        { name: "Item Group Creation", path: `/${encSalesService}/${encItemGroupCreation}` },
+        { name: "Transport Medium Creation", path: `/${encSalesService}/${encTransportMediumCreation}` },
+        { name: "Terms Of Delivery Creation", path: `/${encSalesService}/${encTermsOfDeliveryCreation}` },
+        { name: "Terms Of Payment Creation", path: `/${encSalesService}/${encTermsOfPaymentCreation}` },
+        { name: "Mail Details Creation", path: `/${encSalesService}/${encMailDetailsCreation}` },
+        { name: "Document Type Creation", path: `/${encSalesService}/${encDocumentType}` },
+        { name: "Transport Entry", path: `/${encSalesService}/${encTransportMaster}` },
+        { name: "Outward Target Entry", path: `/${encSalesService}/${encTargetEntry}` },
+        { name: "RDF & Inerts Percentage Entry", path: `/${encSalesService}/${encRdfInertsPercEntry}` },
+        { name: "ICW Supplier Creation", path: `/${encSalesService}/${encIcwSupplierCreation}` },
+      ],
+    },
+  ];
+
+  return { home, admin, masters, emMasters, salesMasters, salesService };
 }

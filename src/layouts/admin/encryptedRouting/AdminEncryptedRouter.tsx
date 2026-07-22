@@ -70,6 +70,37 @@ import RdfInertsPercEntryList from "@/pages/admin/modules/salesMasters/rdfInerts
 import RdfInertsPercEntryForm from "@/pages/admin/modules/salesMasters/rdfInertsPercEntry/rdfInertsPercEntryForm";
 import IcwSupplierCreationList from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationList";
 import IcwSupplierCreationForm from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationForm";
+// Sales Service (standalone sales_service microservice - parallel copy of Sales Masters)
+import ScrapSalesCategoryServiceList from "@/pages/admin/modules/salesService/scrapSalesCategory/scrapSalesCategoryList";
+import ScrapSalesCategoryServiceForm from "@/pages/admin/modules/salesService/scrapSalesCategory/scrapSalesCategoryForm";
+import ItemTypeServiceList from "@/pages/admin/modules/salesService/itemType/itemTypeList";
+import ItemTypeServiceForm from "@/pages/admin/modules/salesService/itemType/itemTypeForm";
+import ItemCreationServiceList from "@/pages/admin/modules/salesService/itemCreation/itemCreationList";
+import ItemCreationServiceForm from "@/pages/admin/modules/salesService/itemCreation/itemCreationForm";
+import ItemGroupCreationServiceList from "@/pages/admin/modules/salesService/itemGroupCreation/itemGroupCreationList";
+import ItemGroupCreationServiceForm from "@/pages/admin/modules/salesService/itemGroupCreation/itemGroupCreationForm";
+import TransportMediumCreationServiceList from "@/pages/admin/modules/salesService/transportMediumCreation/transportMediumCreationList";
+import TransportMediumCreationServiceForm from "@/pages/admin/modules/salesService/transportMediumCreation/transportMediumCreationForm";
+import TermsOfDeliveryCreationServiceList from "@/pages/admin/modules/salesService/termsOfDeliveryCreation/termsOfDeliveryCreationList";
+import TermsOfDeliveryCreationServiceForm from "@/pages/admin/modules/salesService/termsOfDeliveryCreation/termsOfDeliveryCreationForm";
+import TermsOfPaymentCreationServiceList from "@/pages/admin/modules/salesService/termsOfPaymentCreation/termsOfPaymentCreationList";
+import TermsOfPaymentCreationServiceForm from "@/pages/admin/modules/salesService/termsOfPaymentCreation/termsOfPaymentCreationForm";
+import MailDetailsCreationServiceList from "@/pages/admin/modules/salesService/mailDetailsCreation/mailDetailsCreationList";
+import MailDetailsCreationServiceForm from "@/pages/admin/modules/salesService/mailDetailsCreation/mailDetailsCreationForm";
+import DocumentTypeServiceList from "@/pages/admin/modules/salesService/documentType/documentTypeList";
+import DocumentTypeServiceForm from "@/pages/admin/modules/salesService/documentType/documentTypeForm";
+import TransportEntryServiceList from "@/pages/admin/modules/salesService/transportEntry/transportEntryList";
+import TransportEntryServiceForm from "@/pages/admin/modules/salesService/transportEntry/transportEntryForm";
+import SubCategoryServiceList from "@/pages/admin/modules/salesService/subCategory/subCategoryList";
+import SubCategoryServiceForm from "@/pages/admin/modules/salesService/subCategory/subCategoryForm";
+import TargetEntryServiceList from "@/pages/admin/modules/salesService/targetEntry/targetEntryList";
+import TargetEntryServiceForm from "@/pages/admin/modules/salesService/targetEntry/targetEntryForm";
+import CustomerCreationServiceList from "@/pages/admin/modules/salesService/customerCreation/customerCreationList";
+import CustomerCreationServiceForm from "@/pages/admin/modules/salesService/customerCreation/customerCreationForm";
+import RdfInertsPercEntryServiceList from "@/pages/admin/modules/salesService/rdfInertsPercEntry/rdfInertsPercEntryList";
+import RdfInertsPercEntryServiceForm from "@/pages/admin/modules/salesService/rdfInertsPercEntry/rdfInertsPercEntryForm";
+import IcwSupplierCreationServiceList from "@/pages/admin/modules/salesService/icwSupplierCreation/icwSupplierCreationList";
+import IcwSupplierCreationServiceForm from "@/pages/admin/modules/salesService/icwSupplierCreation/icwSupplierCreationForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -122,6 +153,23 @@ const ROUTES: RouteMap = {
     "transport-master": { list: TransportEntryList, form: TransportEntryForm },
     "target-entry": { list: TargetEntryList, form: TargetEntryForm },
     "customer-creation": { list: CustomerCreationList, form: CustomerCreationForm },
+  },
+  "sales-service": {
+    "scrap-sales-category": { list: ScrapSalesCategoryServiceList, form: ScrapSalesCategoryServiceForm },
+    "item-type": { list: ItemTypeServiceList, form: ItemTypeServiceForm },
+    "sub-category": { list: SubCategoryServiceList, form: SubCategoryServiceForm },
+    "item-creation": { list: ItemCreationServiceList, form: ItemCreationServiceForm },
+    "item-group-creation": { list: ItemGroupCreationServiceList, form: ItemGroupCreationServiceForm },
+    "transport-medium-creation": { list: TransportMediumCreationServiceList, form: TransportMediumCreationServiceForm },
+    "terms-of-delivery-creation": { list: TermsOfDeliveryCreationServiceList, form: TermsOfDeliveryCreationServiceForm },
+    "terms-of-payment-creation": { list: TermsOfPaymentCreationServiceList, form: TermsOfPaymentCreationServiceForm },
+    "mail-details-creation": { list: MailDetailsCreationServiceList, form: MailDetailsCreationServiceForm },
+    "rdf-inerts-percentage-entry": { list: RdfInertsPercEntryServiceList, form: RdfInertsPercEntryServiceForm },
+    "icw-supplier-creation": { list: IcwSupplierCreationServiceList, form: IcwSupplierCreationServiceForm },
+    "document-type": { list: DocumentTypeServiceList, form: DocumentTypeServiceForm },
+    "transport-master": { list: TransportEntryServiceList, form: TransportEntryServiceForm },
+    "target-entry": { list: TargetEntryServiceList, form: TargetEntryServiceForm },
+    "customer-creation": { list: CustomerCreationServiceList, form: CustomerCreationServiceForm },
   },
 };
 
