@@ -67,6 +67,7 @@ export const salesMasterEndpoints = {
   itemCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/item-creations/`,
   itemGroupCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/item-group-creations/`,
   transportMediumCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/transport-medium-creations/`,
+  termsOfDeliveryCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/terms-of-delivery-creations/`,
   termsOfPaymentCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/terms-of-payment-creations/`,
   mailDetailsCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/mail-details-creations/`,
   documentType: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/document-types/`,
@@ -74,9 +75,14 @@ export const salesMasterEndpoints = {
   subCategory: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/sub-categories/`,
   targetEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/target-entries/`,
   targetEntryItem: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/target-entry-items/`,
+<<<<<<< HEAD
   customerCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/customer-creations/`,
   customerDestination: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/customer-destinations/`,
   customerItemPurpose: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/customer-item-purposes/`,
+=======
+  rdfInertsPercEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/rdf-inerts-perc-entries/`,
+  icwSupplierCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/icw-supplier-creations/`,
+>>>>>>> fd73918c32ca5acd621b7fa832280f2fab593e0b
 } as const;
 
 export type SalesMasterEntity = keyof typeof salesMasterEndpoints;

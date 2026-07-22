@@ -60,11 +60,14 @@ export type EncryptedRoutes = {
   encItemCreation: string;
   encItemGroupCreation: string;
   encTransportMediumCreation: string;
+  encTermsOfDeliveryCreation: string;
   encTermsOfPaymentCreation: string;
   encMailDetailsCreation: string;
   encDocumentType: string;
   encSubCategory: string;
   encTargetEntry: string;
+  encRdfInertsPercEntry: string;
+  encIcwSupplierCreation: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -128,10 +131,13 @@ const plainRoutes: EncryptedRoutes = {
   encDocumentType: "document-type",
   encItemGroupCreation: "item-group-creation",
   encTransportMediumCreation: "transport-medium-creation",
+  encTermsOfDeliveryCreation: "terms-of-delivery-creation",
   encTermsOfPaymentCreation: "terms-of-payment-creation",
   encMailDetailsCreation: "mail-details-creation",
   encSubCategory: "sub-category",
   encTargetEntry: "target-entry",
+  encRdfInertsPercEntry: "rdf-inerts-percentage-entry",
+  encIcwSupplierCreation: "icw-supplier-creation",
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {

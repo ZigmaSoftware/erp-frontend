@@ -23,6 +23,7 @@ import {
   useStatesSelectOptions,
 } from "@/tanstack/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { extractErrorMessage } from "@/utils/errorUtils";
 import {
   includeSelectedOption,
   isOptionActive,
@@ -451,8 +452,12 @@ export default function SiteCreationForm() {
       });
       navigate(LIST_PATH);
     },
-    onError: () => {
-      Swal.fire("Error", "Save failed", "error");
+    onError: (error: unknown) => {
+      Swal.fire({
+        icon: "error",
+        title: "Save failed",
+        text: extractErrorMessage(error),
+      });
     },
   });
 
@@ -489,6 +494,8 @@ export default function SiteCreationForm() {
       unit_per_cost: toNumberValue(values.unit_per_cost),
       kwh: toNumberValue(values.kwh),
       demand_cost: toNumberValue(values.demand_cost),
+      eb_start_date: values.eb_start_date || undefined,
+      eb_end_date: values.eb_end_date || undefined,
       no_of_zones: toNumberValue(values.no_of_zones),
       no_of_phases: toNumberValue(values.no_of_phases),
       density_volume: toNumberValue(values.density_volume),
@@ -496,6 +503,9 @@ export default function SiteCreationForm() {
       service_charge: toNumberValue(values.service_charge),
       transportation_cost: toNumberValue(values.transportation_cost),
       petty_cash: toNumberValue(values.petty_cash),
+      erection_start_date: values.erection_start_date || undefined,
+      commissioning_start_date: values.commissioning_start_date || undefined,
+      project_completion_date: values.project_completion_date || undefined,
     };
 
     const willSubmitWithFiles = Object.values(fileInputs).some(Boolean);

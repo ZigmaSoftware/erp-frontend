@@ -50,6 +50,8 @@ import ItemGroupCreationList from "@/pages/admin/modules/salesMasters/itemGroupC
 import ItemGroupCreationForm from "@/pages/admin/modules/salesMasters/itemGroupCreation/itemGroupCreationForm";
 import TransportMediumCreationList from "@/pages/admin/modules/salesMasters/transportMediumCreation/transportMediumCreationList";
 import TransportMediumCreationForm from "@/pages/admin/modules/salesMasters/transportMediumCreation/transportMediumCreationForm";
+import TermsOfDeliveryCreationList from "@/pages/admin/modules/salesMasters/termsOfDeliveryCreation/termsOfDeliveryCreationList";
+import TermsOfDeliveryCreationForm from "@/pages/admin/modules/salesMasters/termsOfDeliveryCreation/termsOfDeliveryCreationForm";
 import TermsOfPaymentCreationList from "@/pages/admin/modules/salesMasters/termsOfPaymentCreation/termsOfPaymentCreationList";
 import TermsOfPaymentCreationForm from "@/pages/admin/modules/salesMasters/termsOfPaymentCreation/termsOfPaymentCreationForm";
 import MailDetailsCreationList from "@/pages/admin/modules/salesMasters/mailDetailsCreation/mailDetailsCreationList";
@@ -62,8 +64,15 @@ import SubCategoryList from "@/pages/admin/modules/salesMasters/subCategory/subC
 import SubCategoryForm from "@/pages/admin/modules/salesMasters/subCategory/subCategoryForm";
 import TargetEntryList from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryList";
 import TargetEntryForm from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryForm";
+<<<<<<< HEAD
 import CustomerCreationList from "@/pages/admin/modules/salesMasters/customerCreation/customerCreationList";
 import CustomerCreationForm from "@/pages/admin/modules/salesMasters/customerCreation/customerCreationForm";
+=======
+import RdfInertsPercEntryList from "@/pages/admin/modules/salesMasters/rdfInertsPercEntry/rdfInertsPercEntryList";
+import RdfInertsPercEntryForm from "@/pages/admin/modules/salesMasters/rdfInertsPercEntry/rdfInertsPercEntryForm";
+import IcwSupplierCreationList from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationList";
+import IcwSupplierCreationForm from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationForm";
+>>>>>>> fd73918c32ca5acd621b7fa832280f2fab593e0b
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -107,8 +116,11 @@ const ROUTES: RouteMap = {
     "item-creation": { list: ItemCreationList, form: ItemCreationForm },
     "item-group-creation": { list: ItemGroupCreationList, form: ItemGroupCreationForm },
     "transport-medium-creation": { list: TransportMediumCreationList, form: TransportMediumCreationForm },
+    "terms-of-delivery-creation": { list: TermsOfDeliveryCreationList, form: TermsOfDeliveryCreationForm },
     "terms-of-payment-creation": { list: TermsOfPaymentCreationList, form: TermsOfPaymentCreationForm },
     "mail-details-creation": { list: MailDetailsCreationList, form: MailDetailsCreationForm },
+    "rdf-inerts-percentage-entry": { list: RdfInertsPercEntryList, form: RdfInertsPercEntryForm },
+    "icw-supplier-creation": { list: IcwSupplierCreationList, form: IcwSupplierCreationForm },
     "document-type": { list: DocumentTypeList, form: DocumentTypeForm },
     "transport-master": { list: TransportEntryList, form: TransportEntryForm },
     "target-entry": { list: TargetEntryList, form: TargetEntryForm },
