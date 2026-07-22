@@ -86,12 +86,12 @@ const AppSidebar: React.FC = () => {
         items: masters,
         defaultPath: findPrimaryPath(masters),
       },
-      {
-        key: "sales-masters",
-        label: "Sales",
-        items: salesMasters,
-        defaultPath: findPrimaryPath(salesMasters),
-      },
+      // {
+      //   key: "sales-masters",
+      //   label: "Sales",
+      //   items: salesMasters,
+      //   defaultPath: findPrimaryPath(salesMasters),
+      // },
       {
         key: "sales-service",
         label: "Sales Service",
