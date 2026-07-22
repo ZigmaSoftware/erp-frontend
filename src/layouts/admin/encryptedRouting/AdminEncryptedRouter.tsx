@@ -64,15 +64,12 @@ import SubCategoryList from "@/pages/admin/modules/salesMasters/subCategory/subC
 import SubCategoryForm from "@/pages/admin/modules/salesMasters/subCategory/subCategoryForm";
 import TargetEntryList from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryList";
 import TargetEntryForm from "@/pages/admin/modules/salesMasters/targetEntry/targetEntryForm";
-<<<<<<< HEAD
 import CustomerCreationList from "@/pages/admin/modules/salesMasters/customerCreation/customerCreationList";
 import CustomerCreationForm from "@/pages/admin/modules/salesMasters/customerCreation/customerCreationForm";
-=======
 import RdfInertsPercEntryList from "@/pages/admin/modules/salesMasters/rdfInertsPercEntry/rdfInertsPercEntryList";
 import RdfInertsPercEntryForm from "@/pages/admin/modules/salesMasters/rdfInertsPercEntry/rdfInertsPercEntryForm";
 import IcwSupplierCreationList from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationList";
 import IcwSupplierCreationForm from "@/pages/admin/modules/salesMasters/icwSupplierCreation/icwSupplierCreationForm";
->>>>>>> fd73918c32ca5acd621b7fa832280f2fab593e0b
 
 type ModuleComponent = ComponentType | undefined;
 
