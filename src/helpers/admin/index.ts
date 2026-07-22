@@ -30,6 +30,7 @@ export const itemTypeApi = salesMasterApi.itemType;
 export const itemCreationApi = salesMasterApi.itemCreation;
 export const itemGroupCreationApi = salesMasterApi.itemGroupCreation;
 export const transportMediumCreationApi = salesMasterApi.transportMediumCreation;
+export const termsOfDeliveryCreationApi = salesMasterApi.termsOfDeliveryCreation;
 export const termsOfPaymentCreationApi = salesMasterApi.termsOfPaymentCreation;
 export const mailDetailsCreationApi = salesMasterApi.mailDetailsCreation;
 export const documentTypeApi = salesMasterApi.documentType;
@@ -37,6 +38,8 @@ export const transportEntryApi = salesMasterApi.transportEntry;
 export const subCategoryApi = salesMasterApi.subCategory;
 export const targetEntryApi = salesMasterApi.targetEntry;
 export const targetEntryItemApi = salesMasterApi.targetEntryItem;
+export const rdfInertsPercEntryApi = salesMasterApi.rdfInertsPercEntry;
+export const icwSupplierCreationApi = salesMasterApi.icwSupplierCreation;
 
 
 /* -------- Login And Refresh -------- */
