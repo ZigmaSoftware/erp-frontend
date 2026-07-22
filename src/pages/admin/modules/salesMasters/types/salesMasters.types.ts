@@ -224,10 +224,10 @@ export interface RdfInertsPercEntry extends BaseEntity {
    ICW SUPPLIER CREATION
 =========================================================== */
 export interface IcwSupplierCreation extends BaseEntity {
-  customer_date: string;
+  supplier_date: string;
   party_type: "creditor" | "debitor";
-  customer_id?: number | string | null;
-  customer_name: string;
+  supplier_id?: number | string | null;
+  supplier_name: string;
   contact_person: string;
   country_id: string;
   country_name?: string;

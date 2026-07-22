@@ -28,17 +28,90 @@ import {
 } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { extractErrorMessage } from "@/utils/errorUtils";
+import {
+  asRecord,
+  normalizeRelationId,
+  pickFirstString,
+  pickSiteId,
+} from "@/utils/formHelpers";
 import type { TransportEntry } from "../types/salesMasters.types";
 
 type Option = { value: string; label: string };
 
+const normalizeLabel = (value: unknown): string =>
+  normalizeRelationId(value).trim().toLowerCase();
+
+const findOptionLabel = (options: Option[], value: string): string =>
+  options.find((option) => option.value === value)?.label ?? "";
+
+const getRelationLabel = (...values: unknown[]): string => {
+  for (const value of values) {
+    const record = asRecord(value);
+    const label = record
+      ? pickFirstString(record.name, record.label, record.site_name, record.unique_id, record.id)
+      : pickFirstString(value);
+
+    if (label) return label;
+  }
+
+  return "";
+};
+
+const matchesRelation = (
+  record: Record<string, unknown> | undefined,
+  selectedId: string,
+  selectedLabel: string,
+  idKeys: string[],
+  labelKeys: string[],
+): boolean => {
+  if (!record) return false;
+
+  const selectedIdValue = normalizeRelationId(selectedId);
+  if (
+    selectedIdValue &&
+    idKeys.some((key) => normalizeRelationId(record[key]) === selectedIdValue)
+  ) {
+    return true;
+  }
+
+  const selectedLabelValue = normalizeLabel(selectedLabel);
+  return Boolean(
+    selectedLabelValue &&
+      labelKeys.some((key) => normalizeLabel(record[key]) === selectedLabelValue),
+  );
+};
+
+const appendSelectedOption = (
+  options: Option[],
+  selectedId: string,
+  selectedLabel: string,
+): Option[] => {
+  if (!selectedId || options.some((option) => option.value === selectedId)) {
+    return options;
+  }
+
+  return [
+    ...options,
+    {
+      value: selectedId,
+      label: selectedLabel || selectedId,
+    },
+  ];
+};
+
 const toOptions = (
   list: unknown[],
-  getId: (item: any) => string | undefined,
-  getLabel: (item: any) => string | undefined,
+  getId: (item: Record<string, unknown>) => unknown,
+  getLabel: (item: Record<string, unknown>) => unknown,
 ): Option[] =>
   list
-    .map((item) => ({ value: getId(item), label: getLabel(item) }))
+    .map((item) => {
+      const record = asRecord(item);
+      return {
+        value: normalizeRelationId(record ? getId(record) : undefined),
+        label: normalizeRelationId(record ? getLabel(record) : undefined),
+      };
+    })
     .filter((option): option is Option => Boolean(option.value && option.label));
 
 /* -----------------------------------------------------------
@@ -145,6 +218,10 @@ export default function TransportEntryForm() {
   const [stateId, setStateId] = useState("");
   const [districtId, setDistrictId] = useState("");
   const [cityId, setCityId] = useState("");
+  const [selectedCountryName, setSelectedCountryName] = useState("");
+  const [selectedStateName, setSelectedStateName] = useState("");
+  const [selectedDistrictName, setSelectedDistrictName] = useState("");
+  const [selectedCityName, setSelectedCityName] = useState("");
 
   const [buildingNo, setBuildingNo] = useState("");
   const [street, setStreet] = useState("");
@@ -175,11 +252,11 @@ export default function TransportEntryForm() {
   const [existingTdsDocument, setExistingTdsDocument] = useState("");
 
   /* ---------------- Dropdown data ---------------- */
-  const [countries, setCountries] = useState<any[]>([]);
-  const [states, setStates] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
-  const [sites, setSites] = useState<any[]>([]);
+  const [countries, setCountries] = useState<unknown[]>([]);
+  const [states, setStates] = useState<unknown[]>([]);
+  const [districts, setDistricts] = useState<unknown[]>([]);
+  const [cities, setCities] = useState<unknown[]>([]);
+  const [sites, setSites] = useState<unknown[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -224,43 +301,135 @@ export default function TransportEntryForm() {
   }, []);
 
   const countryOptions = useMemo(
-    () => toOptions(countries, (c) => c.unique_id, (c) => c.name),
-    [countries],
+    () =>
+      appendSelectedOption(
+        toOptions(
+          countries,
+          (country) => country.unique_id ?? country.id,
+          (country) => country.name,
+        ),
+        countryId,
+        selectedCountryName,
+      ),
+    [countries, countryId, selectedCountryName],
+  );
+
+  const allStateOptions = useMemo(
+    () =>
+      toOptions(
+        states,
+        (state) => state.unique_id ?? state.id,
+        (state) => state.name,
+      ),
+    [states],
+  );
+
+  const allDistrictOptions = useMemo(
+    () =>
+      toOptions(
+        districts,
+        (district) => district.unique_id ?? district.id,
+        (district) => district.name,
+      ),
+    [districts],
+  );
+
+  const allCityOptions = useMemo(
+    () =>
+      toOptions(
+        cities,
+        (city) => city.unique_id ?? city.id,
+        (city) => city.name,
+      ),
+    [cities],
   );
 
   const stateOptions = useMemo(
     () =>
-      toOptions(
-        states.filter((s) => s.country_id === countryId),
-        (s) => s.unique_id,
-        (s) => s.name,
+      appendSelectedOption(
+        toOptions(
+          states.filter(
+            (state) =>
+              matchesRelation(
+                asRecord(state),
+                countryId,
+                selectedCountryName,
+                ["country_id", "country"],
+                ["country_name"],
+              ),
+          ),
+          (state) => state.unique_id ?? state.id,
+          (state) => state.name,
+        ),
+        stateId,
+        selectedStateName || findOptionLabel(allStateOptions, stateId),
       ),
-    [states, countryId],
+    [states, countryId, selectedCountryName, stateId, selectedStateName, allStateOptions],
   );
 
   const districtOptions = useMemo(
     () =>
-      toOptions(
-        districts.filter((d) => d.state_id === stateId),
-        (d) => d.unique_id,
-        (d) => d.name,
+      appendSelectedOption(
+        toOptions(
+          districts.filter(
+            (district) =>
+              matchesRelation(
+                asRecord(district),
+                stateId,
+                selectedStateName,
+                ["state_id", "state"],
+                ["state_name"],
+              ),
+          ),
+          (district) => district.unique_id ?? district.id,
+          (district) => district.name,
+        ),
+        districtId,
+        selectedDistrictName || findOptionLabel(allDistrictOptions, districtId),
       ),
-    [districts, stateId],
+    [districts, stateId, selectedStateName, districtId, selectedDistrictName, allDistrictOptions],
   );
 
   const cityOptions = useMemo(
     () =>
-      toOptions(
-        cities.filter((c) => c.district_id === districtId),
-        (c) => c.unique_id,
-        (c) => c.name,
+      appendSelectedOption(
+        toOptions(
+          cities.filter(
+            (city) =>
+              matchesRelation(
+                asRecord(city),
+                districtId,
+                selectedDistrictName,
+                ["district_id", "district"],
+                ["district_name"],
+              ),
+          ),
+          (city) => city.unique_id ?? city.id,
+          (city) => city.name,
+        ),
+        cityId,
+        selectedCityName || findOptionLabel(allCityOptions, cityId),
       ),
-    [cities, districtId],
+    [cities, districtId, selectedDistrictName, cityId, selectedCityName, allCityOptions],
   );
 
   const siteOptions = useMemo(
-    () => toOptions(sites, (s) => s.unique_id, (s) => s.site_name),
+    () => toOptions(sites, (s) => s.unique_id ?? s.id, (s) => s.site_name),
     [sites],
+  );
+
+  const selectedCountryLabel =
+    findOptionLabel(countryOptions, countryId) || selectedCountryName;
+  const selectedStateLabel =
+    findOptionLabel(stateOptions, stateId) || selectedStateName;
+  const selectedDistrictLabel =
+    findOptionLabel(districtOptions, districtId) || selectedDistrictName;
+  const selectedCityLabel = findOptionLabel(cityOptions, cityId) || selectedCityName;
+
+  const renderSelectLabel = (label: string, placeholder: string) => (
+    <span className={label ? "truncate text-left" : "truncate text-left text-muted-foreground"}>
+      {label || placeholder}
+    </span>
   );
 
   /* -----------------------------------------------------------
@@ -274,6 +443,7 @@ export default function TransportEntryForm() {
       try {
         const res = await transportEntryApi.get(id as string);
         const data = (res?.data || res) as TransportEntry;
+        const record = asRecord(data) ?? {};
 
         setTransportDate(data.transport_date ?? "");
         setTransportType(data.transport_type ?? "");
@@ -286,10 +456,22 @@ export default function TransportEntryForm() {
         setOtherMobile3(data.other_mobile_3 ?? "");
         setWhatsappNo(data.whatsapp_no ?? "");
 
-        setCountryId(data.country_id ?? "");
-        setStateId(data.state_id ?? "");
-        setDistrictId(data.district_id ?? "");
-        setCityId(data.city_id ?? "");
+        setCountryId(normalizeRelationId(record.country_id ?? record.country));
+        setStateId(normalizeRelationId(record.state_id ?? record.state));
+        setDistrictId(normalizeRelationId(record.district_id ?? record.district));
+        setCityId(normalizeRelationId(record.city_id ?? record.city));
+        setSelectedCountryName(
+          getRelationLabel(record.country_name, record.country_id, record.country),
+        );
+        setSelectedStateName(
+          getRelationLabel(record.state_name, record.state_id, record.state),
+        );
+        setSelectedDistrictName(
+          getRelationLabel(record.district_name, record.district_id, record.district),
+        );
+        setSelectedCityName(
+          getRelationLabel(record.city_name, record.city_id, record.city),
+        );
 
         setBuildingNo(data.building_no ?? "");
         setStreet(data.street ?? "");
@@ -305,7 +487,7 @@ export default function TransportEntryForm() {
         setOpeningBalance(String(data.opening_balance ?? ""));
         setPaymentType(data.payment_type ?? "");
 
-        setSiteIds(Array.isArray(data.sites) ? data.sites : []);
+        setSiteIds(Array.isArray(data.sites) ? data.sites.map(pickSiteId).filter(Boolean) : []);
         setTargetLimit(String(data.target_limit ?? ""));
         setIsActive(data.is_active ?? true);
 
@@ -580,15 +762,20 @@ export default function TransportEntryForm() {
               <Select
                 value={countryId}
                 onValueChange={(value) => {
+                  if (!value) return;
                   setCountryId(value);
+                  setSelectedCountryName(findOptionLabel(countryOptions, value));
                   setStateId("");
+                  setSelectedStateName("");
                   setDistrictId("");
+                  setSelectedDistrictName("");
                   setCityId("");
+                  setSelectedCityName("");
                 }}
                 disabled={isFormDisabled}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
+                  {renderSelectLabel(selectedCountryLabel, "Select country")}
                 </SelectTrigger>
                 <SelectContent>
                   {countryOptions.map((option) => (
@@ -605,14 +792,18 @@ export default function TransportEntryForm() {
               <Select
                 value={stateId}
                 onValueChange={(value) => {
+                  if (!value) return;
                   setStateId(value);
+                  setSelectedStateName(findOptionLabel(stateOptions, value));
                   setDistrictId("");
+                  setSelectedDistrictName("");
                   setCityId("");
+                  setSelectedCityName("");
                 }}
                 disabled={isFormDisabled || !countryId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select state" />
+                  {renderSelectLabel(selectedStateLabel, "Select state")}
                 </SelectTrigger>
                 <SelectContent>
                   {stateOptions.map((option) => (
@@ -629,13 +820,16 @@ export default function TransportEntryForm() {
               <Select
                 value={districtId}
                 onValueChange={(value) => {
+                  if (!value) return;
                   setDistrictId(value);
+                  setSelectedDistrictName(findOptionLabel(districtOptions, value));
                   setCityId("");
+                  setSelectedCityName("");
                 }}
                 disabled={isFormDisabled || !stateId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select district" />
+                  {renderSelectLabel(selectedDistrictLabel, "Select district")}
                 </SelectTrigger>
                 <SelectContent>
                   {districtOptions.map((option) => (
@@ -651,11 +845,15 @@ export default function TransportEntryForm() {
               <Label>City *</Label>
               <Select
                 value={cityId}
-                onValueChange={setCityId}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  setCityId(value);
+                  setSelectedCityName(findOptionLabel(cityOptions, value));
+                }}
                 disabled={isFormDisabled || !districtId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select city" />
+                  {renderSelectLabel(selectedCityLabel, "Select city")}
                 </SelectTrigger>
                 <SelectContent>
                   {cityOptions.map((option) => (

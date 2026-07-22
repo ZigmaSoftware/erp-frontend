@@ -33,9 +33,9 @@ import type { IcwSupplierCreation } from "../types/salesMasters.types";
 type Option = { value: string; label: string };
 
 type FormState = {
-  customer_date: string;
+  supplier_date: string;
   party_type: "creditor" | "debitor" | "";
-  customer_name: string;
+  supplier_name: string;
   contact_person: string;
   country_id: string;
   state_id: string;
@@ -78,9 +78,9 @@ type FormState = {
 const today = () => new Date().toISOString().slice(0, 10);
 
 const initialForm: FormState = {
-  customer_date: today(),
+  supplier_date: today(),
   party_type: "",
-  customer_name: "",
+  supplier_name: "",
   contact_person: "",
   country_id: "",
   state_id: "",
@@ -282,9 +282,9 @@ export default function IcwSupplierCreationForm() {
         const res = await icwSupplierCreationApi.get(id as string);
         const data = (res?.data || res) as IcwSupplierCreation;
         setForm({
-          customer_date: data.customer_date ?? today(),
+          supplier_date: data.supplier_date ?? today(),
           party_type: data.party_type ?? "",
-          customer_name: data.customer_name ?? "",
+          supplier_name: data.supplier_name ?? "",
           contact_person: data.contact_person ?? "",
           country_id: normalizeRelationId(data.country_id),
           state_id: normalizeRelationId(data.state_id),
@@ -386,9 +386,9 @@ export default function IcwSupplierCreationForm() {
 
   const validate = () => {
     const detailFields: Array<[keyof FormState, string]> = [
-      ["customer_date", "Date"],
-      ["party_type", "Customer Type"],
-      ["customer_name", "Customer Name"],
+      ["supplier_date", "Date"],
+      ["party_type", "Supplier Type"],
+      ["supplier_name", "Supplier Name"],
       ["contact_person", "Contact Person"],
       ["country_id", "Country"],
       ["state_id", "State"],
@@ -488,7 +488,7 @@ export default function IcwSupplierCreationForm() {
 
   return (
     <div className="p-8">
-      <ComponentCard title={isEdit ? "Edit Customer" : "Add New Customer"}>
+      <ComponentCard title={isEdit ? "Edit Supplier" : "Add New Supplier"}>
         <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <div className="flex border-b">
             <button
@@ -496,14 +496,14 @@ export default function IcwSupplierCreationForm() {
               className={tabButtonClass("details")}
               onClick={() => setActiveTab("details")}
             >
-              Customer Details
+              Supplier Details
             </button>
             <button
               type="button"
               className={tabButtonClass("bank")}
               onClick={() => setActiveTab("bank")}
             >
-              Customer Bank Details
+              Supplier Bank Details
             </button>
           </div>
 
@@ -518,13 +518,13 @@ export default function IcwSupplierCreationForm() {
               <Label>Date *</Label>
               <Input
                 type="date"
-                value={form.customer_date}
-                onChange={(event) => updateField("customer_date", event.target.value)}
+                value={form.supplier_date}
+                onChange={(event) => updateField("supplier_date", event.target.value)}
                 disabled={isFormDisabled}
               />
             </div>
             <div>
-              <Label>Customer Type *</Label>
+              <Label>Supplier Type *</Label>
               <Select
                 value={form.party_type || undefined}
                 onValueChange={(value) =>
@@ -540,10 +540,10 @@ export default function IcwSupplierCreationForm() {
               </Select>
             </div>
             <div>
-              <Label>Customer Name *</Label>
+              <Label>Supplier Name *</Label>
               <Input
-                value={form.customer_name}
-                onChange={(event) => updateField("customer_name", event.target.value)}
+                value={form.supplier_name}
+                onChange={(event) => updateField("supplier_name", event.target.value)}
                 disabled={isFormDisabled}
               />
             </div>
@@ -880,22 +880,6 @@ export default function IcwSupplierCreationForm() {
               />
             </div>
             <div>
-              <Label>NOC Upload *</Label>
-              <Select
-                value={form.noc_upload_status ? "true" : "false"}
-                onValueChange={(value) =>
-                  updateField("noc_upload_status", value === "true")
-                }
-                disabled={isFormDisabled}
-              >
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Yes</SelectItem>
-                  <SelectItem value="false">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
               <Label>Active Status *</Label>
               <Select
                 value={form.is_active ? "true" : "false"}
@@ -918,31 +902,31 @@ export default function IcwSupplierCreationForm() {
                 : "hidden"
             }
           >
-            <Label className="text-lg font-semibold text-gray-500">Bank Name</Label>
+            <Label>Bank Name</Label>
             <Input
               value={form.bank_name}
               onChange={(event) => updateField("bank_name", event.target.value)}
               disabled={isFormDisabled}
             />
-            <Label className="text-lg font-semibold text-gray-500">Branch</Label>
+            <Label>Branch</Label>
             <Input
               value={form.branch}
               onChange={(event) => updateField("branch", event.target.value)}
               disabled={isFormDisabled}
             />
-            <Label className="text-lg font-semibold text-gray-500">Account No</Label>
+            <Label>Account No</Label>
             <Input
               value={form.account_no}
               onChange={(event) => updateField("account_no", event.target.value)}
               disabled={isFormDisabled}
             />
-            <Label className="text-lg font-semibold text-gray-500">IFSC Code</Label>
+            <Label>IFSC Code</Label>
             <Input
               value={form.ifsc_code}
               onChange={(event) => updateField("ifsc_code", event.target.value)}
               disabled={isFormDisabled}
             />
-            <Label className="text-lg font-semibold text-gray-500">PAN No</Label>
+            <Label>PAN No</Label>
             <Input
               value={form.pan_no}
               onChange={(event) => updateField("pan_no", event.target.value)}
