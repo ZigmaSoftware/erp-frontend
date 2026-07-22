@@ -6,12 +6,14 @@ const API_BASE = "api";
 /* Services */
 const AUTH_SERVICE = "auth-service";
 const MASTER_SERVICE = "master-service";
+const SALES_SERVICE = "sales-service";
 
 /* Apps */
 const AUTH_APP = "auth";
 const MASTER_APP = "masters";
 const EM_APP = "em-masters";
 const SALES_APP = "sales-masters";
+const SALES_SERVICE_APP = "sales-service";
 
 /* Version */
 
@@ -23,6 +25,7 @@ const CURRENT_VERSION = "v1";
 const SERVICE_BASE_URLS: Record<string, string> = {
   [MASTER_SERVICE]: import.meta.env.VITE_API_MASTERSERVICE,
   [AUTH_SERVICE]: import.meta.env.VITE_API_AUTHSERVICE,
+  [SALES_SERVICE]: import.meta.env.VITE_API_SALESSERVICE,
 };
 
 /* ========================================================
@@ -85,6 +88,34 @@ export const salesMasterEndpoints = {
 export type SalesMasterEntity = keyof typeof salesMasterEndpoints;
 
 /* ========================================================
+    SALES SERVICE ENDPOINTS
+    (standalone sales_service microservice - parallel copy of
+    Sales Masters, kept independent from salesMasterEndpoints)
+======================================================== */
+export const salesServiceEndpoints = {
+  scrapSalesCategory: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/scrap-sales-categories/`,
+  itemType: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/item-types/`,
+  itemCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/item-creations/`,
+  itemGroupCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/item-group-creations/`,
+  transportMediumCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/transport-medium-creations/`,
+  termsOfDeliveryCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/terms-of-delivery-creations/`,
+  termsOfPaymentCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/terms-of-payment-creations/`,
+  mailDetailsCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/mail-details-creations/`,
+  documentType: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/document-types/`,
+  transportEntry: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/transport-entries/`,
+  subCategory: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/sub-categories/`,
+  targetEntry: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/target-entries/`,
+  targetEntryItem: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/target-entry-items/`,
+  customerCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/customer-creations/`,
+  customerDestination: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/customer-destinations/`,
+  customerItemPurpose: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/customer-item-purposes/`,
+  rdfInertsPercEntry: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/rdf-inerts-perc-entries/`,
+  icwSupplierCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/icw-supplier-creations/`,
+} as const;
+
+export type SalesServiceEntity = keyof typeof salesServiceEndpoints;
+
+/* ========================================================
     COMMON MASTER ENDPOINTS
 ======================================================== */
 export const commonMasterEndpoints = {
@@ -131,3 +162,7 @@ export const getEmMasterEndpointPath = (
 export const getSalesMasterEndpointPath = (
   entity: SalesMasterEntity
 ): string => buildUrl(salesMasterEndpoints[entity]);
+
+export const getSalesServiceEndpointPath = (
+  entity: SalesServiceEntity
+): string => buildUrl(salesServiceEndpoints[entity]);

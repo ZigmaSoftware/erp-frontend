@@ -9,7 +9,7 @@ const menuButtonBase =
   "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold";
 
 const AppSidebar: React.FC = () => {
-  const { admin, masters, salesMasters } = useMemo(getAdminNavigation, []);
+  const { admin, masters, salesMasters, salesService } = useMemo(getAdminNavigation, []);
   const { isExpanded, isMobileOpen, setActiveItem, activeItem } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
@@ -62,6 +62,8 @@ const AppSidebar: React.FC = () => {
       setActiveItem("masters");
     } else if (currentDecodedPath.master === "sales-masters") {
       setActiveItem("sales-masters");
+    } else if (currentDecodedPath.master === "sales-service") {
+      setActiveItem("sales-service");
     } else {
       setActiveItem(null);
     }
@@ -90,8 +92,14 @@ const AppSidebar: React.FC = () => {
         items: salesMasters,
         defaultPath: findPrimaryPath(salesMasters),
       },
+      {
+        key: "sales-service",
+        label: "Sales Service",
+        items: salesService,
+        defaultPath: findPrimaryPath(salesService),
+      },
     ],
-    [admin, masters, salesMasters, findPrimaryPath]
+    [admin, masters, salesMasters, salesService, findPrimaryPath]
   );
 
   /* ----------------------------------------
