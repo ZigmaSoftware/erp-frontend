@@ -75,6 +75,9 @@ export const salesMasterEndpoints = {
   subCategory: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/sub-categories/`,
   targetEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/target-entries/`,
   targetEntryItem: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/target-entry-items/`,
+  customerCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/customer-creations/`,
+  customerDestination: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/customer-destinations/`,
+  customerItemPurpose: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/customer-item-purposes/`,
   rdfInertsPercEntry: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/rdf-inerts-perc-entries/`,
   icwSupplierCreation: `${MASTER_SERVICE}/${CURRENT_VERSION}/${SALES_APP}/icw-supplier-creations/`,
 } as const;

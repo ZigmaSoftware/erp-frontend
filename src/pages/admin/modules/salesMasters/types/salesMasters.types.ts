@@ -63,6 +63,92 @@ export interface TargetEntry extends BaseEntity {
 }
 
 /* ===========================================================
+   CUSTOMER CREATION MASTER
+=========================================================== */
+export interface CustomerDestination extends BaseEntity {
+  customer: string;
+  site: string;
+  site_name?: string;
+  destination: string;
+  status: "active" | "inactive";
+}
+
+export interface CustomerItemPurpose extends BaseEntity {
+  customer: string;
+  site: string;
+  site_name?: string;
+  destination: string;
+  item: string;
+  item_name?: string;
+  disposal_type: "customer_scope" | "zigma_scope" | "transport_scope";
+  purpose_application: "land_fill_earth_fill";
+  status: "active" | "inactive";
+}
+
+export interface CustomerCreation extends BaseEntity {
+  entry_date: string;
+  customer_type: "creditor" | "debitor";
+  customer_name: string;
+  contact_person: string;
+
+  phone_no?: string | null;
+  mobile_code?: string | null;
+  mobile_no: string;
+  other_mobile_1?: string | null;
+  other_mobile_2?: string | null;
+  other_mobile_3?: string | null;
+  whatsapp_no?: string | null;
+
+  country_id: string;
+  country_name?: string;
+  state_id: string;
+  state_name?: string;
+  district_id: string;
+  district_name?: string;
+  city_id: string;
+  city_name?: string;
+
+  building_no: string;
+  street: string;
+  area: string;
+  pincode: string;
+  address?: string;
+
+  lat: string;
+  lon: string;
+
+  has_gst: boolean;
+  gst_no?: string | null;
+
+  to_email?: string | null;
+  cc_mail?: string | null;
+  quality_email_id?: string | null;
+  quality_cc_mail?: string | null;
+
+  opening_balance: number | string;
+  payment_type: "credit" | "debit";
+
+  sites: string[];
+  site_names?: string[];
+  items: string[];
+  item_names?: string[];
+  executive_name?: string | null;
+  acc_group?: string | null;
+
+  noc_upload: boolean;
+  customer_status?: "approved" | "pending";
+
+  bank_name?: string | null;
+  branch?: string | null;
+  account_no?: string | null;
+  ifsc_code?: string | null;
+  pan_no?: string | null;
+
+  destinations?: CustomerDestination[];
+  item_purposes?: CustomerItemPurpose[];
+}
+
+/* ===========================================================
    DOCUMENT TYPE MASTER
 =========================================================== */
 export interface DocumentType extends BaseEntity {

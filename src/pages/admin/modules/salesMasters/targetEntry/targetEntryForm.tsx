@@ -594,8 +594,15 @@ export default function TargetEntryForm() {
           </table>
         </div>
 
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center gap-3 mt-6">
           <Button onClick={() => navigate(ENC_LIST_PATH)}>SUBMIT</Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => navigate(ENC_LIST_PATH)}
+          >
+            Cancel
+          </Button>
         </div>
       </ComponentCard>
     </div>
