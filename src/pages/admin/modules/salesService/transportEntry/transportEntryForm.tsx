@@ -571,7 +571,7 @@ export default function TransportEntryForm() {
     formData.append("opening_balance", openingBalance || "0");
     formData.append("payment_type", paymentType);
 
-    siteIds.forEach((siteUniqueId) => formData.append("sites", siteUniqueId));
+    formData.append("sites", JSON.stringify(siteIds));
 
     formData.append("target_limit", targetLimit || "0");
     formData.append("is_active", String(isActive));
