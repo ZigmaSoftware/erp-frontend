@@ -20,6 +20,7 @@ import {
   customerDestinationServiceApi,
   customerItemPurposeServiceApi,
   itemCreationServiceApi,
+  siteApi,
 } from "@/helpers/admin";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import type {
@@ -29,14 +30,27 @@ import type {
 } from "../types/salesService.types";
 
 type Option = { value: string; label: string };
+type DraftCustomerItemPurpose = CustomerItemPurpose & { isDraft: true };
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+
+const pickString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.trim() ? value : undefined;
 
 const toOptions = (
   list: unknown[],
-  getId: (item: any) => string | undefined,
-  getLabel: (item: any) => string | undefined,
+  getId: (item: Record<string, unknown>) => string | undefined,
+  getLabel: (item: Record<string, unknown>) => string | undefined,
 ): Option[] =>
   list
-    .map((item) => ({ value: getId(item), label: getLabel(item) }))
+    .map((item) => {
+      const record = asRecord(item);
+      return {
+        value: record ? getId(record) : undefined,
+        label: record ? getLabel(record) : undefined,
+      };
+    })
     .filter((option): option is Option => Boolean(option.value && option.label));
 
 const todayValue = () => new Date().toISOString().slice(0, 10);
@@ -51,6 +65,13 @@ const PURPOSE_APPLICATION_OPTIONS: Option[] = [
   { value: "land_fill_earth_fill", label: "Land Fill / Earth Fill" },
 ];
 
+const createDraftId = () =>
+  `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const isDraftCustomerItemPurpose = (
+  row: CustomerItemPurpose | DraftCustomerItemPurpose,
+): row is DraftCustomerItemPurpose => "isDraft" in row;
+
 export default function CustomerItemPurposeModal({
   customer,
   open,
@@ -61,11 +82,14 @@ export default function CustomerItemPurposeModal({
   onClose: () => void;
 }) {
   const [rows, setRows] = useState<CustomerItemPurpose[]>([]);
+  const [draftRows, setDraftRows] = useState<DraftCustomerItemPurpose[]>([]);
   const [destinations, setDestinations] = useState<CustomerDestination[]>([]);
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<unknown[]>([]);
+  const [masterSites, setMasterSites] = useState<unknown[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [editingId, setEditingId] = useState("");
   const [rowSite, setRowSite] = useState("");
@@ -74,6 +98,27 @@ export default function CustomerItemPurposeModal({
   const [rowDisposalType, setRowDisposalType] = useState("");
   const [rowPurposeApplication, setRowPurposeApplication] = useState("");
   const [rowStatus, setRowStatus] = useState<"active" | "inactive">("active");
+  const [fieldErrors, setFieldErrors] = useState({
+    site: false,
+    destination: false,
+    item: false,
+    disposalType: false,
+    purposeApplication: false,
+  });
+
+  const masterSiteNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    masterSites.forEach((site) => {
+      const record = asRecord(site);
+      if (!record) return;
+
+      const id = pickString(record.unique_id) ?? pickString(record.id);
+      const label =
+        pickString(record.site_name) ?? pickString(record.name) ?? pickString(record.label);
+      if (id && label) map.set(id, label);
+    });
+    return map;
+  }, [masterSites]);
 
   const siteOptions: Option[] = useMemo(() => {
     if (!customer) return [];
@@ -81,36 +126,57 @@ export default function CustomerItemPurposeModal({
     const ids = customer.sites ?? [];
     return ids.map((id, index) => ({
       value: id,
-      label: names[index] ?? id,
+      label: masterSiteNameById.get(id) ?? names[index] ?? id,
     }));
-  }, [customer]);
+  }, [customer, masterSiteNameById]);
+
+  const selectedSiteLabels = useMemo(
+    () => siteOptions.map((option) => option.label).filter(Boolean),
+    [siteOptions],
+  );
+
+  const getSiteLabel = (siteId?: string | null, fallback?: string | null) =>
+    siteOptions.find((option) => option.value === siteId)?.label ||
+    siteOptions.find((option) => option.value === fallback)?.label ||
+    (siteId ? masterSiteNameById.get(siteId) : undefined) ||
+    (fallback ? masterSiteNameById.get(fallback) : undefined) ||
+    fallback ||
+    siteId ||
+    "-";
 
   const destinationOptions: Option[] = useMemo(
     () =>
       toOptions(
         destinations.filter((d) => d.site === rowSite),
-        (d) => d.destination,
-        (d) => d.destination,
+        (d) => pickString(d.destination),
+        (d) => pickString(d.destination),
       ),
     [destinations, rowSite],
   );
 
   const itemOptions: Option[] = useMemo(
-    () => toOptions(items, (i) => i.unique_id, (i) => i.item_name),
+    () => toOptions(items, (i) => pickString(i.unique_id), (i) => pickString(i.item_name)),
     [items],
+  );
+
+  const itemNameById = useMemo(
+    () => new Map(itemOptions.map((option) => [option.value, option.label] as const)),
+    [itemOptions],
   );
 
   const loadData = async (customerId: string) => {
     setLoading(true);
     try {
-      const [itemPurposeRes, destinationRes, itemRes] = await Promise.all([
+      const [itemPurposeRes, destinationRes, itemRes, siteRes] = await Promise.all([
         customerItemPurposeServiceApi.list({ params: { customer: customerId } }),
         customerDestinationServiceApi.list({ params: { customer: customerId } }),
         itemCreationServiceApi.list(),
+        siteApi.list(),
       ]);
       setRows(itemPurposeRes as CustomerItemPurpose[]);
       setDestinations(destinationRes as CustomerDestination[]);
       setItems(itemRes as unknown[]);
+      setMasterSites(siteRes as unknown[]);
     } catch {
       Swal.fire({
         icon: "error",
@@ -124,10 +190,10 @@ export default function CustomerItemPurposeModal({
 
   useEffect(() => {
     if (open && customer) {
+      setDraftRows([]);
       loadData(customer.unique_id);
       resetRow();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, customer]);
 
   const resetRow = () => {
@@ -138,9 +204,16 @@ export default function CustomerItemPurposeModal({
     setRowDisposalType("");
     setRowPurposeApplication("");
     setRowStatus("active");
+    setFieldErrors({
+      site: false,
+      destination: false,
+      item: false,
+      disposalType: false,
+      purposeApplication: false,
+    });
   };
 
-  const handleEdit = (row: CustomerItemPurpose) => {
+  const handleEdit = (row: CustomerItemPurpose | DraftCustomerItemPurpose) => {
     setEditingId(row.unique_id);
     setRowSite(row.site);
     setRowDestination(row.destination);
@@ -148,10 +221,24 @@ export default function CustomerItemPurposeModal({
     setRowDisposalType(row.disposal_type);
     setRowPurposeApplication(row.purpose_application);
     setRowStatus(row.status);
+    setFieldErrors({
+      site: false,
+      destination: false,
+      item: false,
+      disposalType: false,
+      purposeApplication: false,
+    });
   };
 
-  const handleDelete = async (row: CustomerItemPurpose) => {
+  const handleDelete = async (row: CustomerItemPurpose | DraftCustomerItemPurpose) => {
     if (!customer) return;
+
+    if (isDraftCustomerItemPurpose(row)) {
+      setDraftRows((prev) => prev.filter((item) => item.unique_id !== row.unique_id));
+      if (editingId === row.unique_id) resetRow();
+      return;
+    }
+
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
       text: "This row will be permanently deleted!",
@@ -178,43 +265,125 @@ export default function CustomerItemPurposeModal({
 
   const handleAdd = async () => {
     if (!customer) return;
-    if (!rowSite || !rowDestination || !rowItem || !rowDisposalType || !rowPurposeApplication) {
-      Swal.fire({ icon: "error", title: "All fields are required" });
+
+    const nextFieldErrors = {
+      site: !rowSite,
+      destination: !rowDestination,
+      item: !rowItem,
+      disposalType: !rowDisposalType,
+      purposeApplication: !rowPurposeApplication,
+    };
+    setFieldErrors(nextFieldErrors);
+
+    if (
+      nextFieldErrors.site ||
+      nextFieldErrors.destination ||
+      nextFieldErrors.item ||
+      nextFieldErrors.disposalType ||
+      nextFieldErrors.purposeApplication
+    ) {
       return;
     }
 
-    setSaving(true);
-    try {
-      const payload = {
-        customer: customer.unique_id,
-        site: rowSite,
-        destination: rowDestination,
-        item: rowItem,
-        disposal_type: rowDisposalType,
-        purpose_application: rowPurposeApplication,
-        status: rowStatus,
-      };
+    const disposalType = rowDisposalType as CustomerItemPurpose["disposal_type"];
+    const purposeApplication =
+      rowPurposeApplication as CustomerItemPurpose["purpose_application"];
 
-      if (editingId) {
-        await customerItemPurposeServiceApi.update(editingId, payload);
-      } else {
-        await customerItemPurposeServiceApi.create(payload);
+    const apiPayload = {
+      customer: customer.unique_id,
+      site: rowSite,
+      destination: rowDestination,
+      item: rowItem,
+      disposal_type: disposalType,
+      purpose_application: purposeApplication,
+      status: rowStatus,
+    };
+
+    const draftPayload = {
+      ...apiPayload,
+      item_name: itemNameById.get(rowItem) ?? rowItem,
+    };
+
+    if (editingId) {
+      const draftMatch = draftRows.some((item) => item.unique_id === editingId);
+      if (draftMatch) {
+        setDraftRows((prev) =>
+          prev.map((item) =>
+            item.unique_id === editingId
+              ? {
+                  ...item,
+                  ...draftPayload,
+                }
+              : item,
+          ),
+        );
+        resetRow();
+        return;
+      }
+
+      setSaving(true);
+      try {
+        await customerItemPurposeServiceApi.update(editingId, apiPayload);
+        await loadData(customer.unique_id);
+        resetRow();
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Update failed",
+          text: extractErrorMessage(error),
+        });
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    setDraftRows((prev) => [
+      ...prev,
+      {
+        unique_id: createDraftId(),
+        is_active: true,
+        created_at: new Date().toISOString(),
+        ...draftPayload,
+        isDraft: true,
+      } as DraftCustomerItemPurpose,
+    ]);
+    resetRow();
+  };
+
+  const handleSubmit = async () => {
+    if (!customer || draftRows.length === 0) return;
+
+    setSubmitting(true);
+    try {
+      for (const row of draftRows) {
+        await customerItemPurposeServiceApi.create({
+          customer: customer.unique_id,
+          site: row.site,
+          destination: row.destination,
+          item: row.item,
+          disposal_type: row.disposal_type,
+          purpose_application: row.purpose_application,
+          status: row.status,
+        });
       }
 
       await loadData(customer.unique_id);
+      setDraftRows([]);
       resetRow();
     } catch (error) {
       Swal.fire({
         icon: "error",
-        title: editingId ? "Update failed" : "Add failed",
+        title: "Submit failed",
         text: extractErrorMessage(error),
       });
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
-  const isRowDisabled = loading || saving;
+  const isRowDisabled = loading || saving || submitting;
+  const tableRows = [...draftRows, ...rows];
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
@@ -231,7 +400,7 @@ export default function CustomerItemPurposeModal({
           <div>
             <span className="text-gray-500">Site Name: </span>
             <span className="font-medium">
-              {(customer?.site_names ?? []).join(", ") || "-"}
+              {selectedSiteLabels.join(", ") || "-"}
             </span>
           </div>
         </div>
@@ -248,11 +417,27 @@ export default function CustomerItemPurposeModal({
               <tr className="bg-gray-50">
                 <th className="border px-3 py-2 text-left w-10">#</th>
                 <th className="border px-3 py-2 text-left">Entry Date</th>
-                <th className="border px-3 py-2 text-left">Site Name</th>
-                <th className="border px-3 py-2 text-left">Destination</th>
-                <th className="border px-3 py-2 text-left">Item Name</th>
-                <th className="border px-3 py-2 text-left">Disposal Type</th>
-                <th className="border px-3 py-2 text-left">Purpose-Application</th>
+                <th className={`border px-3 py-2 text-left ${fieldErrors.site ? "text-red-600" : ""}`}>
+                  Site Name *
+                </th>
+                <th
+                  className={`border px-3 py-2 text-left ${fieldErrors.destination ? "text-red-600" : ""}`}
+                >
+                  Destination *
+                </th>
+                <th className={`border px-3 py-2 text-left ${fieldErrors.item ? "text-red-600" : ""}`}>
+                  Item Name *
+                </th>
+                <th
+                  className={`border px-3 py-2 text-left ${fieldErrors.disposalType ? "text-red-600" : ""}`}
+                >
+                  Disposal Type *
+                </th>
+                <th
+                  className={`border px-3 py-2 text-left ${fieldErrors.purposeApplication ? "text-red-600" : ""}`}
+                >
+                  Purpose-Application *
+                </th>
                 <th className="border px-3 py-2 text-left">Status</th>
                 <th className="border px-3 py-2 text-center w-28">Action</th>
               </tr>
@@ -268,11 +453,14 @@ export default function CustomerItemPurposeModal({
                     value={rowSite || undefined}
                     onValueChange={(value) => {
                       setRowSite(value);
+                      setFieldErrors((prev) => ({ ...prev, site: false, destination: false }));
                       setRowDestination("");
                     }}
                     disabled={isRowDisabled}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger
+                      className={fieldErrors.site ? "border-red-500 text-red-600 focus:ring-red-500" : ""}
+                    >
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
@@ -287,10 +475,17 @@ export default function CustomerItemPurposeModal({
                 <td className="border px-3 py-2">
                   <Select
                     value={rowDestination || undefined}
-                    onValueChange={setRowDestination}
+                    onValueChange={(value) => {
+                      setRowDestination(value);
+                      setFieldErrors((prev) => ({ ...prev, destination: false }));
+                    }}
                     disabled={isRowDisabled || !rowSite}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger
+                      className={
+                        fieldErrors.destination ? "border-red-500 text-red-600 focus:ring-red-500" : ""
+                      }
+                    >
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
@@ -303,8 +498,17 @@ export default function CustomerItemPurposeModal({
                   </Select>
                 </td>
                 <td className="border px-3 py-2">
-                  <Select value={rowItem || undefined} onValueChange={setRowItem} disabled={isRowDisabled}>
-                    <SelectTrigger>
+                  <Select
+                    value={rowItem || undefined}
+                    onValueChange={(value) => {
+                      setRowItem(value);
+                      setFieldErrors((prev) => ({ ...prev, item: false }));
+                    }}
+                    disabled={isRowDisabled}
+                  >
+                    <SelectTrigger
+                      className={fieldErrors.item ? "border-red-500 text-red-600 focus:ring-red-500" : ""}
+                    >
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
@@ -319,10 +523,17 @@ export default function CustomerItemPurposeModal({
                 <td className="border px-3 py-2">
                   <Select
                     value={rowDisposalType || undefined}
-                    onValueChange={setRowDisposalType}
+                    onValueChange={(value) => {
+                      setRowDisposalType(value);
+                      setFieldErrors((prev) => ({ ...prev, disposalType: false }));
+                    }}
                     disabled={isRowDisabled}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger
+                      className={
+                        fieldErrors.disposalType ? "border-red-500 text-red-600 focus:ring-red-500" : ""
+                      }
+                    >
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
@@ -337,10 +548,19 @@ export default function CustomerItemPurposeModal({
                 <td className="border px-3 py-2">
                   <Select
                     value={rowPurposeApplication || undefined}
-                    onValueChange={setRowPurposeApplication}
+                    onValueChange={(value) => {
+                      setRowPurposeApplication(value);
+                      setFieldErrors((prev) => ({ ...prev, purposeApplication: false }));
+                    }}
                     disabled={isRowDisabled}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger
+                      className={
+                        fieldErrors.purposeApplication
+                          ? "border-red-500 text-red-600 focus:ring-red-500"
+                          : ""
+                      }
+                    >
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
@@ -387,15 +607,20 @@ export default function CustomerItemPurposeModal({
                 </td>
               </tr>
 
-              {rows.map((row, index) => (
-                <tr key={row.unique_id}>
+              {tableRows.map((row, index) => (
+                <tr
+                  key={row.unique_id}
+                  className={isDraftCustomerItemPurpose(row) ? "bg-amber-50" : ""}
+                >
                   <td className="border px-3 py-2">{index + 1}</td>
                   <td className="border px-3 py-2">
                     {new Date(row.created_at ?? "").toLocaleDateString("en-GB")}
                   </td>
-                  <td className="border px-3 py-2">{row.site_name ?? "-"}</td>
+                  <td className="border px-3 py-2">
+                    {getSiteLabel(row.site, row.site_name)}
+                  </td>
                   <td className="border px-3 py-2">{row.destination}</td>
-                  <td className="border px-3 py-2">{row.item_name ?? "-"}</td>
+                  <td className="border px-3 py-2">{row.item_name ?? itemNameById.get(row.item) ?? row.item}</td>
                   <td className="border px-3 py-2">
                     {DISPOSAL_TYPE_OPTIONS.find((o) => o.value === row.disposal_type)?.label ?? row.disposal_type}
                   </td>
@@ -425,7 +650,7 @@ export default function CustomerItemPurposeModal({
                 </tr>
               ))}
 
-              {!loading && rows.length === 0 && (
+              {!loading && tableRows.length === 0 && (
                 <tr>
                   <td colSpan={9} className="border px-3 py-4 text-center text-gray-400">
                     No items added yet.
@@ -434,6 +659,18 @@ export default function CustomerItemPurposeModal({
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <span className="text-sm text-gray-500">Pending: {draftRows.length}</span>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={draftRows.length === 0 || isRowDisabled}
+            className="h-9 px-4"
+          >
+            {submitting ? "Submitting..." : "Submit"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

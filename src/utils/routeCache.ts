@@ -69,6 +69,50 @@ export type EncryptedRoutes = {
   encTargetEntry: string;
   encRdfInertsPercEntry: string;
   encIcwSupplierCreation: string;
+  encAggregateQuotation: string;
+  encScrapQuotation: string;
+  encNocDocument: string;
+  encDailyTarget: string;
+  encAggregateEntry: string;
+  encAfrRfq: string;
+  encWorkOrder: string;
+  encSalesOrder: string;
+  encFreight: string;
+  encDcEntry: string;
+  encInvoice: string;
+  encPayable: string;
+  encReceivable: string;
+  encWorkOrderApproval: string;
+  encCustomerApproval: string;
+  encSalesOrderApproval: string;
+  encFreightApproval: string;
+  encInvoiceApproval: string;
+  encPayableApproval: string;
+  encIcwWorkOrder: string;
+  encNegativeInvoice: string;
+  encFreightLetter: string;
+  encCoProcessing: string;
+  encAggregateComparison: string;
+  encScrapComparison: string;
+  encConfirmationReceipt: string;
+  encNocVerification: string;
+  encAfrTransportApproval: string;
+  encReceivableApproval: string;
+  encReportSupplyChain: string;
+  encReportAggregateStock: string;
+  encReportAggregateStockPerDay: string;
+  encReportGraphical: string;
+  encReportSiteWiseDisposal: string;
+  encReportSiteWiseDisposalComparison: string;
+  encReportConsolidatedMonthly: string;
+  encReportPayableReceivableTracker: string;
+  encReportCustomerCreation: string;
+  encReportConfirmationReceipt: string;
+  encReportWorkOrderStatus: string;
+  encReportMbs: string;
+  encReportRdfTracker: string;
+  encReportIcwDetails: string;
+  encReportOthersAggregateComparison: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -140,6 +184,50 @@ const plainRoutes: EncryptedRoutes = {
   encTargetEntry: "target-entry",
   encRdfInertsPercEntry: "rdf-inerts-percentage-entry",
   encIcwSupplierCreation: "icw-supplier-creation",
+  encAggregateQuotation: "aggregate-quotation",
+  encScrapQuotation: "scrap-quotation",
+  encNocDocument: "noc-document",
+  encDailyTarget: "daily-target",
+  encAggregateEntry: "aggregate-entry",
+  encAfrRfq: "afr-rfq",
+  encWorkOrder: "work-order",
+  encSalesOrder: "sales-order",
+  encFreight: "freight",
+  encDcEntry: "dc-entry",
+  encInvoice: "invoice",
+  encPayable: "payable",
+  encReceivable: "receivable",
+  encWorkOrderApproval: "work-order-approval",
+  encCustomerApproval: "customer-approval",
+  encSalesOrderApproval: "sales-order-approval",
+  encFreightApproval: "freight-approval",
+  encInvoiceApproval: "invoice-approval",
+  encPayableApproval: "payable-approval",
+  encIcwWorkOrder: "icw-work-order",
+  encNegativeInvoice: "negative-invoice",
+  encFreightLetter: "freight-letter",
+  encCoProcessing: "co-processing",
+  encAggregateComparison: "aggregate-comparison",
+  encScrapComparison: "scrap-comparison",
+  encConfirmationReceipt: "confirmation-receipt",
+  encNocVerification: "noc-verification",
+  encAfrTransportApproval: "afr-transport-approval",
+  encReceivableApproval: "receivable-approval",
+  encReportSupplyChain: "report-supply-chain",
+  encReportAggregateStock: "report-aggregate-stock",
+  encReportAggregateStockPerDay: "report-aggregate-stock-per-day",
+  encReportGraphical: "report-graphical",
+  encReportSiteWiseDisposal: "report-site-wise-disposal",
+  encReportSiteWiseDisposalComparison: "report-site-wise-disposal-comparison",
+  encReportConsolidatedMonthly: "report-consolidated-monthly",
+  encReportPayableReceivableTracker: "report-payable-receivable-tracker",
+  encReportCustomerCreation: "report-customer-creation",
+  encReportConfirmationReceipt: "report-confirmation-receipt",
+  encReportWorkOrderStatus: "report-work-order-status",
+  encReportMbs: "report-mbs",
+  encReportRdfTracker: "report-rdf-tracker",
+  encReportIcwDetails: "report-icw-details",
+  encReportOthersAggregateComparison: "report-others-aggregate-comparison",
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {

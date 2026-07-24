@@ -113,6 +113,72 @@ export const salesServiceEndpoints = {
   icwSupplierCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/icw-supplier-creations/`,
 } as const;
 
+/* ========================================================
+    SALES SERVICE TRANSACTION ENDPOINTS
+    (Phase 3+4 transaction modules in sales_service)
+======================================================== */
+export const salesTransactionEndpoints = {
+  aggregateQuotations: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/aggregate-quotations/`,
+  scrapQuotations: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/scrap-quotations/`,
+  nocDocuments: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/noc-documents/`,
+  dailyTargets: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/daily-targets/`,
+  aggregateEntries: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/aggregate-entries/`,
+  afrRfqs: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/afr-rfqs/`,
+  workOrders: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/work-orders/`,
+  salesOrders: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/sales-orders/`,
+  freights: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/freights/`,
+  dcEntries: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/dc-entries/`,
+  invoices: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/invoices/`,
+  payables: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/payables/`,
+  receivables: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/receivables/`,
+  icwWorkOrders: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/icw-work-orders/`,
+  negativeInvoices: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/negative-invoices/`,
+  freightLetters: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/freight-letters/`,
+  coProcessing: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/co-processing/`,
+  aggregateComparisons: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/aggregate-comparisons/`,
+  scrapComparisons: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/scrap-comparisons/`,
+  confirmationReceipts: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/confirmation-receipts/`,
+  approvalHistory: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approval-history/`,
+  approvalWorkOrders: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approvals/work-orders/`,
+  approvalCustomers: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approvals/customers/`,
+  approvalSalesOrders: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approvals/sales-orders/`,
+  approvalFreights: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approvals/freights/`,
+  approvalInvoices: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approvals/invoices/`,
+  approvalPayables: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approvals/payables/`,
+  approvalReceivables: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approvals/receivables/`,
+  approvalAfrTransports: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approvals/afr-transports/`,
+  approvalNocDocuments: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/approvals/noc-documents/`,
+} as const;
+
+/* ========================================================
+    SALES REPORT ENDPOINTS
+======================================================== */
+export const salesReportEndpoints = {
+  supplyChain: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/supply-chain/`,
+  aggregateStock: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/aggregate-stock/`,
+  aggregateStockPerDay: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/aggregate-stock-per-day/`,
+  graphical: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/graphical/`,
+  siteWiseDisposal: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/site-wise-disposal/`,
+  siteWiseDisposalComparison: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/site-wise-disposal-comparison/`,
+  consolidatedMonthly: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/consolidated-monthly/`,
+  payableReceivableTracker: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/payable-receivable-tracker/`,
+  customerCreation: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/customer-creation/`,
+  confirmationReceipt: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/confirmation-receipt/`,
+  workOrderStatus: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/work-order-status/`,
+  mbs: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/mbs/`,
+  rdfTracker: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/rdf-tracker/`,
+  icwDetails: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/icw-details/`,
+  othersAggregateComparison: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/reports/others-aggregate-comparison/`,
+} as const;
+
+export type SalesReportEntity = keyof typeof salesReportEndpoints;
+
+export type SalesTransactionEntity = keyof typeof salesTransactionEndpoints;
+
+export const getSalesTransactionEndpointPath = (
+  entity: SalesTransactionEntity
+): string => buildUrl(salesTransactionEndpoints[entity]);
+
 export type SalesServiceEntity = keyof typeof salesServiceEndpoints;
 
 /* ========================================================

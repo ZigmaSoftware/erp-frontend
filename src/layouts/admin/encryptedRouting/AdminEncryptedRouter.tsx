@@ -101,6 +101,75 @@ import RdfInertsPercEntryServiceList from "@/pages/admin/modules/salesService/rd
 import RdfInertsPercEntryServiceForm from "@/pages/admin/modules/salesService/rdfInertsPercEntry/rdfInertsPercEntryForm";
 import IcwSupplierCreationServiceList from "@/pages/admin/modules/salesService/icwSupplierCreation/icwSupplierCreationList";
 import IcwSupplierCreationServiceForm from "@/pages/admin/modules/salesService/icwSupplierCreation/icwSupplierCreationForm";
+// Phase 3 - Day Product
+import AggregateQuotationServiceList from "@/pages/admin/modules/salesService/aggregateQuotation/aggregateQuotationList";
+import AggregateQuotationServiceForm from "@/pages/admin/modules/salesService/aggregateQuotation/aggregateQuotationForm";
+import ScrapQuotationServiceList from "@/pages/admin/modules/salesService/scrapQuotation/scrapQuotationList";
+import ScrapQuotationServiceForm from "@/pages/admin/modules/salesService/scrapQuotation/scrapQuotationForm";
+import NocDocumentServiceList from "@/pages/admin/modules/salesService/nocDocument/nocDocumentList";
+import NocDocumentServiceForm from "@/pages/admin/modules/salesService/nocDocument/nocDocumentForm";
+import DailyTargetServiceList from "@/pages/admin/modules/salesService/dailyTarget/dailyTargetList";
+import DailyTargetServiceForm from "@/pages/admin/modules/salesService/dailyTarget/dailyTargetForm";
+import AggregateEntryServiceList from "@/pages/admin/modules/salesService/aggregateEntry/aggregateEntryList";
+import AggregateEntryServiceForm from "@/pages/admin/modules/salesService/aggregateEntry/aggregateEntryForm";
+import AfrRfqServiceList from "@/pages/admin/modules/salesService/afrRfq/afrRfqList";
+import AfrRfqServiceForm from "@/pages/admin/modules/salesService/afrRfq/afrRfqForm";
+// Phase 4 - Transactions
+import WorkOrderServiceList from "@/pages/admin/modules/salesService/workOrder/workOrderList";
+import WorkOrderServiceForm from "@/pages/admin/modules/salesService/workOrder/workOrderForm";
+import SalesOrderServiceList from "@/pages/admin/modules/salesService/salesOrder/salesOrderList";
+import SalesOrderServiceForm from "@/pages/admin/modules/salesService/salesOrder/salesOrderForm";
+import FreightServiceList from "@/pages/admin/modules/salesService/freight/freightList";
+import FreightServiceForm from "@/pages/admin/modules/salesService/freight/freightForm";
+import DcEntryServiceList from "@/pages/admin/modules/salesService/dcEntry/dcEntryList";
+import DcEntryServiceForm from "@/pages/admin/modules/salesService/dcEntry/dcEntryForm";
+import InvoiceServiceList from "@/pages/admin/modules/salesService/invoice/invoiceList";
+import InvoiceServiceForm from "@/pages/admin/modules/salesService/invoice/invoiceForm";
+import PayableServiceList from "@/pages/admin/modules/salesService/payable/payableList";
+import PayableServiceForm from "@/pages/admin/modules/salesService/payable/payableForm";
+import ReceivableServiceList from "@/pages/admin/modules/salesService/receivable/receivableList";
+import ReceivableServiceForm from "@/pages/admin/modules/salesService/receivable/receivableForm";
+// Phase A - Additional modules
+import IcwWorkOrderServiceList from "@/pages/admin/modules/salesService/icwWorkOrder/icwWorkOrderList";
+import IcwWorkOrderServiceForm from "@/pages/admin/modules/salesService/icwWorkOrder/icwWorkOrderForm";
+import NegativeInvoiceServiceList from "@/pages/admin/modules/salesService/negativeInvoice/negativeInvoiceList";
+import NegativeInvoiceServiceForm from "@/pages/admin/modules/salesService/negativeInvoice/negativeInvoiceForm";
+import FreightLetterServiceList from "@/pages/admin/modules/salesService/freightLetter/freightLetterList";
+import FreightLetterServiceForm from "@/pages/admin/modules/salesService/freightLetter/freightLetterForm";
+import CoProcessingServiceList from "@/pages/admin/modules/salesService/coProcessing/coProcessingList";
+import CoProcessingServiceForm from "@/pages/admin/modules/salesService/coProcessing/coProcessingForm";
+import AggregateComparisonServiceList from "@/pages/admin/modules/salesService/aggregateComparison/aggregateComparisonList";
+import AggregateComparisonServiceForm from "@/pages/admin/modules/salesService/aggregateComparison/aggregateComparisonForm";
+import ScrapComparisonServiceList from "@/pages/admin/modules/salesService/scrapComparison/scrapComparisonList";
+import ScrapComparisonServiceForm from "@/pages/admin/modules/salesService/scrapComparison/scrapComparisonForm";
+import ConfirmationReceiptServiceList from "@/pages/admin/modules/salesService/confirmationReceipt/confirmationReceiptList";
+import ConfirmationReceiptServiceForm from "@/pages/admin/modules/salesService/confirmationReceipt/confirmationReceiptForm";
+// Approvals
+import WorkOrderApprovalList from "@/pages/admin/modules/salesService/approvals/workOrderApprovalList";
+import CustomerApprovalList from "@/pages/admin/modules/salesService/approvals/customerApprovalList";
+import SalesOrderApprovalList from "@/pages/admin/modules/salesService/approvals/salesOrderApprovalList";
+import FreightApprovalList from "@/pages/admin/modules/salesService/approvals/freightApprovalList";
+import InvoiceApprovalList from "@/pages/admin/modules/salesService/approvals/invoiceApprovalList";
+import PayableApprovalList from "@/pages/admin/modules/salesService/approvals/payableApprovalList";
+import ReceivableApprovalList from "@/pages/admin/modules/salesService/approvals/receivableApprovalList";
+import AfrTransportApprovalList from "@/pages/admin/modules/salesService/approvals/afrTransportApprovalList";
+import NocVerificationList from "@/pages/admin/modules/salesService/approvals/nocVerificationList";
+// Reports
+import SupplyChainReport from "@/pages/admin/modules/salesService/reports/supplyChainReport";
+import AggregateStockReport from "@/pages/admin/modules/salesService/reports/aggregateStockReport";
+import AggregateStockPerDayReport from "@/pages/admin/modules/salesService/reports/aggregateStockPerDayReport";
+import GraphicalReport from "@/pages/admin/modules/salesService/reports/graphicalReport";
+import SiteWiseDisposalReport from "@/pages/admin/modules/salesService/reports/siteWiseDisposalReport";
+import SiteWiseDisposalComparisonReport from "@/pages/admin/modules/salesService/reports/siteWiseDisposalComparisonReport";
+import ConsolidatedMonthlySiteWiseReport from "@/pages/admin/modules/salesService/reports/consolidatedMonthlySiteWiseReport";
+import PayableReceivableTrackerReport from "@/pages/admin/modules/salesService/reports/payableReceivableTrackerReport";
+import CustomerCreationReport from "@/pages/admin/modules/salesService/reports/customerCreationReport";
+import ConfirmationReceiptReport from "@/pages/admin/modules/salesService/reports/confirmationReceiptReport";
+import WorkOrderStatusReport from "@/pages/admin/modules/salesService/reports/workOrderStatusReport";
+import MBSReport from "@/pages/admin/modules/salesService/reports/mbsReport";
+import RDFTrackerReport from "@/pages/admin/modules/salesService/reports/rdfTrackerReport";
+import ICWDetailsReport from "@/pages/admin/modules/salesService/reports/icwDetailsReport";
+import OthersAggregateComparisonReport from "@/pages/admin/modules/salesService/reports/othersAggregateComparisonReport";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -170,6 +239,55 @@ const ROUTES: RouteMap = {
     "transport-master": { list: TransportEntryServiceList, form: TransportEntryServiceForm },
     "target-entry": { list: TargetEntryServiceList, form: TargetEntryServiceForm },
     "customer-creation": { list: CustomerCreationServiceList, form: CustomerCreationServiceForm },
+    // Phase 3 - Day Product
+    "aggregate-quotation": { list: AggregateQuotationServiceList, form: AggregateQuotationServiceForm },
+    "scrap-quotation": { list: ScrapQuotationServiceList, form: ScrapQuotationServiceForm },
+    "noc-document": { list: NocDocumentServiceList, form: NocDocumentServiceForm },
+    "daily-target": { list: DailyTargetServiceList, form: DailyTargetServiceForm },
+    "aggregate-entry": { list: AggregateEntryServiceList, form: AggregateEntryServiceForm },
+    "afr-rfq": { list: AfrRfqServiceList, form: AfrRfqServiceForm },
+    // Phase 4 - Transactions
+    "work-order": { list: WorkOrderServiceList, form: WorkOrderServiceForm },
+    "sales-order": { list: SalesOrderServiceList, form: SalesOrderServiceForm },
+    freight: { list: FreightServiceList, form: FreightServiceForm },
+    "dc-entry": { list: DcEntryServiceList, form: DcEntryServiceForm },
+    invoice: { list: InvoiceServiceList, form: InvoiceServiceForm },
+    payable: { list: PayableServiceList, form: PayableServiceForm },
+    receivable: { list: ReceivableServiceList, form: ReceivableServiceForm },
+    // Phase A - Additional
+    "icw-work-order": { list: IcwWorkOrderServiceList, form: IcwWorkOrderServiceForm },
+    "negative-invoice": { list: NegativeInvoiceServiceList, form: NegativeInvoiceServiceForm },
+    "freight-letter": { list: FreightLetterServiceList, form: FreightLetterServiceForm },
+    "co-processing": { list: CoProcessingServiceList, form: CoProcessingServiceForm },
+    "aggregate-comparison": { list: AggregateComparisonServiceList, form: AggregateComparisonServiceForm },
+    "scrap-comparison": { list: ScrapComparisonServiceList, form: ScrapComparisonServiceForm },
+    "confirmation-receipt": { list: ConfirmationReceiptServiceList, form: ConfirmationReceiptServiceForm },
+    // Approvals
+    "work-order-approval": { list: WorkOrderApprovalList },
+    "customer-approval": { list: CustomerApprovalList },
+    "sales-order-approval": { list: SalesOrderApprovalList },
+    "freight-approval": { list: FreightApprovalList },
+    "invoice-approval": { list: InvoiceApprovalList },
+    "payable-approval": { list: PayableApprovalList },
+    "receivable-approval": { list: ReceivableApprovalList },
+    "afr-transport-approval": { list: AfrTransportApprovalList },
+    "noc-verification": { list: NocVerificationList },
+    // Reports
+    "report-supply-chain": { list: SupplyChainReport },
+    "report-aggregate-stock": { list: AggregateStockReport },
+    "report-aggregate-stock-per-day": { list: AggregateStockPerDayReport },
+    "report-graphical": { list: GraphicalReport },
+    "report-site-wise-disposal": { list: SiteWiseDisposalReport },
+    "report-site-wise-disposal-comparison": { list: SiteWiseDisposalComparisonReport },
+    "report-consolidated-monthly": { list: ConsolidatedMonthlySiteWiseReport },
+    "report-payable-receivable-tracker": { list: PayableReceivableTrackerReport },
+    "report-customer-creation": { list: CustomerCreationReport },
+    "report-confirmation-receipt": { list: ConfirmationReceiptReport },
+    "report-work-order-status": { list: WorkOrderStatusReport },
+    "report-mbs": { list: MBSReport },
+    "report-rdf-tracker": { list: RDFTrackerReport },
+    "report-icw-details": { list: ICWDetailsReport },
+    "report-others-aggregate-comparison": { list: OthersAggregateComparisonReport },
   },
 };
 
