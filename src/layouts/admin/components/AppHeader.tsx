@@ -26,7 +26,7 @@ const AppHeader: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  const { admin, masters, emMasters, salesMasters, salesService } = useMemo(getAdminNavigation, []);
+  const { admin, masters, emMasters, salesMasters, salesService, salesColumns } = useMemo(getAdminNavigation, []);
 
   /* -------------------------------------------------
      Helpers
@@ -84,6 +84,7 @@ const AppHeader: React.FC = () => {
   const emMasterItems = emMasters[0]?.subItems || [];
   const salesMasterItems = salesMasters[0]?.subItems || [];
   const salesServiceItems = salesService[0]?.subItems || [];
+  const salesServiceFirstPath = salesColumns[0]?.items[0]?.path ?? "/admin";
 
   /* -------------------------------------------------
      Scroll + keyboard effects
@@ -133,7 +134,7 @@ const AppHeader: React.FC = () => {
     if (menu === "masters") navigate(mastersDashboardPath);
     if (menu === "em-masters") navigate(emMastersDashboardPath);
     if (menu === "sales-masters") navigate(salesMastersDashboardPath);
-    if (menu === "sales-service") navigate(salesServiceDashboardPath);
+    if (menu === "sales-service") navigate(withAdminPrefix(salesServiceFirstPath));
   };
 
   /* -------------------------------------------------
@@ -263,8 +264,69 @@ const AppHeader: React.FC = () => {
               {showSalesGroup &&
                 renderNavMenu("Masters", "sales-masters", salesMasterItems)}
 
-              {showSalesServiceGroup &&
-                renderNavMenu("Masters", "sales-service", salesServiceItems)}
+              {showSalesServiceGroup && (
+                <div
+                  className="relative"
+                  onMouseEnter={() => setOpenMenu("sales-service")}
+                  onMouseLeave={() => setOpenMenu(null)}
+                >
+                  <motion.button
+                    onClick={() => toggleMenu("sales-service")}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className={cn(
+                      "rounded-2xl px-5 py-2.5 text-sm font-semibold inline-flex items-center gap-2 transition-all",
+                      openMenu === "sales-service"
+                        ? "bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-accent)] text-white shadow-lg"
+                        : "bg-[var(--admin-surfaceMuted)] text-[var(--admin-text)] hover:bg-[var(--admin-primarySoft)]"
+                    )}
+                  >
+                    Sales
+                    <motion.svg
+                      animate={{ rotate: openMenu === "sales-service" ? 180 : 0 }}
+                      width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    >
+                      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </motion.svg>
+                  </motion.button>
+
+                  <AnimatePresence>
+                    {openMenu === "sales-service" && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="absolute left-0 mt-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-surfaceAlt)]/95 backdrop-blur-xl shadow-[var(--admin-cardShadow)] p-4"
+                        style={{ minWidth: "max-content" }}
+                      >
+                        <div className="flex gap-6">
+                          {salesColumns.map((col) => (
+                            <div key={col.heading} className="min-w-[160px]">
+                              <div className="text-xs font-bold uppercase tracking-wider text-[var(--admin-primary)] mb-2 pb-1 border-b border-[var(--admin-border)]">
+                                {col.heading}
+                              </div>
+                              <ul className="space-y-0.5">
+                                {col.items.map((item) => (
+                                  <li key={item.name}>
+                                    <Link
+                                      to={withAdminPrefix(item.path)}
+                                      onClick={() => setOpenMenu(null)}
+                                      className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--admin-text)] transition hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)] whitespace-nowrap"
+                                    >
+                                      <span className="w-1 h-1 rounded-full bg-[var(--admin-primary)] opacity-50 flex-shrink-0" />
+                                      {item.name}
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
           </div>
 

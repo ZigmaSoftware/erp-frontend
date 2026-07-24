@@ -4,18 +4,23 @@ import {
   adminMasterEndpoints,
   salesMasterEndpoints,
   salesServiceEndpoints,
+  salesTransactionEndpoints,
+  salesReportEndpoints,
 
   getCommonMasterEndpointPath,
   getEmMasterEndpointPath,
   getAdminMasterEndpointPath,
   getSalesMasterEndpointPath,
   getSalesServiceEndpointPath,
+  getSalesTransactionEndpointPath,
 
   type CommonMasterEntity,
   type EmMasterEntity,
   type AdminMasterEntity,
   type SalesMasterEntity,
-  type SalesServiceEntity
+  type SalesServiceEntity,
+  type SalesTransactionEntity,
+  type SalesReportEntity
 } from "./endpoints";
 
 import { createCrudHelpers, type CrudHelpers } from "./crudHelpers";
@@ -134,3 +139,48 @@ export const salesServiceApi: SalesServiceApiRegistry =
 
 export const getSalesServiceApi = (entity: SalesServiceEntity) =>
   salesServiceApi[entity];
+
+
+/* ========================================================
+   SALES TRANSACTION API REGISTRY
+   (Phase 3+4 transaction modules in sales_service)
+======================================================== */
+
+type SalesTransactionApiRegistry = {
+  [K in SalesTransactionEntity]: CrudHelpers;
+};
+
+export const salesTransactionApi: SalesTransactionApiRegistry =
+  (Object.keys(salesTransactionEndpoints) as SalesTransactionEntity[]).reduce(
+    (map, key) => {
+      map[key] = createCrudHelpers(
+        getSalesTransactionEndpointPath(key)
+      );
+      return map;
+    },
+    {} as SalesTransactionApiRegistry
+  );
+
+export const getSalesTransactionApi = (entity: SalesTransactionEntity) =>
+  salesTransactionApi[entity];
+
+
+/* ========================================================
+   SALES REPORT API REGISTRY
+   (Phase C report endpoints in sales_service)
+======================================================== */
+
+type SalesReportApiRegistry = {
+  [K in SalesReportEntity]: CrudHelpers;
+};
+
+export const salesReportApi: SalesReportApiRegistry =
+  (Object.keys(salesReportEndpoints) as SalesReportEntity[]).reduce(
+    (map, key) => {
+      map[key] = createCrudHelpers(
+        `${salesReportEndpoints[key]}`
+      );
+      return map;
+    },
+    {} as SalesReportApiRegistry
+  );
