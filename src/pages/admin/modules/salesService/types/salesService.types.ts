@@ -413,7 +413,7 @@ export interface NocDocumentApprovalHistory extends BaseEntity {
 export interface NocDocument extends BaseEntity {
   scrap_customer_id: string;
   site_id: string;
-  noc_doc_type_id: string;
+  noc_doc_type_id?: string | null;
   dispose_type: string;
   customer_destination: string;
   document_name: string;
@@ -424,6 +424,26 @@ export interface NocDocument extends BaseEntity {
   reason?: string;
   overall_approve_status: "Pending" | "Approve";
   approval_history?: NocDocumentApprovalHistory[];
+}
+
+/* NOC upload worklist row: one per active CustomerItemPurpose for a
+   NOC-enabled customer, joined with its matching active destination
+   (see CustomerItemPurposeViewSet.noc_list on the backend). */
+export interface NocListRow {
+  unique_id: string;
+  item_purpose_id: string;
+  customer_id: string;
+  customer_name: string;
+  site_id: string;
+  destination: string;
+  item_name: string;
+  disposal_type: string;
+  item_verification_status: string;
+  destination_verification_status: string;
+  noc_doc_type_id?: string | null;
+  document_name: string;
+  document_file?: string | null;
+  approve_status: "Pending" | "Approve" | "Reject" | "Cancel";
 }
 
 export interface DailyTargetDisposalSub extends BaseEntity {

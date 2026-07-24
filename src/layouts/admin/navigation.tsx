@@ -202,8 +202,10 @@ export function getAdminNavigation(): AdminNavConfig {
       heading: "Master",
       items: [
         { name: "Category Creation", path: `/${encSalesService}/${encScrapSalesCategory}` },
+        { name: "Item Type", path: `/${encSalesService}/${encItemType}` },
         { name: "Item Creation", path: `/${encSalesService}/${encItemCreation}` },
         { name: "Item Group Creation", path: `/${encSalesService}/${encItemGroupCreation}` },
+        { name: "Outward Sub Category Creation", path: `/${encSalesService}/${encSubCategory}` },
         { name: "Transport Medium Creation", path: `/${encSalesService}/${encTransportMediumCreation}` },
         { name: "Terms of Delivery Creation", path: `/${encSalesService}/${encTermsOfDeliveryCreation}` },
         { name: "Terms of Payment Creation", path: `/${encSalesService}/${encTermsOfPaymentCreation}` },
