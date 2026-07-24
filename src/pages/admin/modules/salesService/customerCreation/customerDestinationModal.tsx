@@ -17,8 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { customerDestinationServiceApi } from "@/helpers/admin";
+import { customerDestinationServiceApi, siteApi } from "@/helpers/admin";
 import { extractErrorMessage } from "@/utils/errorUtils";
+import { asRecord, pickFirstString } from "@/utils/formHelpers";
 import type {
   CustomerCreation,
   CustomerDestination,
@@ -38,6 +39,7 @@ export default function CustomerDestinationModal({
   onClose: () => void;
 }) {
   const [rows, setRows] = useState<CustomerDestination[]>([]);
+  const [masterSites, setMasterSites] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -46,23 +48,54 @@ export default function CustomerDestinationModal({
   const [rowDestination, setRowDestination] = useState("");
   const [rowStatus, setRowStatus] = useState<"active" | "inactive">("active");
 
+  const masterSiteNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    masterSites.forEach((site) => {
+      const record = asRecord(site);
+      if (!record) return;
+
+      const id = pickFirstString(record.unique_id, record.id);
+      const label = pickFirstString(record.site_name, record.name, record.label);
+      if (id && label) map.set(id, label);
+    });
+    return map;
+  }, [masterSites]);
+
   const siteOptions: Option[] = useMemo(() => {
     if (!customer) return [];
     const names = customer.site_names ?? [];
     const ids = customer.sites ?? [];
     return ids.map((id, index) => ({
       value: id,
-      label: names[index] ?? id,
+      label: masterSiteNameById.get(id) ?? names[index] ?? id,
     }));
-  }, [customer]);
+  }, [customer, masterSiteNameById]);
+
+  const selectedSiteLabels = useMemo(
+    () => siteOptions.map((option) => option.label).filter(Boolean),
+    [siteOptions],
+  );
+
+  const getSiteLabel = (siteId?: string | null, fallback?: string | null) =>
+    siteOptions.find((option) => option.value === siteId)?.label ||
+    siteOptions.find((option) => option.value === fallback)?.label ||
+    (siteId ? masterSiteNameById.get(siteId) : undefined) ||
+    (fallback ? masterSiteNameById.get(fallback) : undefined) ||
+    fallback ||
+    siteId ||
+    "-";
 
   const loadRows = async (customerId: string) => {
     setLoading(true);
     try {
-      const res = await customerDestinationServiceApi.list({
-        params: { customer: customerId },
-      });
-      setRows(res as CustomerDestination[]);
+      const [destinationRes, siteRes] = await Promise.all([
+        customerDestinationServiceApi.list({
+          params: { customer: customerId },
+        }),
+        siteApi.list(),
+      ]);
+      setRows(destinationRes as CustomerDestination[]);
+      setMasterSites(siteRes as unknown[]);
     } catch {
       Swal.fire({
         icon: "error",
@@ -79,7 +112,6 @@ export default function CustomerDestinationModal({
       loadRows(customer.unique_id);
       resetRow();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, customer]);
 
   const resetRow = () => {
@@ -178,7 +210,7 @@ export default function CustomerDestinationModal({
           <div>
             <span className="text-gray-500">Site Name: </span>
             <span className="font-medium">
-              {(customer?.site_names ?? []).join(", ") || "-"}
+              {selectedSiteLabels.join(", ") || "-"}
             </span>
           </div>
         </div>
@@ -264,7 +296,9 @@ export default function CustomerDestinationModal({
                   <td className="border px-3 py-2">
                     {new Date(row.created_at ?? "").toLocaleDateString("en-GB")}
                   </td>
-                  <td className="border px-3 py-2">{row.site_name ?? "-"}</td>
+                  <td className="border px-3 py-2">
+                    {getSiteLabel(row.site, row.site_name)}
+                  </td>
                   <td className="border px-3 py-2">{row.destination}</td>
                   <td className="border px-3 py-2 capitalize">{row.status}</td>
                   <td className="border px-3 py-2">

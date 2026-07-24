@@ -1,4 +1,4 @@
-import { commonMasterApi, emMasterApi, adminMasterApi, salesMasterApi, salesServiceApi } from "./registry";
+import { commonMasterApi, emMasterApi, adminMasterApi, salesMasterApi, salesServiceApi, salesTransactionApi, salesReportApi } from "./registry";
 
 /* -------- Masters -------- */
 export const continentApi = commonMasterApi.continents;
@@ -67,6 +67,54 @@ export const icwSupplierCreationServiceApi = salesServiceApi.icwSupplierCreation
 /* -------- Login And Refresh -------- */
 export const loginApi = adminMasterApi.login;
 export const refreshLoginApi = adminMasterApi.generateRefresh;
+
+/* -------- Sales Transactions (Phase 3+4) -------- */
+export const aggregateQuotationApi = salesTransactionApi.aggregateQuotations;
+export const scrapQuotationApi = salesTransactionApi.scrapQuotations;
+export const nocDocumentApi = salesTransactionApi.nocDocuments;
+export const dailyTargetApi = salesTransactionApi.dailyTargets;
+export const afrRfqApi = salesTransactionApi.afrRfqs;
+export const workOrderApi = salesTransactionApi.workOrders;
+export const salesOrderApi = salesTransactionApi.salesOrders;
+export const freightApi = salesTransactionApi.freights;
+export const dcEntryApi = salesTransactionApi.dcEntries;
+export const invoiceApi = salesTransactionApi.invoices;
+export const payableApi = salesTransactionApi.payables;
+export const receivableApi = salesTransactionApi.receivables;
+export const icwWorkOrderApi = salesTransactionApi.icwWorkOrders;
+export const negativeInvoiceApi = salesTransactionApi.negativeInvoices;
+export const freightLetterApi = salesTransactionApi.freightLetters;
+export const coProcessingApi = salesTransactionApi.coProcessing;
+export const aggregateComparisonApi = salesTransactionApi.aggregateComparisons;
+export const scrapComparisonApi = salesTransactionApi.scrapComparisons;
+export const confirmationReceiptApi = salesTransactionApi.confirmationReceipts;
+export const approvalHistoryApi = salesTransactionApi.approvalHistory;
+export const approvalWorkOrderApi = salesTransactionApi.approvalWorkOrders;
+export const approvalCustomerApi = salesTransactionApi.approvalCustomers;
+export const approvalSalesOrderApi = salesTransactionApi.approvalSalesOrders;
+export const approvalFreightApi = salesTransactionApi.approvalFreights;
+export const approvalInvoiceApi = salesTransactionApi.approvalInvoices;
+export const approvalPayableApi = salesTransactionApi.approvalPayables;
+export const approvalReceivableApi = salesTransactionApi.approvalReceivables;
+export const approvalAfrTransportApi = salesTransactionApi.approvalAfrTransports;
+export const approvalNocDocumentApi = salesTransactionApi.approvalNocDocuments;
+
+/* -------- Sales Reports (Phase C) -------- */
+export const reportSupplyChainApi = salesReportApi.supplyChain;
+export const reportAggregateStockApi = salesReportApi.aggregateStock;
+export const reportAggregateStockPerDayApi = salesReportApi.aggregateStockPerDay;
+export const reportGraphicalApi = salesReportApi.graphical;
+export const reportSiteWiseDisposalApi = salesReportApi.siteWiseDisposal;
+export const reportSiteWiseDisposalComparisonApi = salesReportApi.siteWiseDisposalComparison;
+export const reportConsolidatedMonthlyApi = salesReportApi.consolidatedMonthly;
+export const reportPayableReceivableTrackerApi = salesReportApi.payableReceivableTracker;
+export const reportCustomerCreationApi = salesReportApi.customerCreation;
+export const reportConfirmationReceiptApi = salesReportApi.confirmationReceipt;
+export const reportWorkOrderStatusApi = salesReportApi.workOrderStatus;
+export const reportMbsApi = salesReportApi.mbs;
+export const reportRdfTrackerApi = salesReportApi.rdfTracker;
+export const reportIcwDetailsApi = salesReportApi.icwDetails;
+export const reportOthersAggregateComparisonApi = salesReportApi.othersAggregateComparison;
 
 /* -------- Utilities -------- */
 export * from "./endpoints";

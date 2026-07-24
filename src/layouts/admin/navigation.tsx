@@ -14,6 +14,11 @@ export type NavItem = {
   subItems?: { name: string; path: string }[];
 };
 
+export type SalesColumn = {
+  heading: string;
+  items: { name: string; path: string }[];
+};
+
 export type AdminNavConfig = {
   home: NavItem[];
   admin: NavItem[];
@@ -21,6 +26,7 @@ export type AdminNavConfig = {
   emMasters: NavItem[];
   salesMasters: NavItem[];
   salesService: NavItem[];
+  salesColumns: SalesColumn[];
 };
 
 export function getAdminNavigation(): AdminNavConfig {
@@ -62,6 +68,49 @@ export function getAdminNavigation(): AdminNavConfig {
     encRdfInertsPercEntry,
     encIcwSupplierCreation,
     encCustomerCreation,
+    encAggregateQuotation,
+    encScrapQuotation,
+    encNocDocument,
+    encDailyTarget,
+    encAfrRfq,
+    encWorkOrder,
+    encSalesOrder,
+    encFreight,
+    encDcEntry,
+    encInvoice,
+    encPayable,
+    encReceivable,
+    encIcwWorkOrder,
+    encNegativeInvoice,
+    encFreightLetter,
+    encCoProcessing,
+    encAggregateComparison,
+    encScrapComparison,
+    encConfirmationReceipt,
+    encWorkOrderApproval,
+    encCustomerApproval,
+    encSalesOrderApproval,
+    encFreightApproval,
+    encInvoiceApproval,
+    encPayableApproval,
+    encReceivableApproval,
+    encAfrTransportApproval,
+    encNocVerification,
+    encReportSupplyChain,
+    encReportAggregateStock,
+    encReportAggregateStockPerDay,
+    encReportGraphical,
+    encReportSiteWiseDisposal,
+    encReportSiteWiseDisposalComparison,
+    encReportConsolidatedMonthly,
+    encReportPayableReceivableTracker,
+    encReportCustomerCreation,
+    encReportConfirmationReceipt,
+    encReportWorkOrderStatus,
+    encReportMbs,
+    encReportRdfTracker,
+    encReportIcwDetails,
+    encReportOthersAggregateComparison,
   } = getEncryptedRoute();
 
   const home: NavItem[] = [
@@ -143,23 +192,98 @@ export function getAdminNavigation(): AdminNavConfig {
       icon: <Layers3 size={18} />,
       subItems: [
         { name: "Category Creation", path: `/${encSalesService}/${encScrapSalesCategory}` },
-        { name: "Item Type", path: `/${encSalesService}/${encItemType}` },
-        { name: "Customer Creation", path: `/${encSalesService}/${encCustomerCreation}` },
-        { name: "Outward Sub Category Creation", path: `/${encSalesService}/${encSubCategory}` },
-        { name: "Item Creation", path: `/${encSalesService}/${encItemCreation}` },
-        { name: "Item Group Creation", path: `/${encSalesService}/${encItemGroupCreation}` },
-        { name: "Transport Medium Creation", path: `/${encSalesService}/${encTransportMediumCreation}` },
-        { name: "Terms Of Delivery Creation", path: `/${encSalesService}/${encTermsOfDeliveryCreation}` },
-        { name: "Terms Of Payment Creation", path: `/${encSalesService}/${encTermsOfPaymentCreation}` },
-        { name: "Mail Details Creation", path: `/${encSalesService}/${encMailDetailsCreation}` },
-        { name: "Document Type Creation", path: `/${encSalesService}/${encDocumentType}` },
-        { name: "Transport Entry", path: `/${encSalesService}/${encTransportMaster}` },
-        { name: "Outward Target Entry", path: `/${encSalesService}/${encTargetEntry}` },
-        { name: "RDF & Inerts Percentage Entry", path: `/${encSalesService}/${encRdfInertsPercEntry}` },
-        { name: "ICW Supplier Creation", path: `/${encSalesService}/${encIcwSupplierCreation}` },
       ],
     },
   ];
 
-  return { home, admin, masters, emMasters, salesMasters, salesService };
+  const salesColumns: SalesColumn[] = [
+    {
+      heading: "Master",
+      items: [
+        { name: "Category Creation", path: `/${encSalesService}/${encScrapSalesCategory}` },
+        { name: "Item Creation", path: `/${encSalesService}/${encItemCreation}` },
+        { name: "Item Group Creation", path: `/${encSalesService}/${encItemGroupCreation}` },
+        { name: "Transport Medium Creation", path: `/${encSalesService}/${encTransportMediumCreation}` },
+        { name: "Terms of Delivery Creation", path: `/${encSalesService}/${encTermsOfDeliveryCreation}` },
+        { name: "Terms of Payment Creation", path: `/${encSalesService}/${encTermsOfPaymentCreation}` },
+        { name: "Customer Creation", path: `/${encSalesService}/${encCustomerCreation}` },
+        { name: "Mail Detail Creation", path: `/${encSalesService}/${encMailDetailsCreation}` },
+        { name: "Document Type Creation", path: `/${encSalesService}/${encDocumentType}` },
+        { name: "Transport Entry", path: `/${encSalesService}/${encTransportMaster}` },
+        { name: "Outward Target Entry", path: `/${encSalesService}/${encTargetEntry}` },
+        { name: "RDF & Inerts Percentage Entry", path: `/${encSalesService}/${encRdfInertsPercEntry}` },
+        { name: "AFR Logistics – RFQ Entry", path: `/${encSalesService}/${encAfrRfq}` },
+        { name: "ICW Supplier Creation", path: `/${encSalesService}/${encIcwSupplierCreation}` },
+        { name: "ICW Work Order Form", path: `/${encSalesService}/${encIcwWorkOrder}` },
+      ],
+    },
+    {
+      heading: "Day Product",
+      items: [
+        { name: "Aggregate Entry", path: `/${encSalesService}/${encAggregateQuotation}` },
+        { name: "Other Aggregate Quotation Entry", path: `/${encSalesService}/${encAggregateQuotation}` },
+        { name: "Scrap Quotation Entry", path: `/${encSalesService}/${encScrapQuotation}` },
+        { name: "NOC Upload", path: `/${encSalesService}/${encNocDocument}` },
+        { name: "AFR Transport Entry", path: `/${encSalesService}/${encAfrRfq}` },
+        { name: "Daily Target Entry – Disposal", path: `/${encSalesService}/${encDailyTarget}` },
+      ],
+    },
+    {
+      heading: "Approvals",
+      items: [
+        { name: "Other Aggregate Comparison", path: `/${encSalesService}/${encAggregateComparison}` },
+        { name: "Scrap Quotation Comparison", path: `/${encSalesService}/${encScrapComparison}` },
+        { name: "Customer Creation Approval", path: `/${encSalesService}/${encCustomerApproval}` },
+        { name: "Customer Creation Dept. Approval", path: `/${encSalesService}/${encCustomerApproval}` },
+        { name: "Customer Creation Acc. Approval", path: `/${encSalesService}/${encCustomerApproval}` },
+        { name: "NOC Document Verification", path: `/${encSalesService}/${encNocVerification}` },
+        { name: "Transport Work Order Approval", path: `/${encSalesService}/${encWorkOrderApproval}` },
+        { name: "Sales Order Approval", path: `/${encSalesService}/${encSalesOrderApproval}` },
+        { name: "Sales Order Acc. Approval", path: `/${encSalesService}/${encSalesOrderApproval}` },
+        { name: "Freight Approval", path: `/${encSalesService}/${encFreightApproval}` },
+        { name: "AFR Transport Approval", path: `/${encSalesService}/${encAfrTransportApproval}` },
+        { name: "Confirmation Of Receipt Approval", path: `/${encSalesService}/${encConfirmationReceipt}` },
+      ],
+    },
+    {
+      heading: "DC / Invoice",
+      items: [
+        { name: "Transport Work Order Creation", path: `/${encSalesService}/${encWorkOrder}` },
+        { name: "Sales Order Creation", path: `/${encSalesService}/${encSalesOrder}` },
+        { name: "Freight Creation", path: `/${encSalesService}/${encFreight}` },
+        { name: "DC Entry", path: `/${encSalesService}/${encDcEntry}` },
+        { name: "Invoice Generation", path: `/${encSalesService}/${encInvoice}` },
+        { name: "Negative Invoice Generation", path: `/${encSalesService}/${encNegativeInvoice}` },
+        { name: "Freight Letter", path: `/${encSalesService}/${encFreightLetter}` },
+        { name: "Payable Entry", path: `/${encSalesService}/${encPayable}` },
+        { name: "Payable Entry Approval", path: `/${encSalesService}/${encPayableApproval}` },
+        { name: "Receivable Entry", path: `/${encSalesService}/${encReceivable}` },
+        { name: "Receivable Entry Approval", path: `/${encSalesService}/${encReceivableApproval}` },
+        { name: "Target Entry", path: `/${encSalesService}/${encTargetEntry}` },
+        { name: "Co Processing Entry", path: `/${encSalesService}/${encCoProcessing}` },
+      ],
+    },
+    {
+      heading: "Report",
+      items: [
+        { name: "Aggregate Stock Report", path: `/${encSalesService}/${encReportAggregateStock}` },
+        { name: "Aggregate Stock Report Per Day", path: `/${encSalesService}/${encReportAggregateStockPerDay}` },
+        { name: "Supply Chain Report", path: `/${encSalesService}/${encReportSupplyChain}` },
+        { name: "Work Order Status Report", path: `/${encSalesService}/${encReportWorkOrderStatus}` },
+        { name: "Graphical Representation", path: `/${encSalesService}/${encReportGraphical}` },
+        { name: "Site Wise Disposal Comparison", path: `/${encSalesService}/${encReportSiteWiseDisposalComparison}` },
+        { name: "Site Wise Disposal Report", path: `/${encSalesService}/${encReportSiteWiseDisposal}` },
+        { name: "Consolidated Monthly Site Wise Report", path: `/${encSalesService}/${encReportConsolidatedMonthly}` },
+        { name: "Payable & Receivable Tracker", path: `/${encSalesService}/${encReportPayableReceivableTracker}` },
+        { name: "Customer Creation Report", path: `/${encSalesService}/${encReportCustomerCreation}` },
+        { name: "Confirmation of Receipt", path: `/${encSalesService}/${encReportConfirmationReceipt}` },
+        { name: "MBS Report", path: `/${encSalesService}/${encReportMbs}` },
+        { name: "RDF Tracker", path: `/${encSalesService}/${encReportRdfTracker}` },
+        { name: "ICW Details Report", path: `/${encSalesService}/${encReportIcwDetails}` },
+        { name: "Others Aggregate Comparison Report", path: `/${encSalesService}/${encReportOthersAggregateComparison}` },
+      ],
+    },
+  ];
+
+  return { home, admin, masters, emMasters, salesMasters, salesService, salesColumns };
 }

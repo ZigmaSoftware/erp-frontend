@@ -20,6 +20,7 @@ import {
   customerDestinationServiceApi,
   customerItemPurposeServiceApi,
   itemCreationServiceApi,
+  siteApi,
 } from "@/helpers/admin";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import type {
@@ -30,13 +31,25 @@ import type {
 
 type Option = { value: string; label: string };
 
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+
+const pickString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.trim() ? value : undefined;
+
 const toOptions = (
   list: unknown[],
-  getId: (item: any) => string | undefined,
-  getLabel: (item: any) => string | undefined,
+  getId: (item: Record<string, unknown>) => string | undefined,
+  getLabel: (item: Record<string, unknown>) => string | undefined,
 ): Option[] =>
   list
-    .map((item) => ({ value: getId(item), label: getLabel(item) }))
+    .map((item) => {
+      const record = asRecord(item);
+      return {
+        value: record ? getId(record) : undefined,
+        label: record ? getLabel(record) : undefined,
+      };
+    })
     .filter((option): option is Option => Boolean(option.value && option.label));
 
 const todayValue = () => new Date().toISOString().slice(0, 10);
@@ -62,7 +75,8 @@ export default function CustomerItemPurposeModal({
 }) {
   const [rows, setRows] = useState<CustomerItemPurpose[]>([]);
   const [destinations, setDestinations] = useState<CustomerDestination[]>([]);
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<unknown[]>([]);
+  const [masterSites, setMasterSites] = useState<unknown[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -75,42 +89,72 @@ export default function CustomerItemPurposeModal({
   const [rowPurposeApplication, setRowPurposeApplication] = useState("");
   const [rowStatus, setRowStatus] = useState<"active" | "inactive">("active");
 
+  const masterSiteNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    masterSites.forEach((site) => {
+      const record = asRecord(site);
+      if (!record) return;
+
+      const id = pickString(record.unique_id) ?? pickString(record.id);
+      const label =
+        pickString(record.site_name) ?? pickString(record.name) ?? pickString(record.label);
+      if (id && label) map.set(id, label);
+    });
+    return map;
+  }, [masterSites]);
+
   const siteOptions: Option[] = useMemo(() => {
     if (!customer) return [];
     const names = customer.site_names ?? [];
     const ids = customer.sites ?? [];
     return ids.map((id, index) => ({
       value: id,
-      label: names[index] ?? id,
+      label: masterSiteNameById.get(id) ?? names[index] ?? id,
     }));
-  }, [customer]);
+  }, [customer, masterSiteNameById]);
+
+  const selectedSiteLabels = useMemo(
+    () => siteOptions.map((option) => option.label).filter(Boolean),
+    [siteOptions],
+  );
+
+  const getSiteLabel = (siteId?: string | null, fallback?: string | null) =>
+    siteOptions.find((option) => option.value === siteId)?.label ||
+    siteOptions.find((option) => option.value === fallback)?.label ||
+    (siteId ? masterSiteNameById.get(siteId) : undefined) ||
+    (fallback ? masterSiteNameById.get(fallback) : undefined) ||
+    fallback ||
+    siteId ||
+    "-";
 
   const destinationOptions: Option[] = useMemo(
     () =>
       toOptions(
         destinations.filter((d) => d.site === rowSite),
-        (d) => d.destination,
-        (d) => d.destination,
+        (d) => pickString(d.destination),
+        (d) => pickString(d.destination),
       ),
     [destinations, rowSite],
   );
 
   const itemOptions: Option[] = useMemo(
-    () => toOptions(items, (i) => i.unique_id, (i) => i.item_name),
+    () => toOptions(items, (i) => pickString(i.unique_id), (i) => pickString(i.item_name)),
     [items],
   );
 
   const loadData = async (customerId: string) => {
     setLoading(true);
     try {
-      const [itemPurposeRes, destinationRes, itemRes] = await Promise.all([
+      const [itemPurposeRes, destinationRes, itemRes, siteRes] = await Promise.all([
         customerItemPurposeServiceApi.list({ params: { customer: customerId } }),
         customerDestinationServiceApi.list({ params: { customer: customerId } }),
         itemCreationServiceApi.list(),
+        siteApi.list(),
       ]);
       setRows(itemPurposeRes as CustomerItemPurpose[]);
       setDestinations(destinationRes as CustomerDestination[]);
       setItems(itemRes as unknown[]);
+      setMasterSites(siteRes as unknown[]);
     } catch {
       Swal.fire({
         icon: "error",
@@ -127,7 +171,6 @@ export default function CustomerItemPurposeModal({
       loadData(customer.unique_id);
       resetRow();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, customer]);
 
   const resetRow = () => {
@@ -231,7 +274,7 @@ export default function CustomerItemPurposeModal({
           <div>
             <span className="text-gray-500">Site Name: </span>
             <span className="font-medium">
-              {(customer?.site_names ?? []).join(", ") || "-"}
+              {selectedSiteLabels.join(", ") || "-"}
             </span>
           </div>
         </div>
@@ -393,7 +436,9 @@ export default function CustomerItemPurposeModal({
                   <td className="border px-3 py-2">
                     {new Date(row.created_at ?? "").toLocaleDateString("en-GB")}
                   </td>
-                  <td className="border px-3 py-2">{row.site_name ?? "-"}</td>
+                  <td className="border px-3 py-2">
+                    {getSiteLabel(row.site, row.site_name)}
+                  </td>
                   <td className="border px-3 py-2">{row.destination}</td>
                   <td className="border px-3 py-2">{row.item_name ?? "-"}</td>
                   <td className="border px-3 py-2">
