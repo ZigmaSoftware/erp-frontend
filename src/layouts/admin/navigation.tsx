@@ -72,6 +72,7 @@ export function getAdminNavigation(): AdminNavConfig {
     encScrapQuotation,
     encNocDocument,
     encDailyTarget,
+    encAggregateEntry,
     encAfrRfq,
     encWorkOrder,
     encSalesOrder,
@@ -220,7 +221,7 @@ export function getAdminNavigation(): AdminNavConfig {
     {
       heading: "Day Product",
       items: [
-        { name: "Aggregate Entry", path: `/${encSalesService}/${encAggregateQuotation}` },
+        { name: "Aggregate Entry", path: `/${encSalesService}/${encAggregateEntry}` },
         { name: "Other Aggregate Quotation Entry", path: `/${encSalesService}/${encAggregateQuotation}` },
         { name: "Scrap Quotation Entry", path: `/${encSalesService}/${encScrapQuotation}` },
         { name: "NOC Upload", path: `/${encSalesService}/${encNocDocument}` },

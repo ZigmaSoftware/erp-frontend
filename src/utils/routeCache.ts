@@ -73,6 +73,7 @@ export type EncryptedRoutes = {
   encScrapQuotation: string;
   encNocDocument: string;
   encDailyTarget: string;
+  encAggregateEntry: string;
   encAfrRfq: string;
   encWorkOrder: string;
   encSalesOrder: string;
@@ -187,6 +188,7 @@ const plainRoutes: EncryptedRoutes = {
   encScrapQuotation: "scrap-quotation",
   encNocDocument: "noc-document",
   encDailyTarget: "daily-target",
+  encAggregateEntry: "aggregate-entry",
   encAfrRfq: "afr-rfq",
   encWorkOrder: "work-order",
   encSalesOrder: "sales-order",

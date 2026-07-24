@@ -73,6 +73,7 @@ export const aggregateQuotationApi = salesTransactionApi.aggregateQuotations;
 export const scrapQuotationApi = salesTransactionApi.scrapQuotations;
 export const nocDocumentApi = salesTransactionApi.nocDocuments;
 export const dailyTargetApi = salesTransactionApi.dailyTargets;
+export const aggregateEntryApi = salesTransactionApi.aggregateEntries;
 export const afrRfqApi = salesTransactionApi.afrRfqs;
 export const workOrderApi = salesTransactionApi.workOrders;
 export const salesOrderApi = salesTransactionApi.salesOrders;

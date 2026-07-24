@@ -447,6 +447,37 @@ export interface DailyTargetDisposal extends BaseEntity {
   sub_items?: DailyTargetDisposalSub[];
 }
 
+/* ===========================================================
+   AGGREGATE ENTRY (legacy scrap_entry / scrap_entry_sub)
+   site_name / plant_name / item_name store Master Service IDs;
+   the client resolves the display names.
+=========================================================== */
+export interface AggregateEntrySub extends BaseEntity {
+  random_no?: string;
+  random_sc?: string;
+  scrap_no?: string;
+  entry_date?: string;
+  site_name?: string;
+  plant_name?: string;
+  item_name: string;
+  stock: number | string;
+  receipt: number | string;
+  remarks?: string;
+}
+
+export interface AggregateEntry extends BaseEntity {
+  random_no?: string;
+  random_sc?: string;
+  scrap_no: string;
+  entry_date: string;
+  site_name: string;
+  plant_name?: string;
+  description?: string;
+  created_by?: string;
+  updated_by?: string;
+  sub_items?: AggregateEntrySub[];
+}
+
 export interface AfrTransportRfq extends BaseEntity {
   request_quotation_transportation: string;
   source: string;
