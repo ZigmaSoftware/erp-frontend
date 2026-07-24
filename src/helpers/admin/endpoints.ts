@@ -122,6 +122,7 @@ export const salesTransactionEndpoints = {
   scrapQuotations: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/scrap-quotations/`,
   nocDocuments: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/noc-documents/`,
   dailyTargets: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/daily-targets/`,
+  aggregateEntries: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/aggregate-entries/`,
   afrRfqs: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/afr-rfqs/`,
   workOrders: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/work-orders/`,
   salesOrders: `${SALES_SERVICE}/${CURRENT_VERSION}/${SALES_SERVICE_APP}/sales-orders/`,

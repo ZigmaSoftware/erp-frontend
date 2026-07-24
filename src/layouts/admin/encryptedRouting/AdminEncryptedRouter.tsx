@@ -110,6 +110,8 @@ import NocDocumentServiceList from "@/pages/admin/modules/salesService/nocDocume
 import NocDocumentServiceForm from "@/pages/admin/modules/salesService/nocDocument/nocDocumentForm";
 import DailyTargetServiceList from "@/pages/admin/modules/salesService/dailyTarget/dailyTargetList";
 import DailyTargetServiceForm from "@/pages/admin/modules/salesService/dailyTarget/dailyTargetForm";
+import AggregateEntryServiceList from "@/pages/admin/modules/salesService/aggregateEntry/aggregateEntryList";
+import AggregateEntryServiceForm from "@/pages/admin/modules/salesService/aggregateEntry/aggregateEntryForm";
 import AfrRfqServiceList from "@/pages/admin/modules/salesService/afrRfq/afrRfqList";
 import AfrRfqServiceForm from "@/pages/admin/modules/salesService/afrRfq/afrRfqForm";
 // Phase 4 - Transactions
@@ -242,6 +244,7 @@ const ROUTES: RouteMap = {
     "scrap-quotation": { list: ScrapQuotationServiceList, form: ScrapQuotationServiceForm },
     "noc-document": { list: NocDocumentServiceList, form: NocDocumentServiceForm },
     "daily-target": { list: DailyTargetServiceList, form: DailyTargetServiceForm },
+    "aggregate-entry": { list: AggregateEntryServiceList, form: AggregateEntryServiceForm },
     "afr-rfq": { list: AfrRfqServiceList, form: AfrRfqServiceForm },
     // Phase 4 - Transactions
     "work-order": { list: WorkOrderServiceList, form: WorkOrderServiceForm },

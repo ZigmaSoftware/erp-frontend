@@ -26,8 +26,15 @@ import type {
 } from "../types/salesService.types";
 
 type Option = { value: string; label: string };
+type DraftCustomerDestination = CustomerDestination & { isDraft: true };
 
 const todayValue = () => new Date().toISOString().slice(0, 10);
+const createDraftId = () =>
+  `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const isDraftCustomerDestination = (
+  row: CustomerDestination | DraftCustomerDestination,
+): row is DraftCustomerDestination => "isDraft" in row;
 
 export default function CustomerDestinationModal({
   customer,
@@ -39,14 +46,20 @@ export default function CustomerDestinationModal({
   onClose: () => void;
 }) {
   const [rows, setRows] = useState<CustomerDestination[]>([]);
+  const [draftRows, setDraftRows] = useState<DraftCustomerDestination[]>([]);
   const [masterSites, setMasterSites] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [editingId, setEditingId] = useState("");
   const [rowSite, setRowSite] = useState("");
   const [rowDestination, setRowDestination] = useState("");
   const [rowStatus, setRowStatus] = useState<"active" | "inactive">("active");
+  const [fieldErrors, setFieldErrors] = useState({
+    site: false,
+    destination: false,
+  });
 
   const masterSiteNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -109,6 +122,7 @@ export default function CustomerDestinationModal({
 
   useEffect(() => {
     if (open && customer) {
+      setDraftRows([]);
       loadRows(customer.unique_id);
       resetRow();
     }
@@ -119,17 +133,26 @@ export default function CustomerDestinationModal({
     setRowSite("");
     setRowDestination("");
     setRowStatus("active");
+    setFieldErrors({ site: false, destination: false });
   };
 
-  const handleEdit = (row: CustomerDestination) => {
+  const handleEdit = (row: CustomerDestination | DraftCustomerDestination) => {
     setEditingId(row.unique_id);
     setRowSite(row.site);
     setRowDestination(row.destination);
     setRowStatus(row.status);
+    setFieldErrors({ site: false, destination: false });
   };
 
-  const handleDelete = async (row: CustomerDestination) => {
+  const handleDelete = async (row: CustomerDestination | DraftCustomerDestination) => {
     if (!customer) return;
+
+    if (isDraftCustomerDestination(row)) {
+      setDraftRows((prev) => prev.filter((item) => item.unique_id !== row.unique_id));
+      if (editingId === row.unique_id) resetRow();
+      return;
+    }
+
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
       text: "This destination will be permanently deleted!",
@@ -156,44 +179,104 @@ export default function CustomerDestinationModal({
 
   const handleAdd = async () => {
     if (!customer) return;
-    if (!rowSite) {
-      Swal.fire({ icon: "error", title: "Site Name is required" });
-      return;
-    }
-    if (!rowDestination.trim()) {
-      Swal.fire({ icon: "error", title: "Destination is required" });
+
+    const nextFieldErrors = {
+      site: !rowSite,
+      destination: !rowDestination.trim(),
+    };
+    setFieldErrors(nextFieldErrors);
+
+    if (nextFieldErrors.site || nextFieldErrors.destination) {
       return;
     }
 
-    setSaving(true);
-    try {
-      const payload = {
+    const payload = {
+      customer: customer.unique_id,
+      site: rowSite,
+      destination: rowDestination.trim(),
+      status: rowStatus,
+    };
+
+    if (editingId) {
+      const draftMatch = draftRows.some((item) => item.unique_id === editingId);
+      if (draftMatch) {
+        setDraftRows((prev) =>
+          prev.map((item) =>
+            item.unique_id === editingId
+              ? {
+                  ...item,
+                  ...payload,
+                }
+              : item,
+          ),
+        );
+        resetRow();
+        return;
+      }
+
+      setSaving(true);
+      try {
+        await customerDestinationServiceApi.update(editingId, payload);
+        await loadRows(customer.unique_id);
+        resetRow();
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Update failed",
+          text: extractErrorMessage(error),
+        });
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    setDraftRows((prev) => [
+      ...prev,
+      {
+        unique_id: createDraftId(),
+        is_active: true,
+        created_at: new Date().toISOString(),
         customer: customer.unique_id,
         site: rowSite,
         destination: rowDestination.trim(),
         status: rowStatus,
-      };
+        isDraft: true,
+      },
+    ]);
+    resetRow();
+  };
 
-      if (editingId) {
-        await customerDestinationServiceApi.update(editingId, payload);
-      } else {
-        await customerDestinationServiceApi.create(payload);
+  const handleSubmit = async () => {
+    if (!customer || draftRows.length === 0) return;
+
+    setSubmitting(true);
+    try {
+      for (const row of draftRows) {
+        await customerDestinationServiceApi.create({
+          customer: customer.unique_id,
+          site: row.site,
+          destination: row.destination,
+          status: row.status,
+        });
       }
 
       await loadRows(customer.unique_id);
+      setDraftRows([]);
       resetRow();
     } catch (error) {
       Swal.fire({
         icon: "error",
-        title: editingId ? "Update failed" : "Add failed",
+        title: "Submit failed",
         text: extractErrorMessage(error),
       });
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
-  const isRowDisabled = loading || saving;
+  const isRowDisabled = loading || saving || submitting;
+  const tableRows = [...draftRows, ...rows];
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
@@ -221,8 +304,16 @@ export default function CustomerDestinationModal({
               <tr className="bg-gray-50">
                 <th className="border px-3 py-2 text-left w-10">#</th>
                 <th className="border px-3 py-2 text-left">Entry Date</th>
-                <th className="border px-3 py-2 text-left">Site Name</th>
-                <th className="border px-3 py-2 text-left">Destination</th>
+                <th
+                  className={`border px-3 py-2 text-left ${fieldErrors.site ? "text-red-600" : ""}`}
+                >
+                  Site Name *
+                </th>
+                <th
+                  className={`border px-3 py-2 text-left ${fieldErrors.destination ? "text-red-600" : ""}`}
+                >
+                  Destination *
+                </th>
                 <th className="border px-3 py-2 text-left">Status</th>
                 <th className="border px-3 py-2 text-center w-28">Action</th>
               </tr>
@@ -234,8 +325,17 @@ export default function CustomerDestinationModal({
                   <Input value={todayValue()} disabled readOnly />
                 </td>
                 <td className="border px-3 py-2">
-                  <Select value={rowSite || undefined} onValueChange={setRowSite} disabled={isRowDisabled}>
-                    <SelectTrigger>
+                  <Select
+                    value={rowSite || undefined}
+                    onValueChange={(value) => {
+                      setRowSite(value);
+                      setFieldErrors((prev) => ({ ...prev, site: false }));
+                    }}
+                    disabled={isRowDisabled}
+                  >
+                    <SelectTrigger
+                      className={fieldErrors.site ? "border-red-500 text-red-600 focus:ring-red-500" : ""}
+                    >
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
@@ -250,9 +350,17 @@ export default function CustomerDestinationModal({
                 <td className="border px-3 py-2">
                   <Input
                     value={rowDestination}
-                    onChange={(e) => setRowDestination(e.target.value)}
+                    onChange={(e) => {
+                      setRowDestination(e.target.value);
+                      setFieldErrors((prev) => ({ ...prev, destination: false }));
+                    }}
                     placeholder="Destination"
                     disabled={isRowDisabled}
+                    className={
+                      fieldErrors.destination
+                        ? "border-red-500 text-red-600 placeholder:text-red-400 focus-visible:ring-red-500"
+                        : ""
+                    }
                   />
                 </td>
                 <td className="border px-3 py-2">
@@ -290,8 +398,11 @@ export default function CustomerDestinationModal({
                 </td>
               </tr>
 
-              {rows.map((row, index) => (
-                <tr key={row.unique_id}>
+              {tableRows.map((row, index) => (
+                <tr
+                  key={row.unique_id}
+                  className={isDraftCustomerDestination(row) ? "bg-amber-50" : ""}
+                >
                   <td className="border px-3 py-2">{index + 1}</td>
                   <td className="border px-3 py-2">
                     {new Date(row.created_at ?? "").toLocaleDateString("en-GB")}
@@ -322,7 +433,7 @@ export default function CustomerDestinationModal({
                 </tr>
               ))}
 
-              {!loading && rows.length === 0 && (
+              {!loading && tableRows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="border px-3 py-4 text-center text-gray-400">
                     No destinations added yet.
@@ -331,6 +442,20 @@ export default function CustomerDestinationModal({
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <span className="text-sm text-gray-500">
+            Pending: {draftRows.length}
+          </span>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={draftRows.length === 0 || isRowDisabled}
+            className="h-9 px-4"
+          >
+            {submitting ? "Submitting..." : "Submit"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
