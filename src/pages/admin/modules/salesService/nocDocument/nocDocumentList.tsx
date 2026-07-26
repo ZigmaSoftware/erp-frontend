@@ -35,9 +35,24 @@ import {
   siteApi,
 } from "@/helpers/admin";
 import { extractErrorMessage } from "@/utils/errorUtils";
-import type { NocListRow } from "../types/salesService.types";
+import { DISPOSAL_TYPE_LABELS } from "@/utils/disposalTypes";
+import { openDocumentPopup } from "@/utils/documentPreview";
+import { normalizeRelationId, pickSiteId } from "@/utils/formHelpers";
+import type {
+  NocDocumentUploadRow,
+  NocListRow,
+} from "../types/salesService.types";
 
 type Option = { value: string; label: string };
+type PendingDocument = {
+  id: string;
+  documentTypeId: string;
+  file: File;
+  previewUrl: string;
+};
+
+const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "pdf"];
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 const toOptions = (
   list: unknown[],
@@ -48,11 +63,14 @@ const toOptions = (
     .map((item) => ({ value: getId(item), label: getLabel(item) }))
     .filter((option): option is Option => Boolean(option.value && option.label));
 
-const DISPOSAL_TYPE_LABELS: Record<string, string> = {
-  customer_scope: "Customer Scope",
-  zigma_scope: "Zigma Scope",
-  transport_scope: "Transport Scope",
+const displayDate = (value?: string | null) => {
+  if (!value) return "-";
+  const [year, month, day] = value.slice(0, 10).split("-");
+  return year && month && day ? `${day}-${month}-${year}` : value;
 };
+
+const createPendingId = () =>
+  `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export default function NocDocumentList() {
   const [rows, setRows] = useState<NocListRow[]>([]);
@@ -60,39 +78,50 @@ export default function NocDocumentList() {
 
   const [customers, setCustomers] = useState<any[]>([]);
   const [sites, setSites] = useState<any[]>([]);
+  const [docTypes, setDocTypes] = useState<any[]>([]);
 
   const [customerFilter, setCustomerFilter] = useState("");
   const [siteFilter, setSiteFilter] = useState("");
-
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
-  /* ---------------- Upload dialog state ---------------- */
   const [uploadRow, setUploadRow] = useState<NocListRow | null>(null);
-  const [docTypeId, setDocTypeId] = useState("");
-  const [documentName, setDocumentName] = useState("");
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [selectedDocTypeId, setSelectedDocTypeId] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [dialogError, setDialogError] = useState("");
 
-  /* -----------------------------------------------------------
-     LOAD DROPDOWN OPTIONS (customers with NOC upload enabled, sites)
-  ----------------------------------------------------------- */
   useEffect(() => {
     const loadOptions = async () => {
-      try {
-        const [customerList, siteList] = await Promise.all([
-          customerCreationServiceApi.list(),
-          siteApi.list(),
-        ]);
-        setCustomers(customerList as unknown[]);
-        setSites(siteList as unknown[]);
-      } catch {
+      const results = await Promise.allSettled([
+        customerCreationServiceApi.list(),
+        siteApi.list(),
+        documentTypeServiceApi.list(),
+      ]);
+
+      const [customerResult, siteResult, documentTypeResult] = results;
+      if (customerResult.status === "fulfilled") {
+        setCustomers(customerResult.value as unknown[]);
+      }
+      if (siteResult.status === "fulfilled") {
+        setSites(siteResult.value as unknown[]);
+      }
+      if (documentTypeResult.status === "fulfilled") {
+        setDocTypes(documentTypeResult.value as unknown[]);
+      }
+
+      const failedRequests = results.filter(
+        (result): result is PromiseRejectedResult => result.status === "rejected",
+      );
+      if (failedRequests.length > 0) {
         Swal.fire({
           icon: "error",
           title: "Failed to load dropdown options",
-          text: "Something went wrong!",
+          text: "Sales Service is unavailable. Start the Sales Service on port 8003, then reload this page.",
         });
       }
     };
@@ -103,29 +132,36 @@ export default function NocDocumentList() {
   const customerOptions = useMemo(
     () =>
       toOptions(
-        customers.filter((c: any) => c.noc_upload),
-        (c) => c.unique_id,
-        (c) => c.customer_name,
+        customers.filter((customer: any) => customer.noc_upload),
+        (customer) => customer.unique_id,
+        (customer) => customer.customer_name,
       ),
     [customers],
   );
 
   const siteOptions = useMemo(
-    () => toOptions(sites, (s) => s.unique_id, (s) => s.site_name),
+    () => toOptions(sites, (site) => site.unique_id, (site) => site.site_name),
     [sites],
   );
 
   const siteNameById = useMemo(() => {
     const map = new Map<string, string>();
-    sites.forEach((s: any) => {
-      if (s.unique_id) map.set(s.unique_id, s.site_name);
+    sites.forEach((site: any) => {
+      const key = normalizeRelationId(site);
+      if (key) map.set(key, site.site_name || site.name || key);
     });
     return map;
   }, [sites]);
 
-  /* -----------------------------------------------------------
-     LOAD WORKLIST
-  ----------------------------------------------------------- */
+  const customerById = useMemo(() => {
+    const map = new Map<string, any>();
+    customers.forEach((customer: any) => {
+      const key = normalizeRelationId(customer);
+      if (key) map.set(key, customer);
+    });
+    return map;
+  }, [customers]);
+
   const fetchRows = async () => {
     setLoading(true);
     try {
@@ -133,17 +169,17 @@ export default function NocDocumentList() {
       if (customerFilter) params.customer = customerFilter;
       if (siteFilter) params.site = siteFilter;
 
-      const res = await customerItemPurposeServiceApi.action<NocListRow[]>(
+      const response = await customerItemPurposeServiceApi.action<NocListRow[]>(
         "noc-list",
         undefined,
         { params },
       );
-      setRows(Array.isArray(res) ? res : []);
+      setRows(Array.isArray(response) ? response : []);
     } catch {
       Swal.fire({
         icon: "error",
         title: "Failed to load NOC upload list",
-        text: "Something went wrong!",
+        text: "Sales Service is unavailable. Start the Sales Service on port 8003, then reload this page.",
       });
     } finally {
       setLoading(false);
@@ -152,101 +188,152 @@ export default function NocDocumentList() {
 
   useEffect(() => {
     fetchRows();
+    // The initial worklist should load once; GO handles later filter changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onGlobalFilterChange = (e: any) => {
-    const value = e.target.value;
-    const _filters = { ...filters };
-    _filters["global"].value = value;
-    setFilters(_filters);
+  const onGlobalFilterChange = (event: any) => {
+    const value = event.target.value;
+    setFilters({ global: { value, matchMode: FilterMatchMode.CONTAINS } });
     setGlobalFilterValue(value);
   };
 
   const indexTemplate = (_: NocListRow, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
-  const siteNameTemplate = (row: NocListRow) =>
-    siteNameById.get(row.site_id) ?? row.site_id;
-
   const disposalTypeTemplate = (row: NocListRow) =>
     DISPOSAL_TYPE_LABELS[row.disposal_type] ?? row.disposal_type;
 
-  const verifyStatusTemplate = (value: string) =>
-    value ? (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-        Yes
-      </span>
-    ) : (
-      ""
-    );
+  const verifyStatusTemplate = (value: string) => {
+    const normalizedValue = value || "Pending";
+    const displayValue =
+      normalizedValue === "Approve" ? "Verified" : normalizedValue === "Reject" ? "Cancel" : normalizedValue;
+    const statusClass =
+      displayValue === "Verified"
+        ? "bg-green-100 text-green-800"
+        : displayValue === "Cancel"
+          ? "bg-red-100 text-red-800"
+          : "bg-yellow-100 text-yellow-800";
 
-  const openUploadDialog = (row: NocListRow) => {
-    setUploadRow(row);
-    setDocTypeId(row.noc_doc_type_id ?? "");
-    setDocumentName(row.document_name ?? "");
-    setDocumentFile(null);
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+        {displayValue}
+      </span>
+    );
   };
 
-  const handleUploadSubmit = async () => {
+  const openUploadDialog = (row: NocListRow) => {
+    pendingDocuments.forEach((document) => URL.revokeObjectURL(document.previewUrl));
+    setUploadRow(row);
+    setSelectedDocTypeId("");
+    setSelectedFiles([]);
+    setPendingDocuments([]);
+    setFileInputKey((key) => key + 1);
+    setDialogError("");
+  };
+
+  const closeUploadDialog = () => {
+    pendingDocuments.forEach((document) => URL.revokeObjectURL(document.previewUrl));
+    setPendingDocuments([]);
+    setUploadRow(null);
+  };
+
+  const addDocuments = () => {
+    const documentTypeId = selectedDocTypeId.trim();
+    if (!documentTypeId) {
+      setDialogError("Document type is required.");
+      return;
+    }
+    if (selectedFiles.length === 0) {
+      setDialogError("Please choose a document.");
+      return;
+    }
+
+    const invalidFile = selectedFiles.find((file) => {
+      const extension = file.name.split(".").pop()?.toLowerCase();
+      return !extension || !ALLOWED_EXTENSIONS.includes(extension) || file.size > MAX_FILE_SIZE;
+    });
+    if (invalidFile) {
+      const extension = invalidFile.name.split(".").pop()?.toLowerCase();
+      const message =
+        extension && ALLOWED_EXTENSIONS.includes(extension)
+          ? "Each file must be 15 MB or smaller."
+          : "Allowed extensions: .jpg, .jpeg, .png, .pdf.";
+      setDialogError(message);
+      return;
+    }
+
+    setPendingDocuments((current) => [
+      ...current,
+      ...selectedFiles.map((file) => ({
+        id: createPendingId(),
+        documentTypeId,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    ]);
+    setSelectedFiles([]);
+    setFileInputKey((key) => key + 1);
+    setDialogError("");
+  };
+
+  const handleSubmit = async () => {
     if (!uploadRow) return;
-    if (!documentFile && !uploadRow.document_file) {
-      Swal.fire({ icon: "error", title: "Please choose a file to upload" });
+    if (pendingDocuments.length === 0) {
+      setDialogError("Add at least one document before submitting.");
       return;
     }
 
     setUploading(true);
-    const formData = new FormData();
-    if (docTypeId) formData.append("noc_doc_type_id", docTypeId);
-    formData.append("document_name", documentName);
-    if (documentFile) formData.append("document_file", documentFile);
-
     try {
-      await nocDocumentApi.uploadUpdate(uploadRow.unique_id, formData);
+      await Promise.all(
+        pendingDocuments.map(({ documentTypeId, file }) => {
+          const formData = new FormData();
+          formData.append("scrap_customer_id", uploadRow.customer_id);
+          formData.append("scrap_item_purpose_id", uploadRow.item_purpose_id);
+          formData.append("site_id", uploadRow.site_id);
+          formData.append("noc_doc_type_id", documentTypeId);
+          formData.append("dispose_type", uploadRow.disposal_type);
+          formData.append("customer_destination", uploadRow.destination);
+          formData.append(
+            "entry_date",
+            uploadRow.customer_entry_date ||
+              customerById.get(uploadRow.customer_id)?.entry_date ||
+              "",
+          );
+          formData.append("document_name", file.name);
+          formData.append("document_file", file);
+          return nocDocumentApi.upload(formData);
+        }),
+      );
+
       Swal.fire({
         icon: "success",
-        title: "Uploaded successfully!",
+        title: "Documents submitted successfully!",
         timer: 1500,
         showConfirmButton: false,
       });
-      setUploadRow(null);
-      fetchRows();
+      closeUploadDialog();
+      await fetchRows();
     } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Upload failed",
-        text: extractErrorMessage(error),
-      });
+      setDialogError(
+        (error as any)?.response?.status === 503
+          ? "Sales Service is unavailable. Start the Sales Service on port 8003, then reload this page."
+          : extractErrorMessage(error),
+      );
     } finally {
       setUploading(false);
     }
   };
 
   const actionTemplate = (row: NocListRow) => (
-    <div className="flex gap-3 justify-center">
-      <button
-        title="Upload NOC Document"
-        className="text-blue-600 hover:text-blue-800"
-        onClick={() => openUploadDialog(row)}
-      >
-        <i className="pi pi-upload text-lg" />
-      </button>
-
-      <button
-        title="View"
-        className={
-          row.document_file
-            ? "text-gray-700 hover:text-black"
-            : "text-gray-300 cursor-not-allowed"
-        }
-        disabled={!row.document_file}
-        onClick={() =>
-          row.document_file && window.open(row.document_file, "_blank")
-        }
-      >
-        <i className="pi pi-eye text-lg" />
-      </button>
-    </div>
+    <button
+      title="NOC Upload / View"
+      className="text-blue-600 hover:text-blue-800"
+      onClick={() => openUploadDialog(row)}
+    >
+      <i className="pi pi-upload text-lg" />
+    </button>
   );
 
   const header = (
@@ -263,12 +350,29 @@ export default function NocDocumentList() {
     </div>
   );
 
+  const selectedRowCustomer = uploadRow
+    ? customerById.get(normalizeRelationId(uploadRow.customer_id))
+    : undefined;
+  const uploadDocumentTypes = uploadRow
+    ? toOptions(
+        docTypes.filter((documentType: any) => documentType.disposal_type === uploadRow.disposal_type),
+        (documentType) => documentType.unique_id,
+        (documentType) => documentType.doc_type,
+      )
+    : [];
+
+  const documentTypeName = (id?: string | null) =>
+    docTypes.find((documentType: any) => documentType.unique_id === id)?.doc_type ?? "-";
+
+  const resolveSiteName = (value: unknown) => {
+    const key = pickSiteId(value);
+    return (key && siteNameById.get(key)) || key || "-";
+  };
+
   return (
     <div className="px-3 py-3 w-full">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-1">
-          NOC Document Upload
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-1">NOC Document Upload</h1>
         <p className="text-gray-500 text-sm">
           Upload NOC documents for each customer's destination and item
         </p>
@@ -278,14 +382,10 @@ export default function NocDocumentList() {
         <div>
           <Label>Customer Name</Label>
           <Select value={customerFilter} onValueChange={setCustomerFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
             <SelectContent>
               {customerOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -294,22 +394,16 @@ export default function NocDocumentList() {
         <div>
           <Label>Site Name</Label>
           <Select value={siteFilter} onValueChange={setSiteFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
             <SelectContent>
               {siteOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        <div>
-          <Button onClick={fetchRows}>GO</Button>
-        </div>
+        <div><Button onClick={fetchRows}>GO</Button></div>
       </div>
 
       <DataTable
@@ -319,12 +413,7 @@ export default function NocDocumentList() {
         loading={loading}
         filters={filters}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        globalFilterFields={[
-          "customer_name",
-          "destination",
-          "item_name",
-          "disposal_type",
-        ]}
+        globalFilterFields={["customer_name", "site_name", "destination", "item_name", "disposal_type"]}
         header={header}
         emptyMessage="No NOC upload records found."
         stripedRows
@@ -332,110 +421,86 @@ export default function NocDocumentList() {
         className="p-datatable-sm"
       >
         <Column header="S.No" body={indexTemplate} style={{ width: "70px" }} />
-        <Column
-          field="customer_name"
-          header="Customer Name"
-          sortable
-          style={{ minWidth: "160px" }}
-        />
-        <Column
-          header="Site Name"
-          body={siteNameTemplate}
-          sortable
-          style={{ minWidth: "160px" }}
-        />
-        <Column
-          field="destination"
-          header="Destination"
-          sortable
-          style={{ minWidth: "160px" }}
-        />
-        <Column
-          field="item_name"
-          header="Item Name"
-          sortable
-          style={{ minWidth: "160px" }}
-        />
-        <Column
-          header="Disposal Type"
-          body={disposalTypeTemplate}
-          sortable
-          style={{ minWidth: "160px" }}
-        />
-        <Column
-          header="Disposal Type Verify Status"
-          body={(row: NocListRow) =>
-            verifyStatusTemplate(row.item_verification_status)
-          }
-          style={{ minWidth: "160px" }}
-        />
-        <Column
-          header="Destination Approve Status"
-          body={(row: NocListRow) =>
-            verifyStatusTemplate(row.destination_verification_status)
-          }
-          style={{ minWidth: "160px" }}
-        />
-        <Column
-          header="NOC Upload / View"
-          body={actionTemplate}
-          style={{ width: "140px" }}
-        />
+        <Column field="customer_name" header="Customer Name" sortable style={{ minWidth: "160px" }} />
+        <Column header="Site Name" body={(row: NocListRow) => row.site_name || resolveSiteName(row.site_id)} sortable style={{ minWidth: "160px" }} />
+        <Column field="destination" header="Destination" sortable style={{ minWidth: "160px" }} />
+        <Column field="item_name" header="Item Name" sortable style={{ minWidth: "160px" }} />
+        <Column header="Disposal Type" body={disposalTypeTemplate} sortable style={{ minWidth: "160px" }} />
+        <Column header="Disposal Type Verify Status" body={(row: NocListRow) => verifyStatusTemplate(row.item_verification_status)} style={{ minWidth: "160px" }} />
+        <Column header="Destination Approve Status" body={(row: NocListRow) => verifyStatusTemplate(row.destination_verification_status)} style={{ minWidth: "160px" }} />
+        <Column header="NOC Upload / View" body={actionTemplate} style={{ width: "140px" }} />
       </DataTable>
 
-      <Dialog open={Boolean(uploadRow)} onOpenChange={(open) => !open && setUploadRow(null)}>
-        <DialogContent>
+      <Dialog open={Boolean(uploadRow)} onOpenChange={(open) => !open && closeUploadDialog()}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Upload NOC Document</DialogTitle>
+            <DialogTitle>NOC Upload / View</DialogTitle>
           </DialogHeader>
 
           {uploadRow && (
-            <div className="space-y-4">
-              <div className="text-sm text-gray-600">
-                {uploadRow.customer_name} &middot; {uploadRow.destination} &middot;{" "}
-                {uploadRow.item_name}
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 rounded-md bg-gray-50 p-4 text-sm">
+                <ReadOnlyField label="Date" value={displayDate(uploadRow.customer_entry_date || selectedRowCustomer?.entry_date)} />
+                <ReadOnlyField label="Site Name" value={uploadRow.site_name || resolveSiteName(uploadRow.site_id)} />
+                <ReadOnlyField label="Customer Destination" value={uploadRow.destination} />
+                <ReadOnlyField label="Disposal Type" value={DISPOSAL_TYPE_LABELS[uploadRow.disposal_type] ?? uploadRow.disposal_type} />
               </div>
 
               <div>
-                <Label>Document Type</Label>
-                <DocTypeSelect value={docTypeId} onChange={setDocTypeId} />
+                <Label>Document Type *</Label>
+                <select
+                  value={selectedDocTypeId}
+                  onChange={(event) => {
+                    setSelectedDocTypeId(event.target.value);
+                    setDialogError("");
+                  }}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <option value="">Select document type</option>
+                    {uploadDocumentTypes.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                </select>
               </div>
 
               <div>
-                <Label>Document Name</Label>
+                <Label>Upload Documents</Label>
                 <Input
-                  value={documentName}
-                  onChange={(e) => setDocumentName(e.target.value)}
-                  placeholder="Document Name"
-                />
-              </div>
-
-              <div>
-                <Label>Document File</Label>
-                <Input
+                  key={fileInputKey}
                   type="file"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) setDocumentFile(file);
+                  multiple
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={(event) => {
+                    setSelectedFiles(Array.from(event.target.files ?? []));
+                    setDialogError("");
                   }}
                 />
-                {uploadRow.document_file && !documentFile && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Current file: {uploadRow.document_file.split("/").pop()}
+                <p className="mt-1 text-xs text-gray-500">
+                  Allowed Extensions: .jpg, .jpeg, .png, .pdf. Maximum size: 15 MB per file.
+                </p>
+                <div className="mt-3 flex justify-end">
+                  <Button type="button" onClick={addDocuments}>Add</Button>
+                </div>
+                {dialogError && (
+                  <p role="alert" className="mt-2 text-sm font-medium text-red-600">
+                    {dialogError}
                   </p>
                 )}
               </div>
 
+              <DocumentTable
+                documents={uploadRow.documents ?? []}
+                pendingDocuments={pendingDocuments}
+                entryDate={uploadRow.customer_entry_date || selectedRowCustomer?.entry_date}
+                documentTypeName={documentTypeName}
+              />
+
               <div className="flex justify-end gap-3">
-                <Button onClick={handleUploadSubmit} disabled={uploading}>
-                  {uploading ? "Uploading..." : "Upload"}
+                <Button type="button" onClick={handleSubmit} disabled={uploading}>
+                  {uploading ? "Submitting..." : "Submit"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setUploadRow(null)}
-                >
-                  Cancel
+                <Button type="button" variant="destructive" onClick={closeUploadDialog}>
+                  Close
                 </Button>
               </div>
             </div>
@@ -446,40 +511,126 @@ export default function NocDocumentList() {
   );
 }
 
-function DocTypeSelect({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [docTypes, setDocTypes] = useState<unknown[]>([]);
-
-  useEffect(() => {
-    documentTypeServiceApi
-      .list()
-      .then((list) => setDocTypes(list as unknown[]))
-      .catch(() => undefined);
-  }, []);
-
-  const docTypeOptions = toOptions(
-    docTypes,
-    (d) => d.unique_id,
-    (d) => d.doc_type,
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="font-semibold text-gray-700">{label}</div>
+      <div className="mt-1 text-gray-600">{value || "-"}</div>
+    </div>
   );
+}
+
+function DocumentTable({
+  documents,
+  pendingDocuments,
+  entryDate,
+  documentTypeName,
+}: {
+  documents: NocDocumentUploadRow[];
+  pendingDocuments: PendingDocument[];
+  entryDate?: string | null;
+  documentTypeName: (id?: string | null) => string;
+}) {
+  const rows = [
+    ...documents.map((document) => ({
+      id: document.unique_id,
+      entryDate: document.entry_date,
+      documentType: documentTypeName(document.noc_doc_type_id),
+      documentName: document.document_name,
+      fileUrl: document.document_file,
+      thumbnailUrl: document.document_file,
+      mimeType: "",
+      verifyDate: document.approve_date,
+      verifyStatus: document.approve_status || "Pending",
+      pending: false,
+    })),
+    ...pendingDocuments.map((document) => ({
+      id: document.id,
+      entryDate: entryDate ?? "",
+      documentType: documentTypeName(document.documentTypeId),
+      documentName: document.file.name,
+      file: document.file,
+      fileUrl: null,
+      thumbnailUrl: document.previewUrl,
+      mimeType: document.file.type,
+      verifyDate: null,
+      verifyStatus: "Pending",
+      pending: true,
+    })),
+  ];
+
+  const openPreview = (row: (typeof rows)[number]) => {
+    const file = "file" in row ? (row.file as File) : null;
+    const url = row.fileUrl || (file ? row.thumbnailUrl : null);
+    if (!url) return;
+    const fallbackName = url.split("?")[0].split("/").pop() || "document";
+
+    openDocumentPopup(
+      url,
+      row.documentName || fallbackName,
+      row.mimeType,
+      Boolean(file),
+    );
+  };
+
+  const isImageDocument = (row: (typeof rows)[number]) =>
+    row.mimeType.startsWith("image/") ||
+    /\.(jpe?g|png|webp)$/i.test(`${row.documentName} ${row.thumbnailUrl ?? ""}`);
+
+  const isPdfDocument = (row: (typeof rows)[number]) =>
+    row.mimeType === "application/pdf" ||
+    /\.pdf$/i.test(`${row.documentName} ${row.thumbnailUrl ?? ""}`);
 
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger>
-        <SelectValue placeholder="Select" />
-      </SelectTrigger>
-      <SelectContent>
-        {docTypeOptions.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <>
+      <div className="overflow-x-auto rounded-md border">
+        <table className="w-full min-w-[680px] text-sm">
+          <thead className="bg-gray-100 text-left">
+            <tr>
+              <th className="p-2">S.No</th>
+              <th className="p-2">Entry Date</th>
+              <th className="p-2">Document Type</th>
+              <th className="p-2">View</th>
+              <th className="p-2">Verify Date</th>
+              <th className="p-2">Verify Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr><td colSpan={6} className="p-4 text-center text-gray-500">No documents added.</td></tr>
+            ) : rows.map((row, index) => (
+              <tr key={row.id} className="border-t">
+                <td className="p-2">{index + 1}</td>
+                <td className="p-2">{displayDate(row.entryDate)}</td>
+                <td className="p-2">{row.documentType}</td>
+                <td className="p-2">
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-12 items-center justify-center text-blue-600 hover:text-blue-800"
+                    title="View document"
+                    onClick={() => openPreview(row)}
+                  >
+                    {isImageDocument(row) && row.thumbnailUrl ? (
+                      <img
+                        src={row.thumbnailUrl}
+                        alt={row.documentName || "Document"}
+                        className="h-10 w-12 rounded border object-cover"
+                      />
+                    ) : isPdfDocument(row) ? (
+                      <i className="pi pi-file-pdf text-2xl text-red-600" />
+                    ) : (
+                      <i className="pi pi-file text-2xl text-gray-600" />
+                    )}
+                  </button>
+                </td>
+                <td className="p-2">{displayDate(row.verifyDate)}</td>
+                <td className="p-2">{row.verifyStatus}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+    </>
   );
 }

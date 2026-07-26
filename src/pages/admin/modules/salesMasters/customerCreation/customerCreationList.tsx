@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { MapPin, Target, CheckCircle2 } from "lucide-react";
@@ -16,13 +16,15 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { customerCreationApi } from "@/helpers/admin";
+import { customerCreationApi, siteApi } from "@/helpers/admin";
+import { pickSiteId } from "@/utils/formHelpers";
 import type { CustomerCreation } from "../types/salesMasters.types";
 import CustomerDestinationModal from "./customerDestinationModal";
 import CustomerItemPurposeModal from "./customerItemPurposeModal";
 
 export default function CustomerCreationList() {
   const [customers, setCustomers] = useState<CustomerCreation[]>([]);
+  const [sites, setSites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -52,7 +54,17 @@ export default function CustomerCreationList() {
 
   useEffect(() => {
     fetchCustomers();
+    siteApi.list().then((res) => setSites(res as any[])).catch(() => undefined);
   }, []);
+
+  const siteNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    sites.forEach((site: any) => {
+      const id = pickSiteId(site);
+      if (id) map.set(id, site.site_name || site.name || id);
+    });
+    return map;
+  }, [sites]);
 
   const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
@@ -94,8 +106,22 @@ export default function CustomerCreationList() {
   const partyTypeTemplate = (row: CustomerCreation) =>
     row.customer_type === "creditor" ? "Creditor" : "Debitor";
 
-  const siteNameTemplate = (row: CustomerCreation) =>
-    (row.site_names ?? []).join(", ") || "-";
+  const siteNameTemplate = (row: CustomerCreation) => {
+    const names = row.site_names?.filter(Boolean) ?? [];
+    if (names.length > 0) return names.join(", ");
+
+    const resolvedNames = (row.sites ?? [])
+      .map((site) => {
+        const id = pickSiteId(site);
+        // Some records store the site name directly rather than its id
+        // (legacy-migrated data); fall back to the raw stored value so it
+        // still displays instead of dropping the row's site entirely.
+        return siteNameById.get(id) || id;
+      })
+      .filter(Boolean);
+
+    return resolvedNames.length > 0 ? resolvedNames.join(", ") : "-";
+  };
 
   const nocUploadTemplate = (row: CustomerCreation) => (row.noc_upload ? "Yes" : "No");
 

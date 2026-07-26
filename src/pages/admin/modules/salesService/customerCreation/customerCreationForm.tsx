@@ -29,17 +29,90 @@ import {
 } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { extractErrorMessage } from "@/utils/errorUtils";
+import {
+  asRecord,
+  normalizeRelationId,
+  pickFirstString,
+  pickSiteId,
+} from "@/utils/formHelpers";
 import type { CustomerCreation } from "../types/salesService.types";
 
 type Option = { value: string; label: string };
 
+const normalizeLabel = (value: unknown): string =>
+  normalizeRelationId(value).trim().toLowerCase();
+
+const findOptionLabel = (options: Option[], value: string): string =>
+  options.find((option) => option.value === value)?.label ?? "";
+
+const getRelationLabel = (...values: unknown[]): string => {
+  for (const value of values) {
+    const record = asRecord(value);
+    const label = record
+      ? pickFirstString(record.name, record.label, record.site_name, record.unique_id, record.id)
+      : pickFirstString(value);
+
+    if (label) return label;
+  }
+
+  return "";
+};
+
+const matchesRelation = (
+  record: Record<string, unknown> | undefined,
+  selectedId: string,
+  selectedLabel: string,
+  idKeys: string[],
+  labelKeys: string[],
+): boolean => {
+  if (!record) return false;
+
+  const selectedIdValue = normalizeRelationId(selectedId);
+  if (
+    selectedIdValue &&
+    idKeys.some((key) => normalizeRelationId(record[key]) === selectedIdValue)
+  ) {
+    return true;
+  }
+
+  const selectedLabelValue = normalizeLabel(selectedLabel);
+  return Boolean(
+    selectedLabelValue &&
+      labelKeys.some((key) => normalizeLabel(record[key]) === selectedLabelValue),
+  );
+};
+
+const appendSelectedOption = (
+  options: Option[],
+  selectedId: string,
+  selectedLabel: string,
+): Option[] => {
+  if (!selectedId || options.some((option) => option.value === selectedId)) {
+    return options;
+  }
+
+  return [
+    ...options,
+    {
+      value: selectedId,
+      label: selectedLabel || selectedId,
+    },
+  ];
+};
+
 const toOptions = (
   list: unknown[],
-  getId: (item: any) => string | undefined,
-  getLabel: (item: any) => string | undefined,
+  getId: (item: Record<string, unknown>) => unknown,
+  getLabel: (item: Record<string, unknown>) => unknown,
 ): Option[] =>
   list
-    .map((item) => ({ value: getId(item), label: getLabel(item) }))
+    .map((item) => {
+      const record = asRecord(item);
+      return {
+        value: normalizeRelationId(record ? getId(record) : undefined),
+        label: normalizeRelationId(record ? getLabel(record) : undefined),
+      };
+    })
     .filter((option): option is Option => Boolean(option.value && option.label));
 
 const todayValue = () => new Date().toISOString().slice(0, 10);
@@ -154,6 +227,10 @@ export default function CustomerCreationForm() {
   const [stateId, setStateId] = useState("");
   const [districtId, setDistrictId] = useState("");
   const [cityId, setCityId] = useState("");
+  const [selectedCountryName, setSelectedCountryName] = useState("");
+  const [selectedStateName, setSelectedStateName] = useState("");
+  const [selectedDistrictName, setSelectedDistrictName] = useState("");
+  const [selectedCityName, setSelectedCityName] = useState("");
 
   const [buildingNo, setBuildingNo] = useState("");
   const [street, setStreet] = useState("");
@@ -241,53 +318,123 @@ export default function CustomerCreationForm() {
   }, []);
 
   const countryOptions = useMemo(
-    () => toOptions(countries, (c) => c.unique_id, (c) => c.name),
-    [countries],
+    () =>
+      appendSelectedOption(
+        toOptions(countries, (c) => c.unique_id ?? c.id, (c) => c.name),
+        countryId,
+        selectedCountryName,
+      ),
+    [countries, countryId, selectedCountryName],
+  );
+
+  const allStateOptions = useMemo(
+    () => toOptions(states, (s) => s.unique_id ?? s.id, (s) => s.name),
+    [states],
+  );
+
+  const allDistrictOptions = useMemo(
+    () => toOptions(districts, (d) => d.unique_id ?? d.id, (d) => d.name),
+    [districts],
+  );
+
+  const allCityOptions = useMemo(
+    () => toOptions(cities, (c) => c.unique_id ?? c.id, (c) => c.name),
+    [cities],
   );
 
   const stateOptions = useMemo(
     () =>
-      toOptions(
-        states.filter((s) => s.country_id === countryId),
-        (s) => s.unique_id,
-        (s) => s.name,
+      appendSelectedOption(
+        toOptions(
+          states.filter((state) =>
+            matchesRelation(
+              asRecord(state),
+              countryId,
+              selectedCountryName,
+              ["country_id", "country"],
+              ["country_name"],
+            ),
+          ),
+          (state) => state.unique_id ?? state.id,
+          (state) => state.name,
+        ),
+        stateId,
+        selectedStateName || findOptionLabel(allStateOptions, stateId),
       ),
-    [states, countryId],
+    [states, countryId, selectedCountryName, stateId, selectedStateName, allStateOptions],
   );
 
   const districtOptions = useMemo(
     () =>
-      toOptions(
-        districts.filter((d) => d.state_id === stateId),
-        (d) => d.unique_id,
-        (d) => d.name,
+      appendSelectedOption(
+        toOptions(
+          districts.filter((district) =>
+            matchesRelation(
+              asRecord(district),
+              stateId,
+              selectedStateName,
+              ["state_id", "state"],
+              ["state_name"],
+            ),
+          ),
+          (district) => district.unique_id ?? district.id,
+          (district) => district.name,
+        ),
+        districtId,
+        selectedDistrictName || findOptionLabel(allDistrictOptions, districtId),
       ),
-    [districts, stateId],
+    [districts, stateId, selectedStateName, districtId, selectedDistrictName, allDistrictOptions],
   );
 
   const cityOptions = useMemo(
     () =>
-      toOptions(
-        cities.filter((c) => c.district_id === districtId),
-        (c) => c.unique_id,
-        (c) => c.name,
+      appendSelectedOption(
+        toOptions(
+          cities.filter((city) =>
+            matchesRelation(
+              asRecord(city),
+              districtId,
+              selectedDistrictName,
+              ["district_id", "district"],
+              ["district_name"],
+            ),
+          ),
+          (city) => city.unique_id ?? city.id,
+          (city) => city.name,
+        ),
+        cityId,
+        selectedCityName || findOptionLabel(allCityOptions, cityId),
       ),
-    [cities, districtId],
+    [cities, districtId, selectedDistrictName, cityId, selectedCityName, allCityOptions],
   );
 
   const siteOptions = useMemo(
-    () => toOptions(sites, (s) => s.unique_id, (s) => s.site_name),
+    () => toOptions(sites, (s) => s.unique_id ?? s.id, (s) => s.site_name),
     [sites],
   );
 
   const itemOptions = useMemo(
-    () => toOptions(items, (i) => i.unique_id, (i) => i.item_name),
+    () => toOptions(items, (i) => i.unique_id ?? i.id, (i) => i.item_name),
     [items],
   );
 
   const selectedItemLabels = useMemo(
     () => itemOptions.filter((option) => itemIds.includes(option.value)).map((o) => o.label),
     [itemOptions, itemIds],
+  );
+
+  const selectedCountryLabel =
+    findOptionLabel(countryOptions, countryId) || selectedCountryName;
+  const selectedStateLabel =
+    findOptionLabel(stateOptions, stateId) || selectedStateName;
+  const selectedDistrictLabel =
+    findOptionLabel(districtOptions, districtId) || selectedDistrictName;
+  const selectedCityLabel = findOptionLabel(cityOptions, cityId) || selectedCityName;
+
+  const renderSelectLabel = (label: string, placeholder: string) => (
+    <span className={label ? "truncate text-left" : "truncate text-left text-muted-foreground"}>
+      {label || placeholder}
+    </span>
   );
 
   /* -----------------------------------------------------------
@@ -301,6 +448,7 @@ export default function CustomerCreationForm() {
       try {
         const res = await customerCreationServiceApi.get(id as string);
         const data = (res?.data || res) as CustomerCreation;
+        const record = asRecord(data) ?? {};
 
         setEntryDate(data.entry_date ?? todayValue());
         setCustomerType(data.customer_type ?? "");
@@ -315,10 +463,22 @@ export default function CustomerCreationForm() {
         setOtherMobile3(data.other_mobile_3 ?? "");
         setWhatsappNo(data.whatsapp_no ?? "");
 
-        setCountryId(data.country_id ?? "");
-        setStateId(data.state_id ?? "");
-        setDistrictId(data.district_id ?? "");
-        setCityId(data.city_id ?? "");
+        setCountryId(normalizeRelationId(record.country_id ?? record.country));
+        setStateId(normalizeRelationId(record.state_id ?? record.state));
+        setDistrictId(normalizeRelationId(record.district_id ?? record.district));
+        setCityId(normalizeRelationId(record.city_id ?? record.city));
+        setSelectedCountryName(
+          getRelationLabel(record.country_name, record.country_id, record.country),
+        );
+        setSelectedStateName(
+          getRelationLabel(record.state_name, record.state_id, record.state),
+        );
+        setSelectedDistrictName(
+          getRelationLabel(record.district_name, record.district_id, record.district),
+        );
+        setSelectedCityName(
+          getRelationLabel(record.city_name, record.city_id, record.city),
+        );
 
         setBuildingNo(data.building_no ?? "");
         setStreet(data.street ?? "");
@@ -338,8 +498,8 @@ export default function CustomerCreationForm() {
         setOpeningBalance(String(data.opening_balance ?? ""));
         setPaymentType(data.payment_type ?? "");
 
-        setSiteIds(Array.isArray(data.sites) ? data.sites : []);
-        setItemIds(Array.isArray(data.items) ? data.items : []);
+        setSiteIds(Array.isArray(data.sites) ? data.sites.map(pickSiteId).filter(Boolean) : []);
+        setItemIds(Array.isArray(data.items) ? data.items.map(normalizeRelationId).filter(Boolean) : []);
         setExecutiveName(data.executive_name ?? "");
         setAccGroup(data.acc_group ?? "");
 
@@ -549,15 +709,20 @@ export default function CustomerCreationForm() {
               <Select
                 value={countryId}
                 onValueChange={(value) => {
+                  if (!value) return;
                   setCountryId(value);
+                  setSelectedCountryName(findOptionLabel(countryOptions, value));
                   setStateId("");
                   setDistrictId("");
                   setCityId("");
+                  setSelectedStateName("");
+                  setSelectedDistrictName("");
+                  setSelectedCityName("");
                 }}
                 disabled={isFormDisabled}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
+                  {renderSelectLabel(selectedCountryLabel, "Select country")}
                 </SelectTrigger>
                 <SelectContent>
                   {countryOptions.map((option) => (
@@ -574,14 +739,18 @@ export default function CustomerCreationForm() {
               <Select
                 value={stateId}
                 onValueChange={(value) => {
+                  if (!value) return;
                   setStateId(value);
+                  setSelectedStateName(findOptionLabel(stateOptions, value));
                   setDistrictId("");
                   setCityId("");
+                  setSelectedDistrictName("");
+                  setSelectedCityName("");
                 }}
                 disabled={isFormDisabled || !countryId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select state" />
+                  {renderSelectLabel(selectedStateLabel, "Select state")}
                 </SelectTrigger>
                 <SelectContent>
                   {stateOptions.map((option) => (
@@ -598,13 +767,16 @@ export default function CustomerCreationForm() {
               <Select
                 value={districtId}
                 onValueChange={(value) => {
+                  if (!value) return;
                   setDistrictId(value);
+                  setSelectedDistrictName(findOptionLabel(districtOptions, value));
                   setCityId("");
+                  setSelectedCityName("");
                 }}
                 disabled={isFormDisabled || !stateId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select district" />
+                  {renderSelectLabel(selectedDistrictLabel, "Select district")}
                 </SelectTrigger>
                 <SelectContent>
                   {districtOptions.map((option) => (
@@ -620,11 +792,15 @@ export default function CustomerCreationForm() {
               <Label>City *</Label>
               <Select
                 value={cityId}
-                onValueChange={setCityId}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  setCityId(value);
+                  setSelectedCityName(findOptionLabel(cityOptions, value));
+                }}
                 disabled={isFormDisabled || !districtId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select city" />
+                  {renderSelectLabel(selectedCityLabel, "Select city")}
                 </SelectTrigger>
                 <SelectContent>
                   {cityOptions.map((option) => (
