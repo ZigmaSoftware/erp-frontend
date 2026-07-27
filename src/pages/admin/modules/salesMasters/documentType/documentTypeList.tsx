@@ -14,6 +14,7 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { DISPOSAL_TYPE_OPTIONS } from "@/utils/disposalTypes";
 import { Switch } from "@/components/ui/switch";
 import { documentTypeApi } from "@/helpers/admin";
 import type { DocumentType } from "../types/salesMasters.types";
@@ -90,6 +91,10 @@ export default function DocumentTypeList() {
   const indexTemplate = (_: DocumentType, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
+  const disposalTypeTemplate = (row: DocumentType) =>
+    DISPOSAL_TYPE_OPTIONS.find((option) => option.value === row.disposal_type)?.label ??
+    row.disposal_type;
+
   const actionTemplate = (row: DocumentType) => (
     <div className="flex gap-2 justify-center">
       <button
@@ -113,6 +118,7 @@ export default function DocumentTypeList() {
   const statusTemplate = (row: DocumentType) => {
     const updateStatus = async (value: boolean) => {
       await documentTypeApi.update(row.unique_id, {
+        disposal_type: row.disposal_type,
         doc_type: row.doc_type,
         description: row.description,
         is_active: value,
@@ -166,7 +172,7 @@ export default function DocumentTypeList() {
         loading={loading}
         filters={filters}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        globalFilterFields={["doc_type", "description"]}
+        globalFilterFields={["disposal_type", "doc_type", "description"]}
         header={header}
         emptyMessage="No document types found."
         stripedRows
@@ -177,6 +183,13 @@ export default function DocumentTypeList() {
           header="S.No"
           body={indexTemplate}
           style={{ width: "80px" }}
+        />
+        <Column
+          field="disposal_type"
+          body={disposalTypeTemplate}
+          header="Disposal Type"
+          sortable
+          style={{ minWidth: "170px" }}
         />
         <Column
           field="doc_type"

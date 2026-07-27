@@ -1,3 +1,5 @@
+import type { DisposalTypeValue } from "@/utils/disposalTypes";
+
 export interface BaseEntity {
   unique_id: string;
   is_active: boolean;
@@ -80,7 +82,7 @@ export interface CustomerItemPurpose extends BaseEntity {
   destination: string;
   item: string;
   item_name?: string;
-  disposal_type: "customer_scope" | "zigma_scope" | "transport_scope";
+  disposal_type: DisposalTypeValue;
   purpose_application: "land_fill_earth_fill";
   status: "active" | "inactive";
 }
@@ -152,6 +154,7 @@ export interface CustomerCreation extends BaseEntity {
    DOCUMENT TYPE MASTER
 =========================================================== */
 export interface DocumentType extends BaseEntity {
+  disposal_type: DisposalTypeValue;
   doc_type: string;
   description?: string | null;
 }
@@ -412,18 +415,35 @@ export interface NocDocumentApprovalHistory extends BaseEntity {
 
 export interface NocDocument extends BaseEntity {
   scrap_customer_id: string;
+  scrap_item_purpose_id?: string | null;
   site_id: string;
   noc_doc_type_id?: string | null;
   dispose_type: string;
   customer_destination: string;
+  entry_date?: string | null;
+  staff_id?: string;
+  created_by?: string;
   document_name: string;
   document_file?: string | null;
   approve_status: "Pending" | "Approve" | "Reject" | "Cancel";
   approve_staff_id: string;
+  approve_staff_name?: string;
   approve_date?: string | null;
   reason?: string;
   overall_approve_status: "Pending" | "Approve";
   approval_history?: NocDocumentApprovalHistory[];
+  customer_name?: string;
+  site_name?: string;
+}
+
+export interface NocDocumentUploadRow {
+  unique_id: string;
+  entry_date: string;
+  noc_doc_type_id?: string | null;
+  document_name: string;
+  document_file?: string | null;
+  approve_date?: string | null;
+  approve_status: string;
 }
 
 /* NOC upload worklist row: one per active CustomerItemPurpose for a
@@ -434,16 +454,15 @@ export interface NocListRow {
   item_purpose_id: string;
   customer_id: string;
   customer_name: string;
+  customer_entry_date?: string | null;
   site_id: string;
+  site_name?: string;
   destination: string;
   item_name: string;
   disposal_type: string;
   item_verification_status: string;
   destination_verification_status: string;
-  noc_doc_type_id?: string | null;
-  document_name: string;
-  document_file?: string | null;
-  approve_status: "Pending" | "Approve" | "Reject" | "Cancel";
+  documents?: NocDocumentUploadRow[];
 }
 
 export interface DailyTargetDisposalSub extends BaseEntity {

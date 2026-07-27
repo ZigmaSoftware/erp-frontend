@@ -17,9 +17,11 @@ import {
 
 import { documentTypeApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { DISPOSAL_TYPE_OPTIONS } from "@/utils/disposalTypes";
 import type { DocumentType } from "../types/salesMasters.types";
 
 export default function DocumentTypeForm() {
+  const [disposalType, setDisposalType] = useState("");
   const [docType, setDocType] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -45,6 +47,7 @@ export default function DocumentTypeForm() {
         const res = await documentTypeApi.get(id as string);
         const data = (res?.data || res) as DocumentType;
 
+        setDisposalType(data.disposal_type ?? "");
         setDocType(data.doc_type ?? "");
         setDescription(data.description ?? "");
         setIsActive(data.is_active ?? true);
@@ -70,12 +73,19 @@ export default function DocumentTypeForm() {
     setLoading(true);
 
     const payload = {
+      disposal_type: disposalType,
       doc_type: docType.trim(),
       description: description.trim() || null,
       is_active: isActive,
     };
 
     try {
+      if (!disposalType) {
+        throw new Error("Please select a disposal type.");
+      }
+      if (!docType.trim()) {
+        throw new Error("Document type is required.");
+      }
       if (isEdit) {
         await documentTypeApi.update(id as string, payload);
         Swal.fire({
@@ -97,7 +107,9 @@ export default function DocumentTypeForm() {
       navigate(ENC_LIST_PATH);
     } catch (error: any) {
       const message =
+        error?.message ||
         error?.response?.data?.doc_type?.[0] ||
+        error?.response?.data?.disposal_type?.[0] ||
         error?.response?.data?.detail ||
         "Unable to save document type.";
 
@@ -119,6 +131,26 @@ export default function DocumentTypeForm() {
         <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
+              <Label>Disposal Type *</Label>
+              <Select
+                value={disposalType}
+                onValueChange={setDisposalType}
+                disabled={isFormDisabled}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select disposal type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DISPOSAL_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <Label>Document Type *</Label>
               <Input
                 value={docType}
@@ -129,7 +161,7 @@ export default function DocumentTypeForm() {
               />
             </div>
 
-            <div>
+            <div className="md:col-span-2">
               <Label>Active Status *</Label>
               <Select
                 value={isActive ? "true" : "false"}

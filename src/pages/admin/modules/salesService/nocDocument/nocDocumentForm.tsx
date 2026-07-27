@@ -22,6 +22,7 @@ import {
 } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { extractErrorMessage } from "@/utils/errorUtils";
+import { DISPOSAL_TYPE_OPTIONS } from "@/utils/disposalTypes";
 import type { NocDocument } from "../types/salesService.types";
 
 type Option = { value: string; label: string };
@@ -94,7 +95,7 @@ export default function NocDocumentForm() {
     (c) => c.customer_name,
   );
   const docTypeOptions = toOptions(
-    docTypes,
+    docTypes.filter((d: any) => d.disposal_type === disposeType),
     (d) => d.unique_id,
     (d) => d.doc_type,
   );
@@ -144,6 +145,14 @@ export default function NocDocumentForm() {
     }
     if (!siteId) {
       Swal.fire({ icon: "error", title: "Site is required" });
+      return;
+    }
+    if (!disposeType) {
+      Swal.fire({ icon: "error", title: "Disposal type is required" });
+      return;
+    }
+    if (!docTypeId) {
+      Swal.fire({ icon: "error", title: "Document type is required" });
       return;
     }
 
@@ -244,17 +253,20 @@ export default function NocDocumentForm() {
             </div>
 
             <div>
-              <Label>Document Type</Label>
+              <Label>Disposal Type *</Label>
               <Select
-                value={docTypeId}
-                onValueChange={setDocTypeId}
+                value={disposeType}
+                onValueChange={(value) => {
+                  setDisposeType(value);
+                  setDocTypeId("");
+                }}
                 disabled={isFormDisabled}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select" />
+                  <SelectValue placeholder="Select disposal type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {docTypeOptions.map((option) => (
+                  {DISPOSAL_TYPE_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -264,13 +276,23 @@ export default function NocDocumentForm() {
             </div>
 
             <div>
-              <Label>Dispose Type</Label>
-              <Input
-                value={disposeType}
-                onChange={(e) => setDisposeType(e.target.value)}
-                placeholder="Dispose Type"
-                disabled={isFormDisabled}
-              />
+              <Label>Document Type *</Label>
+              <Select
+                value={docTypeId}
+                onValueChange={setDocTypeId}
+                disabled={isFormDisabled || !disposeType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={disposeType ? "Select" : "Select disposal type first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {docTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>

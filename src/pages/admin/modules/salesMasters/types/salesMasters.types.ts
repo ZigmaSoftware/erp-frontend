@@ -1,3 +1,5 @@
+import type { DisposalTypeValue } from "@/utils/disposalTypes";
+
 export interface BaseEntity {
   unique_id: string;
   is_active: boolean;
@@ -80,7 +82,7 @@ export interface CustomerItemPurpose extends BaseEntity {
   destination: string;
   item: string;
   item_name?: string;
-  disposal_type: "customer_scope" | "zigma_scope" | "transport_scope";
+  disposal_type: DisposalTypeValue;
   purpose_application: "land_fill_earth_fill";
   status: "active" | "inactive";
 }
@@ -152,6 +154,7 @@ export interface CustomerCreation extends BaseEntity {
    DOCUMENT TYPE MASTER
 =========================================================== */
 export interface DocumentType extends BaseEntity {
+  disposal_type: DisposalTypeValue;
   doc_type: string;
   description?: string | null;
 }
